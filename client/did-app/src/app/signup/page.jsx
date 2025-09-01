@@ -2,11 +2,53 @@
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Script from "next/script";
+import { useMutation } from '@tanstack/react-query';
+import axios from 'axios';
 import Input from "@/components/UI/Input";
 import Button from "@/components/UI/Button";
 import Modal from "@/components/UI/Modal";
 import ProgressBar from "@/components/UI/ProgressBar";
 import LoadingSpinner from "@/components/UI/Spinner";
+
+
+const createUser = async (userData, file) => {
+  try {
+    const formData = new FormData();
+    formData.append("userId", userData.userId);
+    formData.append("userName", userData.userName);
+    formData.append("nickName", userData.nickName);
+    formData.append("password", userData.password);
+    formData.append("address", userData.address);
+    formData.append("birthDate", userData.birthDate);
+
+    // 파일이 없을 경우 에러 처리 (클라이언트에서 이미 유효성 검사 하지만, 혹시 모를 경우 대비)
+    if (!file) {
+      throw new Error("프로필 사진은 필수입니다."); 
+    }
+    formData.append("file", file); 
+
+    const response = await axios.post(
+     `${process.env.NEXT_PUBLIC_API_BASE_URL}/user`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        withCredentials: false,
+      }
+    );
+
+    console.log("회원가입 성공 응답:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("회원가입 API 에러:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || `서버 오류 (${error.response.status})`);
+    }
+    throw new Error("회원가입 요청 실패");
+  }
+};
+
 
 // 입력 상태에 따른 스타일 반환
 const getInputStatus = (value, isValid, hasError = false) => {
@@ -17,116 +59,71 @@ const getInputStatus = (value, isValid, hasError = false) => {
 
 export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [userName, setuserName] = useState("");
-  const [id, setId] = useState("");
+  const [nickName, setNickName] = useState("");
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [birth, setBirth] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [address, setAddress] = useState("");
   const [addressDetail, setAddressDetail] = useState("");
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [imgPath, setImgPath] = useState(null); // 미리보기 URL
+  const [selectedImageFile, setSelectedImageFile] = useState(null); // 실제 파일 객체 저장
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [idCheckStatus, setIdCheckStatus] = useState(""); // "checking", "available", "unavailable", ""
-  const [isIdChecked, setIsIdChecked] = useState(false); // 중복체크 완료 여부
-  const [lastCheckedId, setLastCheckedId] = useState(""); // 마지막으로 체크한 아이디
-  const [retryCount, setRetryCount] = useState(0);
 
-  // 폼 데이터 임시 저장 (새로고침 대응)
-  useEffect(() => {
-    const savedData = localStorage.getItem("signup_temp");
-    if (savedData) {
-      try {
-        const data = JSON.parse(savedData);
-        setuserName(data.userName || "");
-        setId(data.id || "");
-        setBirth(data.birth || "");
-        setAddress(data.address || "");
-        setAddressDetail(data.addressDetail || "");
-        setCurrentStep(data.currentStep || 1);
-      } catch (error) {
-        console.error("임시 데이터 로드 실패:", error);
+
+  // 회원가입 뮤테이션
+  const registerMutation = useMutation({
+    mutationFn: ({ userData, imageFile }) => createUser(userData, imageFile),
+    onSuccess: (data) => {
+      showErrorModal("회원가입이 완료되었습니다!");
+      setTimeout(() => {
+        window.location.href = "/"; // 메인 페이지로 이동
+      }, 1500);
+    },
+    onError: (error) => {
+      console.error('회원가입 에러:', error);
+      
+      if (error.message.includes('500')) {
+        showErrorModal("서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } else if (error.message.includes('중복') || error.message.includes('이미 존재')) {
+        showErrorModal("이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.");
+        setCurrentStep(1); // 아이디 입력 단계로 돌아감
+      } else if (error.message.includes('네트워크') || error.message.includes('연결')) {
+        showErrorModal("네트워크 연결을 확인하고 다시 시도해주세요.");
+      } else if (error.message.includes('프로필 사진은 필수입니다.')) {
+        showErrorModal("프로필 사진을 등록해주세요.");
+        setCurrentStep(4); // 프로필 사진 등록 단계로 돌아감
+      } else {
+        showErrorModal(error.message || "회원가입 중 오류가 발생했습니다.");
       }
-    }
-  }, []);
+    },
+  });
 
-  // 폼 데이터 임시 저장
-  useEffect(() => {
-    const tempData = {
-      userName, id, birth, address, addressDetail, currentStep
-    };
-    localStorage.setItem("signup_temp", JSON.stringify(tempData));
-  }, [name, id, birth, address, addressDetail, currentStep]);
 
-  // 아이디가 변경되면 중복체크 상태 초기화
-  useEffect(() => {
-    if (id !== lastCheckedId) {
-      setIsIdChecked(false);
-      setIdCheckStatus("");
-    }
-  }, [id, lastCheckedId]);
-
-  // 키보드 이벤트 처리
+  // 키보드 이벤트 처리 (Enter 키로 다음 단계 이동 또는 제출)
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         if (currentStep < 4) {
-          // 각 단계별 유효성 검사를 여기서 직접 체크
-          let isCurrentStepValid = false;
-          
-          if (currentStep === 1) {
-            const userNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
-            const idRegex = /^[a-zA-Z0-9]+$/;
-            
-            isCurrentStepValid = userName.trim().length >= 2 && 
-                   userName.trim().length <= 12 &&
-                   userName === userName.trim() &&
-                   userNameRegex.test(userName.trim()) &&
-                   !/(.)\1{2,}/.test(userName.trim()) &&
-                   !/^\d+$/.test(userName.trim()) &&
-                   id.trim().length >= 4 && 
-                   id.trim().length <= 16 &&
-                   id === id.trim() &&
-                   idRegex.test(id.trim()) &&
-                   !/(.)\1{2,}/.test(id.trim()) &&
-                   isIdChecked &&
-                   idCheckStatus === "available" &&
-                   id === lastCheckedId;
-          } else if (currentStep === 2) {
-            const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':",.<>?]).{8,}$/;
-            const passwordValid = regex.test(password);
-            isCurrentStepValid = passwordValid && password === confirm;
-          } else if (currentStep === 3) {
-            if (!birth || !address.trim()) {
-              isCurrentStepValid = false;
-            } else {
-              const today = new Date();
-              const birthDate = new Date(birth);
-              today.setHours(0, 0, 0, 0);
-              birthDate.setHours(0, 0, 0, 0);
-              isCurrentStepValid = birthDate.getTime() <= today.getTime();
-            }
-          }
-          
-          if (isCurrentStepValid) {
-            setCurrentStep(currentStep + 1);
-          } else {
-            // 유효하지 않을 때만 handleNext 호출 (에러 메시지 표시용)
-            handleNext();
-          }
+          handleNext(); // 다음 단계 유효성 검사 및 이동
         } else if (currentStep === 4) {
-          handleSubmit();
+          // 4단계에서는 handleSubmit 호출
+          // `form` 태그의 `onSubmit`이 발동하도록 `type="submit"` 버튼 클릭으로 유도
+          const submitButton = document.querySelector('button[type="submit"][form="signup-form"]');
+          if (submitButton && !submitButton.disabled) {
+            submitButton.click();
+          }
         }
       }
     };
 
     document.addEventListener("keydown", handleKeyPress);
     return () => document.removeEventListener("keydown", handleKeyPress);
-  }, [currentStep, userName, id, password, confirm, birth, address, isIdChecked, idCheckStatus, lastCheckedId]);
+  }, [currentStep, nickName, userId, password, confirm, birthDate, address, selectedImageFile]); // 의존성 추가
 
   const pwdValid = useMemo(() => {
     const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':",.<>?]).{8,}$/;
@@ -140,93 +137,42 @@ export default function SignupPage() {
     [address, addressDetail]
   );
 
-  // 아이디 중복 체크 함수
-  const checkIdAvailability = useCallback(async () => {
-    const trimmedId = id.trim();
-    
-    if (!trimmedId || trimmedId.length < 4) {
-      showErrorModal("아이디를 4자 이상 입력해주세요.");
-      return;
-    }
-
-    if (trimmedId.length > 16) {
-      showErrorModal("아이디는 16자 이하로 입력해주세요.");
-      return;
-    }
-
-    const idRegex = /^[a-zA-Z0-9]+$/;
-    if (!idRegex.test(trimmedId)) {
-      showErrorModal("아이디는 영문자와 숫자만 사용 가능합니다.");
-      return;
-    }
-
-    if (/(.)\1{2,}/.test(trimmedId)) {
-      showErrorModal("아이디에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
-      return;
-    }
-
-    setIdCheckStatus("checking");
-    setLoading(true);
-    
-    try {
-      // 실제로는 API 호출, 여기서는 localStorage 체크
-      await new Promise(resolve => setTimeout(resolve, 800)); // 실제 API 호출 시뮬레이션
-      
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const isAvailable = !users.some((u) => u.id === trimmedId);
-      
-      if (isAvailable) {
-        setIdCheckStatus("available");
-        setIsIdChecked(true);
-        setLastCheckedId(trimmedId);
-        showErrorModal("사용 가능한 아이디입니다!");
-      } else {
-        setIdCheckStatus("unavailable");
-        setIsIdChecked(false);
-        showErrorModal("이미 사용 중인 아이디입니다.");
-      }
-    } catch (error) {
-      setIdCheckStatus("");
-      setIsIdChecked(false);
-      showErrorModal("중복체크 중 오류가 발생했습니다. 다시 시도해주세요.");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
   // 각 단계별 완료 조건
   const step1Valid = useMemo(() => {
-    const userNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
-    const idRegex = /^[a-zA-Z0-9]+$/;
+    const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
+    const userIdRegex = /^[a-zA-Z0-9]+$/;
     
-    return userName.trim().length >= 2 && 
-           userName.trim().length <= 12 &&
-           userName === userName.trim() &&
-           userNameRegex.test(userName.trim()) &&
-           !/(.)\1{2,}/.test(userName.trim()) &&
-           !/^\d+$/.test(userName.trim()) &&
-           id.trim().length >= 4 && 
-           id.trim().length <= 16 &&
-           id === id.trim() &&
-           idRegex.test(id.trim()) &&
-           !/(.)\1{2,}/.test(id.trim()) &&
-           isIdChecked &&
-           idCheckStatus === "available" &&
-           id === lastCheckedId; // 현재 아이디와 체크한 아이디가 같은지 확인
-  }, [userName, id, isIdChecked, idCheckStatus, lastCheckedId]);
+    return nickName.trim().length >= 2 && 
+           nickName.trim().length <= 12 &&
+           nickName === nickName.trim() &&
+           nickNameRegex.test(nickName.trim()) &&
+           !/(.)\1{2,}/.test(nickName.trim()) &&
+           !/^\d+$/.test(nickName.trim()) &&
+           userId.trim().length >= 4 && 
+           userId.trim().length <= 16 &&
+           userId === userId.trim() &&
+           userIdRegex.test(userId.trim()) &&
+           !/(.)\1{2,}/.test(userId.trim());
+  }, [nickName, userId]);
 
   const step2Valid = useMemo(() => pwdOk, [pwdOk]);
 
   const step3Valid = useMemo(() => {
-    if (!birth || !address.trim()) return false;
+    if (!birthDate || !address.trim()) return false;
     
     const today = new Date();
-    const birthDate = new Date(birth);
+    const birthDateObj = new Date(birthDate);
     today.setHours(0, 0, 0, 0);
-    birthDate.setHours(0, 0, 0, 0);
+    birthDateObj.setHours(0, 0, 0, 0);
 
-    return birthDate.getTime() <= today.getTime();
-  }, [birth, address]);
+    return birthDateObj.getTime() <= today.getTime();
+  }, [birthDate, address]);
+
+  // 4단계 유효성 검사 (프로필 이미지 필수)
+  const step4Valid = useMemo(() => {
+    return selectedImageFile !== null;
+  }, [selectedImageFile]);
+
 
   // 모달 관련 함수들
   const showErrorModal = (message) => {
@@ -239,10 +185,7 @@ export default function SignupPage() {
     setModalMessage("");
   };
 
-  // 기본 프로필 이미지 경로
-  const getDefaultProfile = () => "/images/default.png";
-
-  // 이미지 압축 함수 개선
+  // 이미지 압축 함수
   const compressImage = useCallback((file, maxSize = 150, quality = 0.7) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -271,8 +214,23 @@ export default function SignupPage() {
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
 
+          // 압축된 이미지를 Data URL로 얻음
           const dataUrl = canvas.toDataURL("image/jpeg", quality);
-          resolve(dataUrl);
+
+          // Data URL을 Blob으로 변환하여 다시 File 객체로 만들 필요가 있음
+          // 백엔드로 전송할 때는 원래 File 객체 또는 Blob 객체가 필요할 수 있으므로
+          // 여기서는 미리보기용 Data URL과 실제 전송용 File을 분리
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              });
+              resolve({ dataUrl, compressedFile });
+            } else {
+              resolve({ dataUrl, compressedFile: null });
+            }
+          }, "image/jpeg", quality);
         };
       };
       reader.readAsDataURL(file);
@@ -282,26 +240,38 @@ export default function SignupPage() {
   // 이미지 업로드 처리
   const handleProfileChange = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+      setImgPath(null); // 파일 선택 취소 시 미리보기 제거
+      setSelectedImageFile(null); // 실제 파일도 제거
+      return;
+    }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB 제한
+    if (file.size > 5 * 1024 * 1024) {
       showErrorModal("파일 크기는 5MB 이하여야 합니다.");
+      e.target.value = ''; // input 초기화
+      setImgPath(null);
+      setSelectedImageFile(null);
       return;
     }
 
     if (!file.type.startsWith('image/')) {
       showErrorModal("이미지 파일만 업로드 가능합니다.");
+      e.target.value = ''; // input 초기화
+      setImgPath(null);
+      setSelectedImageFile(null);
       return;
     }
 
     try {
-      setLoading(true);
-      const compressedImage = await compressImage(file);
-      setProfile(compressedImage);
+      const { dataUrl, compressedFile } = await compressImage(file);
+      setImgPath(dataUrl); // 미리보기용 Data URL
+      setSelectedImageFile(compressedFile); // 압축된 File 객체 저장
     } catch (error) {
+      console.error("이미지 처리 중 오류 발생:", error);
       showErrorModal("이미지 처리 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
+      e.target.value = ''; // input 초기화
+      setImgPath(null);
+      setSelectedImageFile(null);
     }
   };
 
@@ -309,52 +279,61 @@ export default function SignupPage() {
   const handleNext = () => {
     if (currentStep === 1) {
       if (!step1Valid) {
-        if (!userName.trim()) {
+        if (!nickName.trim()) {
           showErrorModal("닉네임을 입력해주세요.");
           return;
         }
-        if (userName !== userName.trim()) {
+        if (nickName !== nickName.trim()) {
           showErrorModal("닉네임의 앞뒤 공백을 제거해주세요.");
           return;
         }
-        if (userName.trim().length < 2) {
+        if (nickName.trim().length < 2) {
           showErrorModal("닉네임은 2자 이상 입력해주세요.");
           return;
         }
-        if (userName.trim().length > 12) {
+        if (nickName.trim().length > 12) {
           showErrorModal("닉네임은 12자 이하로 입력해주세요.");
           return;
         }
-        const userNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
-        if (!userNameRegex.test(userName.trim())) {
+        const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
+        if (!nickNameRegex.test(nickName.trim())) {
           showErrorModal("닉네임은 한글, 영문, 숫자만 사용 가능합니다.");
           return;
         }
-        if (/(.)\1{2,}/.test(userName.trim())) {
+        if (/(.)\1{2,}/.test(nickName.trim())) {
           showErrorModal("닉네임에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
           return;
         }
-        if (/^\d+$/.test(userName.trim())) {
+        if (/^\d+$/.test(nickName.trim())) {
           showErrorModal("닉네임은 숫자로만 구성할 수 없습니다.");
           return;
         }
-        if (!id.trim()) {
+        if (!userId.trim()) {
           showErrorModal("아이디를 입력해주세요.");
           return;
         }
-        if (!isIdChecked) {
-          showErrorModal("아이디 중복체크를 완료해주세요.");
+        if (userId !== userId.trim()) {
+          showErrorModal("아이디의 앞뒤 공백을 제거해주세요.");
           return;
         }
-        if (id !== lastCheckedId) {
-          showErrorModal("아이디가 변경되었습니다. 중복체크를 다시 진행해주세요.");
+        if (userId.trim().length < 4) {
+          showErrorModal("아이디는 4자 이상 입력해주세요.");
           return;
         }
-        if (idCheckStatus !== "available") {
-          showErrorModal("사용 가능한 아이디를 입력해주세요.");
+        if (userId.trim().length > 16) {
+          showErrorModal("아이디는 16자 이하로 입력해주세요.");
           return;
         }
-        return;
+        const userIdRegex = /^[a-zA-Z0-9]+$/;
+        if (!userIdRegex.test(userId.trim())) {
+          showErrorModal("아이디는 영문자와 숫자만 사용 가능합니다.");
+          return;
+        }
+        if (/(.)\1{2,}/.test(userId.trim())) {
+          showErrorModal("아이디에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
+          return;
+        }
+        return; // 유효성 검사 실패 시 다음 단계로 넘어가지 않음
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
@@ -376,17 +355,17 @@ export default function SignupPage() {
       setCurrentStep(3);
     } else if (currentStep === 3) {
       if (!step3Valid) {
-        if (!birth) {
+        if (!birthDate) {
           showErrorModal("생년월일을 선택해주세요.");
           return;
         }
         
         const today = new Date();
-        const birthDate = new Date(birth);
+        const birthDateObj = new Date(birthDate);
         today.setHours(0, 0, 0, 0);
-        birthDate.setHours(0, 0, 0, 0);
+        birthDateObj.setHours(0, 0, 0, 0);
 
-        if (birthDate.getTime() > today.getTime()) {
+        if (birthDateObj.getTime() > today.getTime()) {
           showErrorModal("생년월일이 올바르지 않습니다. 미래 날짜는 선택할 수 없습니다.");
           return;
         }
@@ -398,6 +377,12 @@ export default function SignupPage() {
         return;
       }
       setCurrentStep(4);
+    } else if (currentStep === 4) {
+      if (!step4Valid) {
+        showErrorModal("프로필 사진은 필수입니다.");
+        return;
+      }
+      // 4단계에서는 handleSubmit이 직접 호출되지 않고, form 제출로 처리됨
     }
   };
 
@@ -408,60 +393,26 @@ export default function SignupPage() {
     }
   };
 
-  // 회원가입 완료
-  const handleSubmit = async () => {
-    setLoading(true);
-    setRetryCount(0);
+  // 회원가입 완료 (form onSubmit 핸들러)
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // 기본 폼 제출 동작 방지
 
-    const attemptSignup = async () => {
-      try {
-        // 네트워크 지연 시뮬레이션
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const finalProfile = profile || getDefaultProfile();
+    // 최종 단계에서 프로필 이미지 유효성 다시 확인
+    if (!step4Valid) {
+      showErrorModal("프로필 사진을 등록해주세요.");
+      return;
+    }
 
-        const newUser = {
-          userName: userName.trim(),
-          id: id.trim(),
-          password,
-          birth,
-          address: fullAddress,
-          profile: finalProfile,
-          hasDID: false,
-          createdAt: new Date().toISOString()
-        };
-
-        const users = JSON.parse(localStorage.getItem("users") || "[]");
-        
-        // 최종 중복 체크
-        if (users.some((u) => u.id === id.trim())) {
-          throw new Error("이미 사용 중인 아이디입니다.");
-        }
-
-        localStorage.setItem("users", JSON.stringify([...users, newUser]));
-        
-        // 임시 데이터 삭제
-        localStorage.removeItem("signup_temp");
-
-        showErrorModal("회원가입이 완료되었습니다!");
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 1500);
-
-      } catch (error) {
-        if (retryCount < 2) {
-          setRetryCount(prev => prev + 1);
-          showErrorModal(`오류가 발생했습니다. 다시 시도하시겠습니까? (${retryCount + 1}/3)`);
-          setTimeout(attemptSignup, 1000);
-        } else {
-          showErrorModal("회원가입 중 오류가 발생했습니다. 나중에 다시 시도해주세요.");
-        }
-      } finally {
-        setLoading(false);
-      }
+    const userData = {
+      userId: userId.trim(),
+      userName: userId.trim(), // userName 필드는 userId와 동일하게 사용
+      nickName: nickName.trim(),
+      password,
+      birthDate,
+      address: fullAddress,
     };
 
-    await attemptSignup();
+    registerMutation.mutate({ userData, imageFile: selectedImageFile });
   };
 
   const openPostcode = () => {
@@ -510,8 +461,9 @@ export default function SignupPage() {
         </div>
 
         <ProgressBar currentStep={currentStep} totalSteps={4} />
-
-        <div className="min-h-[280px] sm:min-h-[300px]">
+      
+        {/* form 태그에 id="signup-form" 추가 */}
+        <form id="signup-form" onSubmit={handleSubmit} className="min-h-[280px] sm:min-h-[300px]" encType="multipart/form-data">
           {/* 1단계: 기본 정보 */}
           {currentStep === 1 && (
             <div className="space-y-4">
@@ -521,83 +473,75 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" htmlFor="userName">닉네임</label>
+                <label className="block text-sm font-medium mb-2" htmlFor="nickName">닉네임</label>
                 <Input
-                  id="userName"
-                  value={userName}
-                  onChange={(e) => setuserName(e.target.value)}
+                  id="nickName"
+                  value={nickName}
+                  onChange={(e) => setNickName(e.target.value)}
                   placeholder="한글, 영문, 숫자 2-12자"
-                  className={`h-12 text-base ${getInputStatus(userName, userName.trim().length >= 2 && userName.trim().length <= 12 && /^[가-힣a-zA-Z0-9]{2,12}$/.test(userName.trim()) && !/(.)\1{2,}/.test(userName.trim()) && !/^\d+$/.test(userName.trim()), userName && (userName !== userName.trim() || userName.trim().length < 2 || userName.trim().length > 12 || !/^[가-힣a-zA-Z0-9]{2,12}$/.test(userName.trim()) || /(.)\1{2,}/.test(userName.trim()) || /^\d+$/.test(userName.trim())))}`}
+                  className={`h-12 text-base ${getInputStatus(
+                    nickName,
+                    nickName.trim().length >= 2 && nickName.trim().length <= 12 && /^[가-힣a-zA-Z0-9]{2,12}$/.test(nickName.trim()) && !/(.)\1{2,}/.test(nickName.trim()) && !/^\d+$/.test(nickName.trim()),
+                    nickName && (nickName !== nickName.trim() || nickName.trim().length < 2 || nickName.trim().length > 12 || !/^[가-힣a-zA-Z0-9]{2,12}$/.test(nickName.trim()) || /(.)\1{2,}/.test(nickName.trim()) || /^\d+$/.test(nickName.trim()))
+                  )}`}
                   aria-label="닉네임 입력"
-                  aria-describedby={userName && userName !== userName.trim() ? "userName-error" : undefined}
                 />
-                {userName && userName !== userName.trim() && (
-                  <p id="userName-error" className="text-xs text-red-600 mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
+                {nickName && nickName !== nickName.trim() && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
                 )}
-                {userName.trim() && userName.trim().length > 0 && userName.trim().length < 2 && (
+                {nickName.trim() && nickName.trim().length > 0 && nickName.trim().length < 2 && (
                   <p className="text-xs text-red-600 mt-1" role="alert">2자 이상 입력해주세요</p>
                 )}
-                {userName.trim() && userName.trim().length > 12 && (
+                {nickName.trim() && nickName.trim().length > 12 && (
                   <p className="text-xs text-red-600 mt-1" role="alert">12자 이하로 입력해주세요</p>
                 )}
-                {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 12 && !/^[가-힣a-zA-Z0-9]{2,12}$/.test(userName.trim()) && (
+                {nickName.trim() && nickName.trim().length >= 2 && nickName.trim().length <= 12 && !/^[가-힣a-zA-Z0-9]{2,12}$/.test(nickName.trim()) && (
                   <p className="text-xs text-red-600 mt-1" role="alert">한글, 영문, 숫자만 사용 가능합니다</p>
                 )}
-                {userName.trim() && /(.)\1{2,}/.test(userName.trim()) && (
+                {nickName.trim() && /(.)\1{2,}/.test(nickName.trim()) && (
                   <p className="text-xs text-red-600 mt-1" role="alert">같은 문자를 3번 이상 연속 사용할 수 없습니다</p>
                 )}
-                {userName.trim() && /^\d+$/.test(userName.trim()) && (
+                {nickName.trim() && /^\d+$/.test(nickName.trim()) && (
                   <p className="text-xs text-red-600 mt-1" role="alert">숫자로만 구성할 수 없습니다</p>
                 )}
-                {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 12 && /^[가-힣a-zA-Z0-9]{2,12}$/.test(userName.trim()) && !/(.)\1{2,}/.test(userName.trim()) && !/^\d+$/.test(userName.trim()) && (
+                {nickName.trim() && nickName.trim().length >= 2 && nickName.trim().length <= 12 && /^[가-힣a-zA-Z0-9]{2,12}$/.test(nickName.trim()) && !/(.)\1{2,}/.test(nickName.trim()) && !/^\d+$/.test(nickName.trim()) && (
                   <p className="text-xs text-green-600 mt-1">사용 가능한 닉네임입니다</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" htmlFor="user-id">아이디</label>
-                <div className="flex gap-2">
-                  <Input
-                    id="user-id"
-                    value={id}
-                    onChange={(e) => setId(e.target.value)}
-                    placeholder="영문/숫자 4-16자"
-                    className={`h-12 text-base flex-1 ${getInputStatus(id, isIdChecked && idCheckStatus === "available" && id === lastCheckedId, id && (id !== id.trim() || idCheckStatus === "unavailable"))}`}
-                    aria-label="아이디 입력"
-                    aria-describedby="id-status"
-                  />
-                  <Button
-                    type="button"
-                    onClick={checkIdAvailability}
-                    disabled={!id.trim() || id.trim().length < 4 || loading || idCheckStatus === "checking"}
-                    className="bg-black text-white hover:bg-rose-500 px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap h-12"
-                    aria-label="아이디 중복체크"
-                  >
-                    {idCheckStatus === "checking" ? (
-                      <LoadingSpinner message="확인중" size="sm" color="white" />
-                    ) : (
-                      "중복체크"
-                    )}
-                  </Button>
-                </div>
+                <label className="block text-sm font-medium mb-2" htmlFor="userId">아이디</label>
+                <Input
+                  id="userId"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="영문/숫자 4-16자"
+                  className={`h-12 text-base ${getInputStatus(
+                    userId,
+                    userId.trim().length >= 4 && userId.trim().length <= 16 && /^[a-zA-Z0-9]+$/.test(userId.trim()) && !/(.)\1{2,}/.test(userId.trim()),
+                    userId && (userId !== userId.trim() || userId.trim().length < 4 || userId.trim().length > 16 || !/^[a-zA-Z0-9]+$/.test(userId.trim()) || /(.)\1{2,}/.test(userId.trim()))
+                  )}`}
+                  aria-label="아이디 입력"
+                />
                 
-                <div id="id-status" className="mt-1">
-                  {id && id !== id.trim() && (
+                <div className="mt-1">
+                  {userId && userId !== userId.trim() && (
                     <p className="text-xs text-red-600" role="alert">앞뒤 공백을 제거해주세요</p>
                   )}
-                  {id && id.trim().length > 0 && id.trim().length < 4 && (
+                  {userId && userId.trim().length > 0 && userId.trim().length < 4 && (
                     <p className="text-xs text-red-600" role="alert">4자 이상 입력해주세요</p>
                   )}
-                  {isIdChecked && idCheckStatus === "available" && id === lastCheckedId && (
-                    <p className="text-xs text-green-600 flex items-center gap-1">
-                      <span>사용 가능한 아이디입니다</span>
-                    </p>
+                  {userId && userId.trim().length > 16 && (
+                    <p className="text-xs text-red-600" role="alert">16자 이하로 입력해주세요</p>
                   )}
-                  {idCheckStatus === "unavailable" && (
-                    <p className="text-xs text-red-600" role="alert">이미 사용 중인 아이디입니다</p>
+                  {userId && userId.trim().length >= 4 && userId.trim().length <= 16 && !/^[a-zA-Z0-9]+$/.test(userId.trim()) && (
+                    <p className="text-xs text-red-600" role="alert">영문자와 숫자만 사용 가능합니다</p>
                   )}
-                  {id !== lastCheckedId && isIdChecked && (
-                    <p className="text-xs text-orange-600" role="alert">아이디가 변경되었습니다. 중복체크를 다시 진행해주세요</p>
+                  {userId && /(.)\1{2,}/.test(userId.trim()) && (
+                    <p className="text-xs text-red-600" role="alert">같은 문자를 3번 이상 연속 사용할 수 없습니다</p>
+                  )}
+                  {userId.trim().length >= 4 && userId.trim().length <= 16 && /^[a-zA-Z0-9]+$/.test(userId.trim()) && !/(.)\1{2,}/.test(userId.trim()) && (
+                    <p className="text-xs text-green-600">올바른 아이디 형식입니다</p>
                   )}
                 </div>
               </div>
@@ -623,7 +567,6 @@ export default function SignupPage() {
                     placeholder="영문, 숫자, 특수문자 포함 8자 이상"
                     className={`h-12 text-base pr-10 ${getInputStatus(password, pwdValid)}`}
                     aria-label="비밀번호 입력"
-                    aria-describedby="password-status"
                   />
                   <button
                     type="button"
@@ -634,7 +577,7 @@ export default function SignupPage() {
                     {showPassword ? "숨기기" : "보기"}
                   </button>
                 </div>
-                <div id="password-status" className="mt-1">
+                <div className="mt-1">
                   {password.length > 0 && !pwdValid && (
                     <p className="text-xs text-red-600" role="alert">영문, 숫자, 특수문자를 포함하여 8자 이상 입력해주세요</p>
                   )}
@@ -655,7 +598,6 @@ export default function SignupPage() {
                     placeholder="비밀번호 재입력"
                     className={`h-12 text-base pr-10 ${getInputStatus(confirm, password === confirm && confirm.length > 0, confirm.length > 0 && password !== confirm)}`}
                     aria-label="비밀번호 확인"
-                    aria-describedby="confirm-status"
                   />
                   <button
                     type="button"
@@ -666,7 +608,7 @@ export default function SignupPage() {
                     {showConfirmPassword ? "숨기기" : "보기"}
                   </button>
                 </div>
-                <div id="confirm-status" className="mt-1">
+                <div className="mt-1">
                   {confirm.length > 0 && password !== confirm && (
                     <p className="text-xs text-red-600" role="alert">비밀번호가 일치하지 않습니다</p>
                   )}
@@ -687,17 +629,17 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" htmlFor="birth">생년월일</label>
+                <label className="block text-sm font-medium mb-2" htmlFor="birthDate">생년월일</label>
                 <Input
-                  id="birth"
+                  id="birthDate"
                   type="date"
-                  value={birth}
-                  onChange={(e) => setBirth(e.target.value)}
-                  className={`h-12 text-base ${getInputStatus(birth, step3Valid)}`}
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className={`h-12 text-base ${getInputStatus(birthDate, step3Valid)}`}
                   aria-label="생년월일 선택"
                   max={new Date().toISOString().split('T')[0]}
                 />
-                {birth && new Date(birth) > new Date() && (
+                {birthDate && new Date(birthDate) > new Date() && (
                   <p className="text-xs text-red-600 mt-1" role="alert">미래 날짜는 선택할 수 없습니다</p>
                 )}
               </div>
@@ -735,13 +677,13 @@ export default function SignupPage() {
             <div className="space-y-4">
               <div className="text-center mb-6">
                 <h2 className="text-xl font-semibold mb-2">프로필 설정</h2>
-                <p className="text-sm text-gray-600">프로필 사진을 설정하세요 (선택사항)</p>
+                <p className="text-sm text-gray-600">프로필 사진을 설정하세요 <span className="text-red-500 font-bold">(필수)</span></p>
               </div>
 
               <div className="text-center">
-                {profile ? (
+                {imgPath ? (
                   <img
-                    src={profile}
+                    src={imgPath}
                     alt="프로필 미리보기"
                     className="w-32 h-32 rounded-full object-cover mx-auto mb-4 border-4 border-green-200"
                   />
@@ -765,37 +707,40 @@ export default function SignupPage() {
                              hover:file:bg-rose-500"
                   aria-label="프로필 이미지 업로드"
                 />
+                {!step4Valid && (
+                  <p className="text-xs text-red-600 mt-2" role="alert">프로필 사진을 선택해주세요.</p>
+                )}
                 <p className="text-xs text-gray-500 mt-2">JPG, PNG 파일 (최대 5MB)</p>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-medium mb-2">입력하신 정보</h3>
                 <div className="space-y-1 text-sm text-gray-600">
-                  <p><span className="font-medium">닉네임:</span> {userName}</p>
-                  <p><span className="font-medium">아이디:</span> {id}</p>
-                  <p><span className="font-medium">생년월일:</span> {birth}</p>
+                  <p><span className="font-medium">닉네임:</span> {nickName}</p>
+                  <p><span className="font-medium">아이디:</span> {userId}</p>
+                  <p><span className="font-medium">생년월일:</span> {birthDate}</p>
                   <p><span className="font-medium">주소:</span> {fullAddress}</p>
                 </div>
               </div>
             </div>
           )}
-        </div>
 
         {/* 네비게이션 버튼 */}
         <div className="flex justify-between mt-8">
           {currentStep > 1 ? (
             <Button
-              onClick={handlePrev}
-              className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg transition-colors"
-              aria-label="이전 단계로"
+            type="button" // type을 button으로 명시하여 폼 제출 방지
+            onClick={handlePrev}
+            className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg transition-colors"
+            aria-label="이전 단계로"
             >
               이전
             </Button>
           ) : (
             <Link 
-              href="/" 
-              className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg inline-block text-center transition-colors"
-              aria-label="로그인 페이지로 이동"
+            href="/" 
+            className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg inline-block text-center transition-colors"
+            aria-label="로그인 페이지로 이동"
             >
               로그인으로
             </Link>
@@ -803,29 +748,30 @@ export default function SignupPage() {
 
           {currentStep < 4 ? (
             <Button
-              onClick={handleNext}
-              disabled={
-                (currentStep === 1 && !step1Valid) ||
-                (currentStep === 2 && !step2Valid) ||
-                (currentStep === 3 && !step3Valid) ||
-                loading
-              }
-              className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            type="button" // type을 button으로 명시하여 폼 제출 방지
+            onClick={handleNext}
+            disabled={
+              (currentStep === 1 && !step1Valid) ||
+              (currentStep === 2 && !step2Valid) ||
+              (currentStep === 3 && !step3Valid)
+            }
+            className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               aria-label="다음 단계로"
             >
-              {loading ? <LoadingSpinner message="확인 중..." /> : "다음"}
+              다음
             </Button>
           ) : (
             <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors min-w-[100px]"
-              aria-label="회원가입 완료"
+            type="submit"
+            disabled={registerMutation.isPending || !step4Valid}
+            className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors min-w-[100px]"
+            aria-label="회원가입 완료"
             >
-              {loading ? <LoadingSpinner message="가입 중..." /> : "가입 완료"}
+              {registerMutation.isPending ? <LoadingSpinner message="가입 중..." /> : "가입 완료"}
             </Button>
           )}
         </div>
+        </form>
       </div>
 
       {/* 커스텀 모달 */}
