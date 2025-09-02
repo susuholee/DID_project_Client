@@ -3,7 +3,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Header from '@/components/layout/Header';
 import NotificationBell from '@/components/UI/NotificationBell';
 
 // Suspense로 감쌀 컴포넌트 분리
@@ -173,14 +172,6 @@ function CertificateDetailContent() {
 
   return (
     <>
-      <Header
-        user={user}
-        displayName={displayName}
-        NotificationBell={NotificationBell}
-        notifications={notifications}
-        setNotifications={setNotifications}
-      />
-
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           <button
