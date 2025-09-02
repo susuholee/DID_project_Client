@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/layout/Header';
+
 import NotificationBell from '@/components/UI/NotificationBell';
 
 export default function MyCertificatesPage() {
@@ -163,14 +163,6 @@ export default function MyCertificatesPage() {
 
   return (
     <>
-      <Header
-        user={user}
-        displayName={displayName}
-        NotificationBell={NotificationBell}
-        notifications={notifications}
-        setNotifications={setNotifications}
-      />
-
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           {/* 상단 */}
