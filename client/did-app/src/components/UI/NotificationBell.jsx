@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import useUserStore from '@/Store/useUserStore';
+import useUserStore from '@/Store/userStore';
 
 export default function NotificationBell() {
   const btnRef = useRef(null);

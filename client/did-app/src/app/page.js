@@ -2,11 +2,12 @@
 
 import React, { useEffect, useRef } from "react";
 import LoginForm from "@/components/auth/LoginForm";
-import useUserStore from "@/Store/useUserStore";
+import useUserStore from "@/Store/userStore";
 
 export default function MainPage() {
   const sectionsRef = useRef([]);
   const user = useUserStore((state) => state.user);
+  console.log("누구야",user)
   const isLoggedIn = !!user;
 
   // 섹션 스크롤 애니메이션

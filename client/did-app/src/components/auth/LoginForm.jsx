@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import Image from "next/image";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/UI/Button";
 import Input from "@/components/UI/Input";
 import Modal from "@/components/UI/Modal";
+import useUserStore from "@/Store/userStore";
 
 export default function LoginForm() {
   const [idOrEmail, setIdOrEmail] = useState("");
@@ -12,35 +13,27 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const { user } = useUserStore();
+  const router = useRouter();
 
-  // 컴포넌트 마운트시 모달 상태 초기화
-  useEffect(() => {
-    setShowModal(false);
-    setModalMessage("");
-  }, []);
-
-  // 모달 관련 함수들
   const showErrorModal = (message) => {
     setModalMessage(message);
     setShowModal(true);
   };
-
   const closeModal = () => {
     setShowModal(false);
     setModalMessage("");
   };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // 입력값 검증
     if (!idOrEmail.trim()) {
       showErrorModal("아이디를 입력해주세요.");
       setLoading(false);
       return;
     }
-
     if (!password.trim()) {
       showErrorModal("비밀번호를 입력해주세요.");
       setLoading(false);
@@ -48,34 +41,33 @@ export default function LoginForm() {
     }
 
     try {
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      
-      // 사용자 목록이 비어있는 경우
-      if (users.length === 0) {
-        throw new Error("등록된 사용자가 없습니다. 먼저 회원가입을 해주세요.");
+      if (!user) {
+        showErrorModal("회원가입된 정보가 없습니다. 먼저 회원가입을 해주세요.");
+        return;
       }
-
-      const foundUser = users.find(
-        (u) => u.id === idOrEmail && u.password === password 
-      );
-
-      if (!foundUser) {
-        throw new Error("아이디 또는 비밀번호가 잘못되었습니다.");
+      if (user.userId !== idOrEmail || user.password !== password) {
+        showErrorModal("아이디 또는 비밀번호가 올바르지 않습니다.");
+        return;
       }
-
-      // 로그인 성공 후 현재 사용자만 저장
-      localStorage.setItem("currentUser", JSON.stringify(foundUser));
-
-    
-      window.location.href = "/dashboard";
-
-      
+      router.push("/dashboard");
     } catch (error) {
-      showErrorModal(error.message);
+      showErrorModal(error.message || "로그인 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
   };
+
+  // 카카오 로그인 버튼 클릭 시
+const handleKakaoLogin = () => {
+  const REST_API_KEY = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+  const REDIRECT_URI = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+  const kakaoAuthUrl =
+    `https://kauth.kakao.com/oauth/authorize?` +
+    `client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code&prompt=login`;
+
+  window.location.href = kakaoAuthUrl;
+};
+
 
   return (
     <>
@@ -83,6 +75,7 @@ export default function LoginForm() {
         <div className="w-full max-w-md rounded-2xl bg-gray-200 shadow-lg p-8">
           <h1 className="text-black text-3xl font-extrabold mb-8">로그인</h1>
 
+          {/* 일반 로그인 (아이디 / 비밀번호) */}
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div>
               <label className="block text-sm font-semibold text-gray-800">
@@ -121,19 +114,21 @@ export default function LoginForm() {
             </Button>
           </form>
 
+          {/* 구분선 */}
           <div className="flex items-center my-6">
             <div className="flex-grow border-b border-gray-500"></div>
             <div className="flex-grow border-b border-gray-500"></div>
           </div>
 
+          {/* 카카오 로그인 버튼 */}
           <div className="space-y-2">
-            <Link href="/auth/kakao/callback" className="block">
+            <button onClick={handleKakaoLogin} className="block w-full cursor-pointer">
               <img
                 src="/images/kakao_login.png"
                 alt="카카오 로그인"
                 className="w-full h-[48px] object-cover rounded-xl"
               />
-            </Link>
+            </button>
           </div>
 
           <p className="mt-8 text-center text-sm text-gray-600">
@@ -143,15 +138,11 @@ export default function LoginForm() {
             </Link>
           </p>
         </div>
-      </main> 
+      </main>
 
-   {showModal && (
-  <Modal 
-    isOpen={showModal} 
-    message={modalMessage}
-    onClose={closeModal}
-  />
-)}
+      {showModal && (
+        <Modal isOpen={showModal} message={modalMessage} onClose={closeModal} />
+      )}
     </>
   );
 }

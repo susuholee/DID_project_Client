@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Script from "next/script";
+import { useRouter } from "next/navigation";
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import Input from "@/components/UI/Input";
@@ -9,7 +10,7 @@ import Button from "@/components/UI/Button";
 import Modal from "@/components/UI/Modal";
 import ProgressBar from "@/components/UI/ProgressBar";
 import LoadingSpinner from "@/components/UI/Spinner";
-
+import useUserStore from "@/Store/userStore";
 
 const createUser = async (userData, file) => {
   try {
@@ -21,7 +22,6 @@ const createUser = async (userData, file) => {
     formData.append("address", userData.address);
     formData.append("birthDate", userData.birthDate);
 
-    // 파일이 없을 경우 에러 처리 (클라이언트에서 이미 유효성 검사 하지만, 혹시 모를 경우 대비)
     if (!file) {
       throw new Error("프로필 사진은 필수입니다."); 
     }
@@ -49,8 +49,6 @@ const createUser = async (userData, file) => {
   }
 };
 
-
-// 입력 상태에 따른 스타일 반환
 const getInputStatus = (value, isValid, hasError = false) => {
   if (!value) return "";
   if (hasError) return "border-red-300 bg-red-50";
@@ -66,54 +64,61 @@ export default function SignupPage() {
   const [birthDate, setBirthDate] = useState("");
   const [address, setAddress] = useState("");
   const [addressDetail, setAddressDetail] = useState("");
-  const [imgPath, setImgPath] = useState(null); // 미리보기 URL
-  const [selectedImageFile, setSelectedImageFile] = useState(null); // 실제 파일 객체 저장
+  const [imgPath, setImgPath] = useState(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const {setUser} = useUserStore.getState();
+  const router = useRouter();
 
-  // 회원가입 뮤테이션
-  const registerMutation = useMutation({
-    mutationFn: ({ userData, imageFile }) => createUser(userData, imageFile),
-    onSuccess: (data) => {
-      showErrorModal("회원가입이 완료되었습니다!");
-      setTimeout(() => {
-        window.location.href = "/"; // 메인 페이지로 이동
-      }, 1500);
-    },
-    onError: (error) => {
-      console.error('회원가입 에러:', error);
-      
-      if (error.message.includes('500')) {
-        showErrorModal("서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
-      } else if (error.message.includes('중복') || error.message.includes('이미 존재')) {
-        showErrorModal("이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.");
-        setCurrentStep(1); // 아이디 입력 단계로 돌아감
-      } else if (error.message.includes('네트워크') || error.message.includes('연결')) {
-        showErrorModal("네트워크 연결을 확인하고 다시 시도해주세요.");
-      } else if (error.message.includes('프로필 사진은 필수입니다.')) {
-        showErrorModal("프로필 사진을 등록해주세요.");
-        setCurrentStep(4); // 프로필 사진 등록 단계로 돌아감
-      } else {
-        showErrorModal(error.message || "회원가입 중 오류가 발생했습니다.");
+const registerMutation = useMutation({
+  mutationFn: ({ userData, imageFile }) => createUser(userData, imageFile),
+  onSuccess: async (data) => {
+    showErrorModal("회원가입이 완료되었습니다!");
+
+    setUser(
+      {
+        userId: data.userId,
+        userName: data.userName,
+        nickName: data.nickName,
+        profile: data.imgPath, // 프로필 이미지 경로
+        type: "local",
       }
-    },
-  });
+    );
+
+    router.push('/'); // 메인 페이지로 이동
+  },
+  onError: (error) => {
+    console.error('회원가입 에러:', error);
+    
+    if (error.message.includes('500')) {
+      showErrorModal("서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    } else if (error.message.includes('중복') || error.message.includes('이미 존재')) {
+      showErrorModal("이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.");
+      setCurrentStep(1);
+    } else if (error.message.includes('네트워크') || error.message.includes('연결')) {
+      showErrorModal("네트워크 연결을 확인하고 다시 시도해주세요.");
+    } else if (error.message.includes('프로필 사진은 필수입니다.')) {
+      showErrorModal("프로필 사진을 등록해주세요.");
+      setCurrentStep(4);
+    } else {
+      showErrorModal(error.message || "회원가입 중 오류가 발생했습니다.");
+    }
+  },
+});
 
 
-  // 키보드 이벤트 처리 (Enter 키로 다음 단계 이동 또는 제출)
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         if (currentStep < 4) {
-          handleNext(); // 다음 단계 유효성 검사 및 이동
+          handleNext();
         } else if (currentStep === 4) {
-          // 4단계에서는 handleSubmit 호출
-          // `form` 태그의 `onSubmit`이 발동하도록 `type="submit"` 버튼 클릭으로 유도
-          const submitButton = document.querySelector('button[type="submit"][form="signup-form"]');
+          const submitButton = document.querySelector('button[type="submit"]');
           if (submitButton && !submitButton.disabled) {
             submitButton.click();
           }
@@ -123,7 +128,7 @@ export default function SignupPage() {
 
     document.addEventListener("keydown", handleKeyPress);
     return () => document.removeEventListener("keydown", handleKeyPress);
-  }, [currentStep, nickName, userId, password, confirm, birthDate, address, selectedImageFile]); // 의존성 추가
+  }, [currentStep, nickName, userId, password, confirm, birthDate, address, selectedImageFile]);
 
   const pwdValid = useMemo(() => {
     const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':",.<>?]).{8,}$/;
@@ -137,7 +142,6 @@ export default function SignupPage() {
     [address, addressDetail]
   );
 
-  // 각 단계별 완료 조건
   const step1Valid = useMemo(() => {
     const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
     const userIdRegex = /^[a-zA-Z0-9]+$/;
@@ -168,13 +172,10 @@ export default function SignupPage() {
     return birthDateObj.getTime() <= today.getTime();
   }, [birthDate, address]);
 
-  // 4단계 유효성 검사 (프로필 이미지 필수)
   const step4Valid = useMemo(() => {
     return selectedImageFile !== null;
   }, [selectedImageFile]);
 
-
-  // 모달 관련 함수들
   const showErrorModal = (message) => {
     setModalMessage(message);
     setShowModal(true);
@@ -185,7 +186,6 @@ export default function SignupPage() {
     setModalMessage("");
   };
 
-  // 이미지 압축 함수
   const compressImage = useCallback((file, maxSize = 150, quality = 0.7) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -214,12 +214,8 @@ export default function SignupPage() {
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
 
-          // 압축된 이미지를 Data URL로 얻음
           const dataUrl = canvas.toDataURL("image/jpeg", quality);
 
-          // Data URL을 Blob으로 변환하여 다시 File 객체로 만들 필요가 있음
-          // 백엔드로 전송할 때는 원래 File 객체 또는 Blob 객체가 필요할 수 있으므로
-          // 여기서는 미리보기용 Data URL과 실제 전송용 File을 분리
           canvas.toBlob((blob) => {
             if (blob) {
               const compressedFile = new File([blob], file.name, {
@@ -237,18 +233,17 @@ export default function SignupPage() {
     });
   }, []);
 
-  // 이미지 업로드 처리
   const handleProfileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) {
-      setImgPath(null); // 파일 선택 취소 시 미리보기 제거
-      setSelectedImageFile(null); // 실제 파일도 제거
+      setImgPath(null);
+      setSelectedImageFile(null);
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       showErrorModal("파일 크기는 5MB 이하여야 합니다.");
-      e.target.value = ''; // input 초기화
+      e.target.value = '';
       setImgPath(null);
       setSelectedImageFile(null);
       return;
@@ -256,7 +251,7 @@ export default function SignupPage() {
 
     if (!file.type.startsWith('image/')) {
       showErrorModal("이미지 파일만 업로드 가능합니다.");
-      e.target.value = ''; // input 초기화
+      e.target.value = '';
       setImgPath(null);
       setSelectedImageFile(null);
       return;
@@ -264,18 +259,17 @@ export default function SignupPage() {
 
     try {
       const { dataUrl, compressedFile } = await compressImage(file);
-      setImgPath(dataUrl); // 미리보기용 Data URL
-      setSelectedImageFile(compressedFile); // 압축된 File 객체 저장
+      setImgPath(dataUrl);
+      setSelectedImageFile(compressedFile);
     } catch (error) {
       console.error("이미지 처리 중 오류 발생:", error);
       showErrorModal("이미지 처리 중 오류가 발생했습니다.");
-      e.target.value = ''; // input 초기화
+      e.target.value = '';
       setImgPath(null);
       setSelectedImageFile(null);
     }
   };
 
-  // 다음 단계로
   const handleNext = () => {
     if (currentStep === 1) {
       if (!step1Valid) {
@@ -333,7 +327,7 @@ export default function SignupPage() {
           showErrorModal("아이디에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
           return;
         }
-        return; // 유효성 검사 실패 시 다음 단계로 넘어가지 않음
+        return;
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
@@ -382,22 +376,18 @@ export default function SignupPage() {
         showErrorModal("프로필 사진은 필수입니다.");
         return;
       }
-      // 4단계에서는 handleSubmit이 직접 호출되지 않고, form 제출로 처리됨
     }
   };
 
-  // 이전 단계로
   const handlePrev = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  // 회원가입 완료 (form onSubmit 핸들러)
   const handleSubmit = async (e) => {
-    e.preventDefault(); // 기본 폼 제출 동작 방지
+    e.preventDefault();
 
-    // 최종 단계에서 프로필 이미지 유효성 다시 확인
     if (!step4Valid) {
       showErrorModal("프로필 사진을 등록해주세요.");
       return;
@@ -405,7 +395,7 @@ export default function SignupPage() {
 
     const userData = {
       userId: userId.trim(),
-      userName: userId.trim(), // userName 필드는 userId와 동일하게 사용
+      userName: userId.trim(),
       nickName: nickName.trim(),
       password,
       birthDate,
@@ -462,8 +452,7 @@ export default function SignupPage() {
 
         <ProgressBar currentStep={currentStep} totalSteps={4} />
       
-        {/* form 태그에 id="signup-form" 추가 */}
-        <form id="signup-form" onSubmit={handleSubmit} className="min-h-[280px] sm:min-h-[300px]" encType="multipart/form-data">
+        <form onSubmit={handleSubmit} className="min-h-[280px] sm:min-h-[300px]" encType="multipart/form-data">
           {/* 1단계: 기본 정보 */}
           {currentStep === 1 && (
             <div className="space-y-4">
@@ -725,52 +714,52 @@ export default function SignupPage() {
             </div>
           )}
 
-        {/* 네비게이션 버튼 */}
-        <div className="flex justify-between mt-8">
-          {currentStep > 1 ? (
-            <Button
-            type="button" // type을 button으로 명시하여 폼 제출 방지
-            onClick={handlePrev}
-            className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg transition-colors"
-            aria-label="이전 단계로"
-            >
-              이전
-            </Button>
-          ) : (
-            <Link 
-            href="/" 
-            className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg inline-block text-center transition-colors"
-            aria-label="로그인 페이지로 이동"
-            >
-              로그인으로
-            </Link>
-          )}
+          {/* 네비게이션 버튼 */}
+          <div className="flex justify-between mt-8">
+            {currentStep > 1 ? (
+              <Button
+                type="button"
+                onClick={handlePrev}
+                className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg transition-colors"
+                aria-label="이전 단계로"
+              >
+                이전
+              </Button>
+            ) : (
+              <Link 
+                href="/" 
+                className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-lg inline-block text-center transition-colors"
+                aria-label="로그인 페이지로 이동"
+              >
+                로그인으로
+              </Link>
+            )}
 
-          {currentStep < 4 ? (
-            <Button
-            type="button" // type을 button으로 명시하여 폼 제출 방지
-            onClick={handleNext}
-            disabled={
-              (currentStep === 1 && !step1Valid) ||
-              (currentStep === 2 && !step2Valid) ||
-              (currentStep === 3 && !step3Valid)
-            }
-            className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-              aria-label="다음 단계로"
-            >
-              다음
-            </Button>
-          ) : (
-            <Button
-            type="submit"
-            disabled={registerMutation.isPending || !step4Valid}
-            className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors min-w-[100px]"
-            aria-label="회원가입 완료"
-            >
-              {registerMutation.isPending ? <LoadingSpinner message="가입 중..." /> : "가입 완료"}
-            </Button>
-          )}
-        </div>
+            {currentStep < 4 ? (
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={
+                  (currentStep === 1 && !step1Valid) ||
+                  (currentStep === 2 && !step2Valid) ||
+                  (currentStep === 3 && !step3Valid)
+                }
+                className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                aria-label="다음 단계로"
+              >
+                다음
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={registerMutation.isPending || !step4Valid}
+                className="bg-rose-400 text-white hover:bg-rose-500 px-6 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors min-w-[100px]"
+                aria-label="회원가입 완료"
+              >
+                {registerMutation.isPending ? <LoadingSpinner message="가입 중..." /> : "가입 완료"}
+              </Button>
+            )}
+          </div>
         </form>
       </div>
 

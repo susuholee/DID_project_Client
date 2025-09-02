@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import useUserStore from "@/Store/useUserStore";
+import useUserStore from "@/Store/userStore";
 
 // 더미 수료증 목록
 const AVAILABLE_CERTIFICATES = [

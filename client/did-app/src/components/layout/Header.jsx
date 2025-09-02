@@ -4,21 +4,22 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useMemo, useState, useRef, useEffect } from 'react';
-import useUserStore from '@/Store/useUserStore';
+import useUserStore from '@/Store/userStore';
 import NotificationBell from '@/components/UI/NotificationBell';
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, logout, loadUser } = useUserStore();
+  const { user, isLoggedIn, logout } = useUserStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const closeTimerRef = useRef(null);
   const menuWrapperRef = useRef(null);
 
-  // 유저 로드
+  // hydration 완료 체크
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+    setIsHydrated(true);
+  }, []);
 
   const isAppRoute = useMemo(
     () =>
@@ -29,8 +30,9 @@ export default function Header() {
     [pathname]
   );
 
-  const displayName = user?.userName || user?.name || '사용자';
-  const profileImage = user?.profile || '/images/default.png';
+  const displayName = user?.userName || user?.name || user?.nickName || '사용자';
+  const profileImage =
+    user?.profileImage || user?.profile || '/images/default.png';
 
   // 로그아웃
   const handleLogout = () => {
@@ -123,80 +125,85 @@ export default function Header() {
 
       {/* 오른쪽 영역 */}
       <div className="flex items-center gap-4">
-        {/* ✅ 알림 벨 */}
-        <NotificationBell />
+        {isHydrated && (
+          <>
+            {/* 알림 벨 - 로그인된 사용자만 표시 */}
+            {isLoggedIn && <NotificationBell />}
 
-        {user && isAppRoute ? (
-          // 앱 내부: 드롭다운 메뉴
-          <div
-            ref={menuWrapperRef}
-            className="relative"
-            tabIndex={0}
-            onMouseEnter={() => {
-              cancelClose();
-              setMenuOpen(true);
-            }}
-            onMouseLeave={scheduleClose}
-            onFocus={() => setMenuOpen(true)}
-            onBlur={handleBlur}
-          >
-            <button
-              type="button"
-              className="flex items-center gap-2 cursor-pointer hover:opacity-80 focus:outline-none"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-            >
-              <img
-                src={profileImage}
-                alt="프로필"
-                className="w-8 h-8 rounded-full object-cover"
-              />
-              <span className="text-sm text-gray-700 font-medium max-w-[10rem] truncate">
-                {displayName}
-              </span>
-            </button>
-
-            {menuOpen && (
+            {isLoggedIn && isAppRoute ? (
+              // 앱 내부: 드롭다운 메뉴
               <div
-                role="menu"
-                className="absolute right-0 mt-2 w-44 bg-white border border-gray-100 rounded-xl shadow-lg ring-1 ring-gray-200 z-10 overflow-hidden"
+                ref={menuWrapperRef}
+                className="relative"
+                tabIndex={0}
+                onMouseEnter={() => {
+                  cancelClose();
+                  setMenuOpen(true);
+                }}
+                onMouseLeave={scheduleClose}
+                onFocus={() => setMenuOpen(true)}
+                onBlur={handleBlur}
               >
-                <Link href="/profile">
-                  <button className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-rose-50 transition-colors">
-                    내정보
-                  </button>
-                </Link>
                 <button
-                  role="menuitem"
-                  tabIndex={0}
-                  onClick={handleLogout}
-                  className="block w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  type="button"
+                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 focus:outline-none"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
                 >
-                  로그아웃
+                  <img
+                    src={profileImage}
+                    alt="프로필"
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <span className="text-sm text-gray-700 font-medium max-w-[10rem] truncate">
+                    {displayName}
+                  </span>
                 </button>
+
+                {menuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 mt-2 w-44 bg-white border border-gray-100 rounded-xl shadow-lg ring-1 ring-gray-200 z-10 overflow-hidden"
+                  >
+                    <Link href="/profile">
+                      <button className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-rose-50 transition-colors">
+                        내정보
+                      </button>
+                    </Link>
+                    <button
+                      role="menuitem"
+                      tabIndex={0}
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                )}
               </div>
+            ) : isLoggedIn ? (
+              // 랜딩 페이지에서 로그인된 경우
+              <Link
+                href="/dashboard"
+                className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${
+                  isScrolled ? 'text-gray-700' : 'text-white'
+                }`}
+                aria-label="대시보드로 이동"
+              >
+                <img
+                  src={profileImage}
+                  alt="프로필"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
+                />
+                <span className="hidden sm:block text-sm font-medium max-w-[8rem] lg:max-w-[10rem] truncate">
+                  {displayName}
+                </span>
+              </Link>
+            ) : (
+              // 로그인하지 않은 경우: 빈 공간
+              <div className="flex items-center gap-2"></div>
             )}
-          </div>
-        ) : (
-          // 랜딩 페이지에서: 대시보드 이동 버튼
-          user && (
-            <Link
-              href="/dashboard"
-              className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${
-                isScrolled ? 'text-gray-700' : 'text-white'
-              }`}
-              aria-label="대시보드로 이동"
-            >
-              <img
-                src={profileImage}
-                alt="프로필"
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
-              />
-              <span className="hidden sm:block text-sm font-medium max-w-[8rem] lg:max-w-[10rem] truncate">
-                {displayName}
-              </span>
-            </Link>
-          )
+          </>
         )}
       </div>
     </header>
