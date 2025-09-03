@@ -3,14 +3,25 @@ import { create } from "zustand";
 const useUserStore = create((set) => ({
   user: null,
   userType: null,
+  token: null,
   notifications: [],
-  isLoggedIn: false, // 로그인 여부 추가
+  isLoggedIn: false,
 
-  setUser: (userData, type) =>
+  // 통합된 setUser 함수
+  setUser: (userData, type = "local") =>
     set(() => {
-      const data = { ...userData, type: type || "local" };
-      return { user: data, userType: data.type };
+      const data = { ...userData, type };
+      return { 
+        user: data, 
+        userType: type,
+        isLoggedIn: true
+      };
     }),
+
+  setToken: (tokenValue) =>
+    set(() => ({
+      token: tokenValue,
+    })),
 
   setIsLoggedIn: (status) =>
     set(() => ({
@@ -18,14 +29,13 @@ const useUserStore = create((set) => ({
     })),
 
   logout: () =>
-    set(() => {
-      return {
-        user: null,
-        userType: null,
-        notifications: [],
-        isLoggedIn: false, // 로그아웃 시 false로 초기화
-      };
-    }),
+    set(() => ({
+      user: null,
+      userType: null,
+      token: null,
+      notifications: [],
+      isLoggedIn: false,
+    })),
 
   addNotification: (userId, newNotification) =>
     set((state) => {

@@ -9,7 +9,7 @@ import NotificationBell from '@/components/UI/NotificationBell';
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, isLoggedIn, logout } = useUserStore();
+  const { user, userType, isLoggedIn, logout } = useUserStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -30,9 +30,31 @@ export default function Header() {
     [pathname]
   );
 
-  const displayName = user?.userName || user?.name || user?.nickName || '사용자';
-  const profileImage =
-    user?.profileImage || user?.profile || '/images/default.png';
+  // 로그인 타입에 따른 사용자 이름 표시
+  const displayName = useMemo(() => {
+    if (!user) return '사용자';
+    
+    // 카카오 로그인 사용자
+    if (userType === 'kakao') {
+      return user.nickname || '사용자';
+    }
+    
+    // 일반 로그인 사용자
+    return user.userName || user.name || user.username || '사용자';
+  }, [user, userType]);
+
+  // 로그인 타입에 따른 프로필 이미지
+  const profileImage = useMemo(() => {
+    if (!user) return '/images/default.png';
+    
+    // 카카오 로그인 사용자
+    if (userType === 'kakao') {
+      return user.profileImage || user.profile_image || '/images/default.png';
+    }
+    
+    // 일반 로그인 사용자
+    return user.profileImage || user.avatar || '/images/default.png';
+  }, [user, userType]);
 
   // 로그아웃
   const handleLogout = () => {

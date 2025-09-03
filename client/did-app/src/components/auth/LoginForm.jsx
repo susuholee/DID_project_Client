@@ -6,6 +6,7 @@ import Button from "@/components/UI/Button";
 import Input from "@/components/UI/Input";
 import Modal from "@/components/UI/Modal";
 import useUserStore from "@/Store/userStore";
+import axios from "axios";
 
 export default function LoginForm() {
   const [idOrEmail, setIdOrEmail] = useState("");
@@ -13,61 +14,75 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-  const { user } = useUserStore();
+  const { setUser, setIsLoggedIn } = useUserStore();
   const router = useRouter();
 
   const showErrorModal = (message) => {
     setModalMessage(message);
     setShowModal(true);
   };
+
   const closeModal = () => {
     setShowModal(false);
     setModalMessage("");
   };
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+ const onSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    if (!idOrEmail.trim()) {
-      showErrorModal("아이디를 입력해주세요.");
-      setLoading(false);
-      return;
-    }
-    if (!password.trim()) {
-      showErrorModal("비밀번호를 입력해주세요.");
-      setLoading(false);
-      return;
-    }
+  if (!idOrEmail.trim()) {
+    showErrorModal("아이디를 입력해주세요.");
+    setLoading(false);
+    return;
+  }
+  if (!password.trim()) {
+    showErrorModal("비밀번호를 입력해주세요.");
+    setLoading(false);
+    return;
+  }
 
-    try {
-      if (!user) {
-        showErrorModal("회원가입된 정보가 없습니다. 먼저 회원가입을 해주세요.");
-        return;
+  try {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/login`,
+      {
+        userId: idOrEmail,
+        password,
+      },
+      { withCredentials: true }
+    );
+
+    const { state, message, data } = response.data;
+
+      if (state === 200 && Array.isArray(data) && data.length > 0) {
+        const userData = data[0];
+        setUser(userData);
+        setIsLoggedIn(true);
+        router.push("/dashboard");
+      } else {
+        showErrorModal(message || "로그인에 실패했습니다.");
       }
-      if (user.userId !== idOrEmail || user.password !== password) {
-        showErrorModal("아이디 또는 비밀번호가 올바르지 않습니다.");
-        return;
-      }
-      router.push("/dashboard");
-    } catch (error) {
-      showErrorModal(error.message || "로그인 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
+
+  } catch (error) {
+    console.error("로그인 실패:", error);
+
+    if (error.response) {
+      const msg =
+        error.response.data?.message || "아이디 또는 비밀번호가 올바르지 않습니다.";
+      showErrorModal(msg);
+    } else {
+      showErrorModal("서버와 연결할 수 없습니다.");
     }
-  };
-
-  // 카카오 로그인 버튼 클릭 시
-const handleKakaoLogin = () => {
-  const REST_API_KEY = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
-  const REDIRECT_URI = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
-  const kakaoAuthUrl =
-    `https://kauth.kakao.com/oauth/authorize?` +
-    `client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code&prompt=login`;
-
-  window.location.href = kakaoAuthUrl;
+  } finally {
+    setLoading(false);
+  }
 };
 
+
+  // 카카오 로그인 버튼 클릭 시
+  const handleKakaoLogin = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/auth`;
+  };
 
   return (
     <>

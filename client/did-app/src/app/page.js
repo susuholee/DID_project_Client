@@ -8,7 +8,7 @@ export default function MainPage() {
   const sectionsRef = useRef([]);
   const user = useUserStore((state) => state.user);
   console.log("누구야",user)
-  const isLoggedIn = !!user;
+  const isLoggedIn = false;
 
   // 섹션 스크롤 애니메이션
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function MainPage() {
               </p>
             </div>
             <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl animate-none">
-              {!isLoggedIn && <LoginForm />}
+             <LoginForm />
             </div>
           </div>
         </section>
