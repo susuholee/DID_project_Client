@@ -6,13 +6,14 @@ import Footer from '@/components/layout/Footer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import './globals.css';
+import Sidebar from '@/components/layout/Sidebar';
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
 
   const [queryClient] = useState(() => new QueryClient());
 
-  const noLayoutRoutes = ['/signup', '/profile', '/signup/did'];
+  const noLayoutRoutes = ['/signup', '/profile', '/signup/did', '/'];
   const hideLayout = noLayoutRoutes.includes(pathname);
 
   return (
@@ -24,7 +25,7 @@ export default function RootLayout({ children }) {
           ) : (
             <div className="flex min-h-screen">
               <div className="flex flex-col flex-1">
-                <Header />
+                <Sidebar />
                 <main className="flex-1">{children}</main>
                 <Footer />
               </div>

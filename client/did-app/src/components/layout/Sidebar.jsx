@@ -1,0 +1,262 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import NotificationBell from '@/components/UI/NotificationBell';
+import useUserStore from '@/Store/userStore';
+
+export default function UserSidebar() {
+  const pathname = usePathname();
+  const { user, userType, isLoggedIn, logout } = useUserStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // hydration 완료 체크
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+
+  // 로그인 타입에 따른 사용자 이름 표시 (헤더에서 가져옴)
+  const displayName = useMemo(() => {
+    if (!user) return '사용자';
+    
+    // 카카오 로그인 사용자
+    if (user.isKakaoUser) {
+      return user.nickName || user.kakaoData?.nickname || '카카오 사용자';
+    }
+    
+    // 일반 로그인 사용자
+    return user.nickName || user.userName || user.name || '사용자';
+  }, [user]);
+
+  // 로그인 타입에 따른 프로필 이미지 (헤더에서 가져옴)
+  const profileImage = useMemo(() => {
+    if (!user) return '/images/default.png';
+    
+    // 카카오 로그인 사용자
+    if (user.isKakaoUser) {
+      return user.imgPath || user.kakaoData?.profile_image || '/images/default.png';
+    }
+    
+    // 일반 로그인 사용자
+    return user.imgPath || user.profile || '/images/default.png';
+  }, [user]);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMenuClick = () => {
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleOverlayClick = () => {
+    setIsMobileMenuOpen(false);
+  };
+
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
+const isActive = (href) => {
+  if (href === '/profile') {
+    return pathname === '/profile';
+  }
+  return pathname === href || pathname?.startsWith(href + '/');
+};
+
+
+  // 로그아웃 처리 (헤더에서 가져옴)
+    const handleLogout = () => {
+    logout();
+    window.location.href = '/';
+  };
+
+  const userMenus = [
+    {
+      title: '대시보드',
+      items: [
+        { href: '/dashboard', label: '대시보드' }
+      ]
+    },
+    {
+      title: '수료증 관리',
+      items: [
+        { href: '/certificates/my', label: '내 수료증' },
+        { href: '/certificates/issue', label: '발급 요청' },
+        { href: '/certificates/request', label: '요청 현황' }
+      ]
+    },
+    {
+      title: '계정 관리',
+      items: [
+        { href: '/profile', label: '내 정보' },
+        { href: '/profile/edit', label: '정보 수정' }
+      ]
+    }
+  ];
+
+  if (!isHydrated || !user) {
+    return null; // 하이드레이션 완료 전이거나 로그인하지 않은 경우 렌더링하지 않음
+  }
+
+  return (
+    <>
+      {/* 모바일 햄버거 메뉴 버튼 */}
+      <button
+        onClick={toggleMobileMenu}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+        aria-label="메뉴 열기"
+      >
+        <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
+          <div className="w-5 h-0.5 bg-gray-500"></div>
+          <div className="w-5 h-0.5 bg-gray-500"></div>
+          <div className="w-5 h-0.5 bg-gray-500"></div>
+        </div>
+      </button>
+
+      {/* 모바일 오버레이 */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black opacity-50 z-40"
+          onClick={handleOverlayClick}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* 사이드바 */}
+      <aside
+        className={`
+          fixed
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          transition-transform duration-300 ease-in-out
+          w-80 lg:w-64 h-screen
+          bg-white
+          overflow-y-auto flex-shrink-0 
+          top-0 left-0 z-40
+          shadow-[8px_0_25px_-5px_rgba(0,0,0,0.1),4px_0_15px_-3px_rgba(0,0,0,0.05)]
+        `}
+      >
+        {/* 상단 로고 */}
+        <div className="flex items-center justify-between h-16 bg-white px-4">
+          <div className="flex items-center space-x-3">
+            <img src="/icons/sealium_logo.png" alt="Sealium" className="w-10 h-10" />
+            <Link href="/">
+              <span className="text-2xl font-bold text-rose-500 tracking-tight">
+                Sealium
+              </span>
+            </Link>
+          </div>
+          
+          {/* 모바일 닫기 버튼 */}
+          <button
+            onClick={toggleMobileMenu}
+            className="lg:hidden p-2 rounded-md hover:bg-gray-100"
+            aria-label="메뉴 닫기"
+          >
+            <div className="w-6 h-6 relative">
+              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 bg-gray-600 transform -translate-x-1/2 -translate-y-1/2 rotate-45"></div>
+              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 bg-gray-600 transform -translate-x-1/2 -translate-y-1/2 -rotate-45"></div>
+            </div>
+          </button>
+        </div>
+
+    
+
+
+        {/* 사용자 프로필 정보 */}
+        {user && (
+          <div className="p-4 bg-gray-50">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16  flex items-center justify-center shadow-lg">
+                {profileImage !== '/images/default.png' ? (
+                  <img
+                    src={profileImage}
+                    alt="프로필"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="text-white font-bold text-xl">
+                    {displayName.charAt(0)}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">{displayName}</p>
+              </div>
+            </div>
+            
+              {/* 알림 벨 - 데스크톱에서만 표시 */}
+             <div className="hidden lg:flex items-center justify-between mt-3 p-2 bg-white rounded-lg shadow-sm">
+               <span className="text-xs font-medium text-gray-600">알림</span>
+               <NotificationBell />
+             </div>
+          </div>
+        )}
+
+        {/* 메뉴 네비게이션 */}
+        <nav className="p-4 pb-20">
+          {userMenus.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="mb-6">
+              <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3 px-3">
+                {section.title}
+              </h3>
+              <ul className="space-y-2">
+                {section.items.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href} onClick={handleMenuClick}>
+                                             <div className={`
+                         flex items-center justify-between px-4 py-3 text-sm rounded-xl transition-all duration-200 shadow-sm
+                         ${isActive(item.href) 
+                           ? 'bg-rose-500 text-white font-semibold shadow-md transform scale-105' 
+                           : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-md'
+                         }
+                       `}>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </div>
+                        {isActive(item.href) && (
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+                {/* 하단 로그아웃 버튼 */}
+         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white">
+               <button
+               onClick={handleLogout}
+               className="w-full flex items-center justify-center px-4 py-3 text-sm font-semibold text-white bg-rose-500 border-0 rounded-xl hover:bg-rose-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+             >
+            <div className="w-4 h-4 mr-2 relative">
+            </div>
+              로그아웃
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}

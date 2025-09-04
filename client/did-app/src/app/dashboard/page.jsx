@@ -23,46 +23,46 @@ function DashboardContent() {
       stats: { totalVCs: 3, verified: 2, pending: 1, onChain: 3 },
       // 관리자 승인 후 발급된 인증서들 (verified 상태만)
       certificates: [
-        // {
-        //   id: 1,
-        //   title: "블록체인 개발자 자격증",
-        //   issuer: "한국블록체인협회",
-        //   date: "2024-03-15",
-        //   status: "verified",
-        //   approvedAt: "2024-03-15T10:30:00"
-        // },
-        // {
-        //   id: 2,
-        //   title: "컴퓨터공학 학사",
-        //   issuer: "한국대학교",
-        //   date: "2023-02-28",
-        //   status: "verified",
-        //   approvedAt: "2024-03-10T14:20:00"
-        // },
-        // {
-        //   id: 3,
-        //   title: "한식 수료증",
-        //   issuer: "수호 아카데미",
-        //   date: "2024-01-28",
-        //   status: "verified",
-        //   approvedAt: "2024-03-08T09:15:00"
-        // },
-        // {
-        //   id: 4,
-        //   title: "일식 수료증",
-        //   issuer: "수호 아카데미",
-        //   date: "2024-01-27",
-        //   status: "verified",
-        //   approvedAt: "2024-03-05T16:45:00"
-        // },
-        // {
-        //   id: 5,
-        //   title: "중식 수료증",
-        //   issuer: "수호 아카데미",
-        //   date: "2024-01-26",
-        //   status: "verified",
-        //   approvedAt: "2024-03-01T11:30:00"
-        // }
+        {
+          id: 1,
+          title: "블록체인 개발자 자격증",
+          issuer: "한국블록체인협회",
+          date: "2024-03-15",
+          status: "verified",
+          approvedAt: "2024-03-15T10:30:00"
+        },
+        {
+          id: 2,
+          title: "컴퓨터공학 학사",
+          issuer: "한국대학교",
+          date: "2023-02-28",
+          status: "verified",
+          approvedAt: "2024-03-10T14:20:00"
+        },
+        {
+          id: 3,
+          title: "한식 수료증",
+          issuer: "수호 아카데미",
+          date: "2024-01-28",
+          status: "verified",
+          approvedAt: "2024-03-08T09:15:00"
+        },
+        {
+          id: 4,
+          title: "일식 수료증",
+          issuer: "수호 아카데미",
+          date: "2024-01-27",
+          status: "verified",
+          approvedAt: "2024-03-05T16:45:00"
+        },
+        {
+          id: 5,
+          title: "중식 수료증",
+          issuer: "수호 아카데미",
+          date: "2024-01-26",
+          status: "verified",
+          approvedAt: "2024-03-01T11:30:00"
+        }
       ],
       // 대기 중인 신청서들 (별도 관리)
       pendingApplications: [
@@ -148,7 +148,7 @@ function DashboardContent() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
         <div className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
           {/* 환영 */}
           <div className="mb-6 sm:mb-8">
@@ -343,7 +343,7 @@ function DashboardContent() {
 // Loading fallback 컴포넌트
 function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64 flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
         <p className="text-gray-600">대시보드를 불러오는 중...</p>

@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import Modal from "@/components/UI/Modal";
 
 // 더미 수료증 목록
 const AVAILABLE_CERTIFICATES = [
@@ -37,12 +39,15 @@ export default function IssueCertificatePage() {
     dateOfBirth: "",
     profileImage: null,
     name: "",
-    email: "",
-    phone: "",
   });
 
   // 이미지 미리보기 URL
   const [imagePreview, setImagePreview] = useState(null);
+
+  // 모달 상태
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState("success"); // success, error, loading
 
   // 선택된 수료증
   const selectedCertificate = useMemo(() => {
@@ -71,13 +76,17 @@ export default function IssueCertificatePage() {
     if (file) {
       // 파일 크기 검증 (5MB 제한)
       if (file.size > 5 * 1024 * 1024) {
-        alert("파일 크기는 5MB 이하여야 합니다.");
+        setModalMessage("파일 크기는 5MB 이하여야 합니다.");
+        setModalType("error");
+        setShowModal(true);
         return;
       }
 
       // 파일 타입 검증
       if (!file.type.startsWith('image/')) {
-        alert("이미지 파일만 업로드할 수 있습니다.");
+        setModalMessage("이미지 파일만 업로드할 수 있습니다.");
+        setModalType("error");
+        setShowModal(true);
         return;
       }
 
@@ -100,63 +109,87 @@ export default function IssueCertificatePage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!user) {
+      setModalMessage("로그인이 필요합니다.");
+      setModalType("error");
+      setShowModal(true);
+      return;
+    }
+
+    // 로딩 모달 표시
+    setModalMessage("수료증 발급 요청을 처리하고 있습니다...");
+    setModalType("loading");
+    setShowModal(true);
+
     const payload = {
-      id: Date.now(),
-      certificateId: formData.certificateId,
+      userName: formData.name,
+      userId: user.id,
       certificateName: selectedCertificate?.name,
-      issuer: formData.issuer,
-      reason: formData.reason,
-      requestedAt: new Date().toISOString(),
-      status: "pending",
-      // 추가된 필드들
-      dateOfBirth: formData.dateOfBirth,
-      profileImage: formData.profileImage,
-      submittedInfo: {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-      }
+      description: formData.reason,
+      requestDate: new Date().toISOString(),
+      request: "발급 요청",
+      imagefile: formData.profileImage,
+      DOB: formData.dateOfBirth,
     };
 
     console.log("발급 요청 데이터:", payload);
 
-    if (!user) {
-      alert("로그인이 필요합니다.");
-      return;
+    try {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/user/vc/request`, payload, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log("서버 응답:", response.data);
+
+      // 알림 추가
+      const newNotification = {
+        id: Date.now(),
+        title: "수료증 발급 요청",
+        message: `${selectedCertificate?.name} 발급 요청이 제출되었습니다.`,
+        ts: Date.now(),
+        read: false,
+      };
+
+      addNotification(user.id, newNotification);
+
+      // 발급 요청 저장 (로컬 백업)
+      const existingRequests = JSON.parse(localStorage.getItem("certificate_requests") || "[]");
+      const updatedRequests = [{
+        ...payload,
+        id: Date.now(),
+        requestedAt: new Date().toISOString(),
+        status: "pending",
+      }, ...existingRequests];
+      localStorage.setItem("certificate_requests", JSON.stringify(updatedRequests));
+
+             setModalMessage("수료증 발급 요청이 성공적으로 제출되었습니다!");
+       setModalType("success");
+       setShowModal(true);
+       
+       // 성공 시 잠시 후 페이지 이동
+       setTimeout(() => {
+         setShowModal(false);
+         router.push("/certificates/request");
+       }, 2000);
+    } catch (error) {
+      console.error("발급 요청 실패:", error);
+      setModalMessage("발급 요청 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setModalType("error");
+      setShowModal(true);
     }
-
-    // 알림 추가
-    const newNotification = {
-      id: Date.now(),
-      title: "수료증 발급 요청",
-      message: `${selectedCertificate?.name} 발급 요청이 제출되었습니다.`,
-      ts: Date.now(),
-      read: false,
-    };
-
-    addNotification(user.id, newNotification);
-
-    // 발급 요청 저장
-    const existingRequests = JSON.parse(localStorage.getItem("certificate_requests") || "[]");
-    const updatedRequests = [payload, ...existingRequests];
-    localStorage.setItem("certificate_requests", JSON.stringify(updatedRequests));
-
-    console.log("업데이트된 요청들:", updatedRequests);
-
-    alert("수료증 발급 요청이 성공적으로 제출되었습니다!");
-    router.push("/certificates/requests");
   };
 
   const canSubmit = formData.certificateId && 
                    formData.issuer && 
                    formData.reason.trim() &&
                    formData.dateOfBirth &&
-                   formData.name.trim() &&
-                   formData.email.trim() &&
-                   formData.phone.trim();
+                   formData.name.trim();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -375,7 +408,7 @@ export default function IssueCertificatePage() {
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+              className="w-full bg-rose-500 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             >
               {!canSubmit ? "모든 필수 정보를 입력해주세요" : "발급 요청하기"}
             </button>
@@ -385,9 +418,59 @@ export default function IssueCertificatePage() {
                 <span className="text-red-500">*</span> 표시된 항목들을 모두 입력해주세요.
               </div>
             )}
+                     </div>
+         </div>
+       </div>
+
+               {/* 모달 */}
+        <Modal
+          isOpen={showModal}
+          onClose={() => modalType !== "loading" && setShowModal(false)}
+          title={
+            modalType === "success" ? "성공" : 
+            modalType === "error" ? "오류" : 
+            "처리 중"
+          }
+        >
+          <div className="p-6">
+            <div className={`text-center ${
+              modalType === "success" ? "text-green-600" : 
+              modalType === "error" ? "text-red-600" : 
+              "text-blue-600"
+            }`}>
+              <div className="mb-4">
+                {modalType === "success" ? (
+                  <svg className="w-12 h-12 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : modalType === "error" ? (
+                  <svg className="w-12 h-12 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <div className="w-12 h-12 mx-auto">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+              </div>
+              <p className="text-lg font-medium">{modalMessage}</p>
+            </div>
+            {modalType !== "loading" && (
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                    modalType === "success" 
+                      ? "bg-green-500 text-white hover:bg-green-600" 
+                      : "bg-red-500 text-white hover:bg-red-600"
+                  }`}
+                >
+                  확인
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+        </Modal>
+     </div>
+   );
+ }

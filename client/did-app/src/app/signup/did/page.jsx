@@ -18,6 +18,28 @@ export default function DIDSignupPage() {
   const [kakaoLoading, setKakaoLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // 카카오 추가 정보 가져오기
+  const getKakaoAdditionalInfo = async () => {
+    if (!user || user.provider !== 'kakao') return;
+    
+    setKakaoLoading(true);
+    try {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/additional-info`, {
+        withCredentials: true
+      });
+      
+      if (res.data.name) setName(res.data.name);
+      if (res.data.birth) setBirth(res.data.birth);
+      if (res.data.address) setAddress(res.data.address);
+      
+    } catch (error) {
+      console.error('카카오 추가 정보 가져오기 실패:', error);
+      alert('카카오에서 추가 정보를 가져올 수 없습니다.');
+    } finally {
+      setKakaoLoading(false);
+    }
+  };
+
   // 다음 주소검색 API 스크립트 로드
   useEffect(() => {
     const script = document.createElement('script');

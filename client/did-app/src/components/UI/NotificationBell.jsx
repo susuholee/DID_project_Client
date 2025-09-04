@@ -37,12 +37,12 @@ export default function NotificationBell() {
       <button
         ref={btnRef}
         onClick={() => setOpen((v) => !v)}
-        className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 relative"
+        className="w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:bg-gray-300 relative transition-colors duration-200"
         aria-label="알림"
       >
-        <Image src="/icons/bell.png" width={20} height={20} alt="알림" />
+        <Image src="/icons/bell.png" width={20} height={20} alt="알림" className="w-5 h-5 lg:w-4 lg:h-4" />
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full font-semibold">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[11px] lg:text-[10px] min-w-[20px] lg:min-w-[18px] h-[20px] lg:h-[18px] px-1 flex items-center justify-center rounded-full font-semibold">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -51,15 +51,15 @@ export default function NotificationBell() {
       {open && (
         <div
           ref={popRef}
-          className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden"
+          className="absolute right-0 mt-2 w-[320px] lg:w-80 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden"
         >
-          <div className="flex items-center justify-between px-3 py-2 border-b">
-            <span className="text-sm font-semibold">알림</span>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between px-4 py-3 lg:px-3 lg:py-2 border-b">
+            <span className="text-base lg:text-sm font-semibold">알림</span>
+            <div className="flex items-center gap-3 lg:gap-2">
               {notifications.length > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="text-xs text-gray-600 hover:text-gray-900"
+                  className="text-sm lg:text-xs text-gray-600 hover:text-gray-900 active:text-gray-700 px-2 py-1 rounded transition-colors"
                 >
                   모두 읽음
                 </button>
@@ -67,7 +67,7 @@ export default function NotificationBell() {
               {notifications.length > 0 && (
                 <button
                   onClick={clearAll}
-                  className="text-xs text-red-500 hover:text-red-600"
+                  className="text-sm lg:text-xs text-red-500 hover:text-red-600 active:text-red-700 px-2 py-1 rounded transition-colors"
                 >
                   전체 삭제
                 </button>
@@ -76,25 +76,25 @@ export default function NotificationBell() {
           </div>
 
           {notifications.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500">새 알림이 없습니다.</div>
+            <div className="p-6 lg:p-4 text-base lg:text-sm text-gray-500 text-center">새 알림이 없습니다.</div>
           ) : (
-            <ul className="max-h-[60vh] overflow-auto divide-y">
+            <ul className="max-h-[50vh] lg:max-h-[60vh] overflow-auto divide-y">
               {notifications.map((n) => (
                 <li
                   key={n.id}
-                  className={`p-3 hover:bg-gray-50 cursor-pointer ${
+                  className={`p-4 lg:p-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors ${
                     !n.read ? 'bg-amber-50' : ''
                   }`}
                   onClick={() => toggleOneRead(n.id)}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-base lg:text-sm font-medium text-gray-900 truncate">
                       {n.title}
                     </p>
-                    <p className="text-sm text-gray-700 mt-0.5 break-words">
+                    <p className="text-sm lg:text-sm text-gray-700 mt-1 lg:mt-0.5 break-words leading-relaxed">
                       {n.message}
                     </p>
-                    <p className="text-[11px] text-gray-500 mt-1">
+                    <p className="text-xs lg:text-[11px] text-gray-500 mt-2 lg:mt-1">
                       {formatRelativeTime(n.ts)}
                     </p>
                   </div>
