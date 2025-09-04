@@ -153,7 +153,7 @@ function DashboardContent() {
           {/* 환영 */}
           <div className="mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              환영합니다, {user.userName ?? user.name}님
+              환영합니다, {user.nickName ?? user.name}님
             </h1>
             <p className="text-sm sm:text-base text-gray-600">
               분산 신원 증명(DID) 기반 수료증 관리 플랫폼입니다. 블록체인으로 안전하게

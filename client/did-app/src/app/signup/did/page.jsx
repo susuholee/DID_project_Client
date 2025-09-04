@@ -137,56 +137,6 @@ export default function DIDSignupPage() {
     }).open();
   };
 
-  const getKakaoAdditionalInfo = async () => {
-    if (!user || user.provider !== 'kakao') {
-      alert('카카오 로그인 사용자만 이용 가능합니다.');
-      return;
-    }
-
-    setKakaoLoading(true);
-
-    try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/me`,
-        { 
-          withCredentials: true,
-          timeout: 10000
-        }
-      );
-
-      const additionalInfo = response.data;
-
-      if (additionalInfo.name && !name.trim()) {
-        setName(additionalInfo.name);
-      }
-      
-      if (additionalInfo.birth && !birth) {
-        setBirth(additionalInfo.birth);
-      }
-
-      const updatedUser = {
-        ...user,
-        ...additionalInfo
-      };
-      setUser(updatedUser);
-
-      alert('카카오 정보를 성공적으로 가져왔습니다!');
-
-    } catch (error) {
-      console.error('카카오 추가 정보 요청 실패:', error);
-      
-      if (error.response?.status === 401) {
-        alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
-        router.replace('/login');
-      } else if (error.response?.status === 403) {
-        alert('카카오에서 추가 정보를 제공하지 않거나 권한이 없습니다.');
-      } else {
-        alert('정보를 가져오는데 실패했습니다. 다시 시도해주세요.');
-      }
-    } finally {
-      setKakaoLoading(false);
-    }
-  };
 
   const onSubmit = async (e) => {
     e.preventDefault();

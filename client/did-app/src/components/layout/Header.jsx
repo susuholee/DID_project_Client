@@ -34,26 +34,26 @@ export default function Header() {
   const displayName = useMemo(() => {
     if (!user) return '사용자';
     
-    // 카카오 로그인 사용자
+    // 카카오 로그인 사용자 (store 구조에 맞게 수정)
     if (userType === 'kakao') {
-      return user.nickname || '사용자';
+      return user.nickName || user.kakaoData?.nickname || '카카오 사용자';
     }
     
     // 일반 로그인 사용자
-    return user.userName || user.name || user.username || '사용자';
+    return user.nickName || user.userName || '사용자';
   }, [user, userType]);
 
   // 로그인 타입에 따른 프로필 이미지
   const profileImage = useMemo(() => {
     if (!user) return '/images/default.png';
     
-    // 카카오 로그인 사용자
+    // 카카오 로그인 사용자 (store 구조에 맞게 수정)
     if (userType === 'kakao') {
-      return user.profileImage || user.profile_image || '/images/default.png';
+      return user.imgPath || user.kakaoData?.profile_image || '/images/default.png';
     }
     
     // 일반 로그인 사용자
-    return user.profileImage || user.avatar || '/images/default.png';
+    return user.imgPath || '/images/default.png';
   }, [user, userType]);
 
   // 로그아웃
@@ -179,6 +179,12 @@ export default function Header() {
                   />
                   <span className="text-sm text-gray-700 font-medium max-w-[10rem] truncate">
                     {displayName}
+                    {/* 개발 중 확인용 - 로그인 타입 표시 */}
+                    {userType && (
+                      <span className="ml-1 text-xs text-gray-400">
+                        ({userType === 'kakao' ? '카카오' : '일반'})
+                      </span>
+                    )}
                   </span>
                 </button>
 
@@ -204,14 +210,10 @@ export default function Header() {
                 )}
               </div>
             ) : isLoggedIn ? (
-              // 랜딩 페이지에서 로그인된 경우
-              <Link
-                href="/dashboard"
-                className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${
-                  isScrolled ? 'text-gray-700' : 'text-white'
-                }`}
-                aria-label="대시보드로 이동"
-              >
+              // 랜딩 페이지에서 로그인된 경우 - 프로필 정보만 표시 (클릭 불가)
+              <div className={`flex items-center gap-2 ${
+                isScrolled ? 'text-gray-700' : 'text-white'
+              }`}>
                 <img
                   src={profileImage}
                   alt="프로필"
@@ -220,7 +222,7 @@ export default function Header() {
                 <span className="hidden sm:block text-sm font-medium max-w-[8rem] lg:max-w-[10rem] truncate">
                   {displayName}
                 </span>
-              </Link>
+              </div>
             ) : (
               // 로그인하지 않은 경우: 빈 공간
               <div className="flex items-center gap-2"></div>

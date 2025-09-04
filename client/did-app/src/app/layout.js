@@ -10,7 +10,6 @@ import './globals.css';
 export default function RootLayout({ children }) {
   const pathname = usePathname();
 
-  // hydration 문제를 피하려면 useState로 인스턴스를 생성해야 함
   const [queryClient] = useState(() => new QueryClient());
 
   const noLayoutRoutes = ['/signup', '/profile', '/signup/did'];

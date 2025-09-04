@@ -14,7 +14,7 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-  const { setUser, setIsLoggedIn } = useUserStore();
+  const { setUser } = useUserStore(); // setIsLoggedIn 제거 - setUser에서 자동 처리
   const router = useRouter();
 
   const showErrorModal = (message) => {
@@ -27,57 +27,81 @@ export default function LoginForm() {
     setModalMessage("");
   };
 
- const onSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  if (!userId.trim()) {
-    showErrorModal("아이디를 입력해주세요.");
-    setLoading(false);
-    return;
-  }
-  if (!password.trim()) {
-    showErrorModal("비밀번호를 입력해주세요.");
-    setLoading(false);
-    return;
-  }
+    if (!userId.trim()) {
+      showErrorModal("아이디를 입력해주세요.");
+      setLoading(false);
+      return;
+    }
+    if (!password.trim()) {
+      showErrorModal("비밀번호를 입력해주세요.");
+      setLoading(false);
+      return;
+    }
 
-  try {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/login`,
-      {
-        userid: userId,
-        password,
-      },
-      { withCredentials: true }
-    );
+    try {
+      const loginUser = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/login`,
+        {
+          userid: userId,
+          password,
+        },
+        { withCredentials: true }
+      );
 
-    const { state, message, data } = response.data;
+      const { state, message, data } = loginUser.data;
+      console.log("응답 데이터:", loginUser.data);
+      console.log("state 값:", state, "타입:", typeof state);
+      console.log("message 값:", message);
 
-      if (state === 200 && Array.isArray(data) && data.length > 0) {
-      const userData = data[0];
-      setUser(userData);
-      setIsLoggedIn(true);
-      router.push("/dashboard"); 
+      // 로그인 성공 처리
+      if (state === 200) {
+        console.log("로그인 성공 - 사용자 정보 조회 시작");
+
+        try {
+          // GET /user/:userId로 사용자 정보 조회
+          const userInfoResponse = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`,
+            { withCredentials: true }
+          );
+
+          console.log("사용자 정보 API 응답:", userInfoResponse.data);
+
+          if (userInfoResponse.data.state === 200) {
+            // 전역 상태에 사용자 정보 저장
+            setUser(userInfoResponse.data, "local");
+            
+            console.log("사용자 정보 저장 완료 - 대시보드로 이동");
+            router.push("/dashboard");
+          } else {
+            showErrorModal("사용자 정보를 가져올 수 없습니다.");
+          }
+        } catch (userInfoError) {
+          console.error("사용자 정보 조회 실패:", userInfoError);
+          showErrorModal("사용자 정보 조회 중 오류가 발생했습니다.");
+        }
+
       } else {
+        console.log("로그인 실패 - state가 200이 아님");
         showErrorModal(message || "로그인에 실패했습니다.");
       }
+    } catch (error) {
+      console.error("로그인 실패:", error);
 
-  } catch (error) {
-    console.error("로그인 실패:", error);
-
-    if (error.response) {
-      const msg =
-        error.response.data?.message || "아이디 또는 비밀번호가 올바르지 않습니다.";
-      showErrorModal(msg);
-    } else {
-      showErrorModal("서버와 연결할 수 없습니다.");
+      if (error.response) {
+        const msg =
+          error.response.data?.message || "아이디 또는 비밀번호가 올바르지 않습니다.";
+        showErrorModal(msg);
+      } else {
+        showErrorModal("서버와 연결할 수 없습니다.");
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   // 카카오 로그인 버튼 클릭 시
   const handleKakaoLogin = () => {

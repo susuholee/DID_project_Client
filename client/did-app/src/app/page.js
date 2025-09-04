@@ -3,12 +3,67 @@
 import React, { useEffect, useRef } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import useUserStore from "@/Store/userStore";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function MainPage() {
   const sectionsRef = useRef([]);
-  const user = useUserStore((state) => state.user);
-  console.log("누구야",user)
-  const isLoggedIn = false;
+  const { user, isLoggedIn, setUser, setIsLoggedIn } = useUserStore();
+  const router = useRouter();
+  
+  console.log("현재 사용자:", user);
+  console.log("로그인 상태:", isLoggedIn);
+
+  // 경로 체크 및 카카오 로그인 처리
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    console.log("현재 경로:", currentPath);
+    
+    // 카카오 로그인 콜백 처리 (특정 경로에서만)
+    if (currentPath === '/signup/did') {
+      console.log("카카오 로그인 콜백 처리 시작");
+      
+      const checkAuth = async () => {
+        try {
+          const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, { 
+            withCredentials: true 
+          });
+          
+          console.log("사용자 정보:", res.data);
+          
+          const userData = {
+            id: res.data.id,
+            nickname: res.data.properties?.nickname,
+            profileImage: res.data.properties?.profile_image,
+            thumbnailImage: res.data.properties?.thumbnail_image,
+            provider: 'kakao'
+          };
+          
+          setUser(userData);
+          setIsLoggedIn(true);
+          router.replace("/signup/did");
+          
+        } catch (error) {
+          console.error("카카오 로그인 API 호출 오류:", error);
+          router.replace("/login?error=auth_failed");
+        }
+      };
+
+      checkAuth();
+      return;
+    }
+
+    // 사용자가 의도적으로 메인 페이지에 왔다면 그대로 보여줌
+    
+    // 만약 카카오 사용자인데 DID 정보가 불완전한 경우에만 리디렉션
+    if (isLoggedIn && user && user.provider === 'kakao') {
+      if (!user.name || !user.address || !user.birth) {
+        console.log("카카오 사용자 DID 정보 불완전 - /signup/did로 이동");
+        router.push("/signup/did");
+      }
+    }
+    
+  }, [isLoggedIn, user, router, setUser, setIsLoggedIn]);
 
   // 섹션 스크롤 애니메이션
   useEffect(() => {
@@ -70,7 +125,32 @@ export default function MainPage() {
               </p>
             </div>
             <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl animate-none">
-             <LoginForm />
+              {/* 로그인된 사용자에게는 대시보드 바로가기 버튼 표시 */}
+              {isLoggedIn && user ? (
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center">
+                  <div className="flex items-center justify-center mb-4">
+                    <img
+                      src={user.imgPath || '/images/default.png'}
+                      alt="프로필"
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    환영합니다, {user.nickName}님!
+                  </h3>
+                  <p className="text-white/80 mb-4">
+                    이미 로그인되어 있습니다.
+                  </p>
+                  <button
+                    onClick={() => router.push('/dashboard')}
+                    className="w-full bg-rose-500 hover:bg-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+                  >
+                    대시보드로 이동
+                  </button>
+                </div>
+              ) : (
+                <LoginForm />
+              )}
             </div>
           </div>
         </section>
@@ -79,7 +159,6 @@ export default function MainPage() {
         <section {...sectionProps(1, "bg-gray-50")}>
           <div className="mx-auto max-w-7xl">
             <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
-              {/* 수료증 이미지 */}
               <div className="flex-1 flex justify-center">
                 <div className="relative w-full max-w-md lg:max-w-lg">
                   <div className="transform hover:scale-105 transition-transform duration-300">
@@ -92,7 +171,6 @@ export default function MainPage() {
                 </div>
               </div>
               
-              {/* 설명 텍스트 */}
               <div className="flex-1 text-center lg:text-left">
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 lg:mb-6 text-rose-500">
                   수료증 발급 · 관리 자동화
@@ -104,8 +182,6 @@ export default function MainPage() {
                   <p className="text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed">
                     관리자는 <span className="text-rose-500 font-medium">운영 부담을 줄이고</span>, 학습자는 <span className="text-rose-500 font-medium">즉시 성과를 확인</span>할 수 있습니다.
                   </p>
-                  <div className="pt-4">
-                  </div>
                 </div>
               </div>
             </div>
