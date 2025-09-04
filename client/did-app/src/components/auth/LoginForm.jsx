@@ -9,7 +9,7 @@ import useUserStore from "@/Store/userStore";
 import axios from "axios";
 
 export default function LoginForm() {
-  const [idOrEmail, setIdOrEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -31,7 +31,7 @@ export default function LoginForm() {
   e.preventDefault();
   setLoading(true);
 
-  if (!idOrEmail.trim()) {
+  if (!userId.trim()) {
     showErrorModal("아이디를 입력해주세요.");
     setLoading(false);
     return;
@@ -46,7 +46,7 @@ export default function LoginForm() {
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/login`,
       {
-        userId: idOrEmail,
+        userid: userId,
         password,
       },
       { withCredentials: true }
@@ -55,10 +55,10 @@ export default function LoginForm() {
     const { state, message, data } = response.data;
 
       if (state === 200 && Array.isArray(data) && data.length > 0) {
-        const userData = data[0];
-        setUser(userData);
-        setIsLoggedIn(true);
-        router.push("/dashboard");
+      const userData = data[0];
+      setUser(userData);
+      setIsLoggedIn(true);
+      router.push("/dashboard"); 
       } else {
         showErrorModal(message || "로그인에 실패했습니다.");
       }
@@ -99,8 +99,8 @@ export default function LoginForm() {
               <Input
                 type="text"
                 required
-                value={idOrEmail}
-                onChange={(e) => setIdOrEmail(e.target.value)}
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
                 placeholder="아이디를 입력해주세요.."
                 disabled={loading}
               />
