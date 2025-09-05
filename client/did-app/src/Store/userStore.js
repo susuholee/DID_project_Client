@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 
 const useUserStore = create((set) => ({
   user: null,
@@ -114,6 +115,62 @@ const useUserStore = create((set) => ({
       const updatedUser = { ...state.user, ...updatedData };
       return { user: updatedUser };
     }),
+
+  // 서버에서 인증 상태 확인하는 함수 추가
+  checkAuthStatus: async () => {
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, {
+        withCredentials: true,
+      });
+      console.log('인증 상태 확인 응답:', response.data);
+      
+      if (response.data) {
+        // 응답 데이터가 있는 경우 (일반 계정 또는 카카오 계정)
+        let userData;
+        let userType;
+        
+        if (response.data.id && response.data.properties) {
+          // 카카오 계정인 경우
+          userData = {
+            id: response.data.id,
+            userName: `kakao_${response.data.id}`,
+            userId: `kakao_${response.data.id}`,
+            nickName: response.data.properties?.nickname || "카카오 사용자",
+            imgPath: response.data.properties?.profile_image || response.data.properties?.thumbnail_image,
+            type: "kakao",
+            kakaoData: response.data.properties,
+          };
+          userType = "kakao";
+        } else {
+          // 일반 계정인 경우 (서버에서 표준 사용자 정보 반환)
+          userData = response.data;
+          userType = "user";
+        }
+        
+        set(() => ({
+          user: userData,
+          userType: userType,
+          isLoggedIn: true,
+        }));
+        return true;
+      } else {
+        set(() => ({
+          user: null,
+          userType: null,
+          isLoggedIn: false,
+        }));
+        return false;
+      }
+    } catch (error) {
+      console.error('인증 상태 확인 실패:', error);
+      set(() => ({
+        user: null,
+        userType: null,
+        isLoggedIn: false,
+      }));
+      return false;
+    }
+  },
 }));
 
 export default useUserStore;

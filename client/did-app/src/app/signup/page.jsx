@@ -12,6 +12,63 @@ import ProgressBar from "@/components/UI/ProgressBar";
 import LoadingSpinner from "@/components/UI/Spinner";
 import useUserStore from "@/Store/userStore";
 
+export default function SignupPage() {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [nickName, setNickName] = useState("");
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [address, setAddress] = useState("");
+  const [addressDetail, setAddressDetail] = useState("");
+  const [imgPath, setImgPath] = useState(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [userIdCheckStatus, setUserIdCheckStatus] = useState(null); // 'checking', 'available', 'duplicate', null
+  const [isCheckingUserId, setIsCheckingUserId] = useState(false);
+  
+  const {setUser} = useUserStore.getState();
+  const router = useRouter();
+  
+  const registerMutation = useMutation({
+    mutationFn: ({ userData, imageFile }) => createUser(userData, imageFile),
+    onSuccess: async (data) => {
+      showErrorModal("회원가입이 완료되었습니다!");
+      
+      setUser(
+        {
+          userId: data.userId,
+          userName: data.userName,
+          nickName: data.nickName,
+          profile: data.imgPath, // 프로필 이미지 경로
+          type: "local",
+        }
+      );
+      
+      router.push('/'); // 메인 페이지로 이동
+    },
+    onError: (error) => {
+      console.error('회원가입 에러:', error);
+      
+      if (error.message.includes('500')) {
+        showErrorModal("서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } else if (error.message.includes('중복') || error.message.includes('이미 존재')) {
+        showErrorModal("이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.");
+        setCurrentStep(1);
+      } else if (error.message.includes('네트워크') || error.message.includes('연결')) {
+        showErrorModal("네트워크 연결을 확인하고 다시 시도해주세요.");
+      } else if (error.message.includes('프로필 사진은 필수입니다.')) {
+        showErrorModal("프로필 사진을 등록해주세요.");
+        setCurrentStep(4);
+      } else {
+        showErrorModal(error.message || "회원가입 중 오류가 발생했습니다.");
+      }
+  },
+});
+
 const createUser = async (userData, file) => {
   try {
     const formData = new FormData();
@@ -49,86 +106,36 @@ const createUser = async (userData, file) => {
   }
 };
 
+const checkUserIdDuplicate = async (userId) => {
+  try {
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`,
+    );
+    console.log("아이디 중복 확인 응답:", response.data);
+    
+    // 서버 응답 구조: {state: 404, message: 'no user'} 또는 {state: 200, data: {...}}
+    if (response.data.state === 404) {
+      // state가 404면 사용자가 존재하지 않는다는 뜻 (사용 가능)
+      return { isDuplicate: false, message: "사용 가능한 아이디입니다." };
+    } else if (response.data.state === 200) {
+      // state가 200이면 사용자가 존재한다는 뜻 (중복)
+      return { isDuplicate: true, message: "이미 사용 중인 아이디입니다." };
+    } else {
+      // 예상치 못한 응답
+      throw new Error("아이디 중복 확인 응답을 처리할 수 없습니다.");
+    }
+  } catch (error) {
+    console.error('아이디 중복 확인 오류:', error);
+    // 네트워크 오류 등
+    throw new Error("아이디 중복 확인 중 오류가 발생했습니다.");
+  }
+};
+
 const getInputStatus = (value, isValid, hasError = false) => {
   if (!value) return "";
   if (hasError) return "border-red-300 bg-red-50";
   return isValid ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50";
 };
-
-export default function SignupPage() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [nickName, setNickName] = useState("");
-  const [userId, setUserId] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [address, setAddress] = useState("");
-  const [addressDetail, setAddressDetail] = useState("");
-  const [imgPath, setImgPath] = useState(null);
-  const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const {setUser} = useUserStore.getState();
-  const router = useRouter();
-
-const registerMutation = useMutation({
-  mutationFn: ({ userData, imageFile }) => createUser(userData, imageFile),
-  onSuccess: async (data) => {
-    showErrorModal("회원가입이 완료되었습니다!");
-
-    setUser(
-      {
-        userId: data.userId,
-        userName: data.userName,
-        nickName: data.nickName,
-        profile: data.imgPath, // 프로필 이미지 경로
-        type: "local",
-      }
-    );
-
-    router.push('/'); // 메인 페이지로 이동
-  },
-  onError: (error) => {
-    console.error('회원가입 에러:', error);
-    
-    if (error.message.includes('500')) {
-      showErrorModal("서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
-    } else if (error.message.includes('중복') || error.message.includes('이미 존재')) {
-      showErrorModal("이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.");
-      setCurrentStep(1);
-    } else if (error.message.includes('네트워크') || error.message.includes('연결')) {
-      showErrorModal("네트워크 연결을 확인하고 다시 시도해주세요.");
-    } else if (error.message.includes('프로필 사진은 필수입니다.')) {
-      showErrorModal("프로필 사진을 등록해주세요.");
-      setCurrentStep(4);
-    } else {
-      showErrorModal(error.message || "회원가입 중 오류가 발생했습니다.");
-    }
-  },
-});
-
-
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        if (currentStep < 4) {
-          handleNext();
-        } else if (currentStep === 4) {
-          const submitButton = document.querySelector('button[type="submit"]');
-          if (submitButton && !submitButton.disabled) {
-            submitButton.click();
-          }
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyPress);
-    return () => document.removeEventListener("keydown", handleKeyPress);
-  }, [currentStep, nickName, userId, password, confirm, birthDate, address, selectedImageFile]);
 
   const pwdValid = useMemo(() => {
     const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':",.<>?]).{8,}$/;
@@ -156,8 +163,9 @@ const registerMutation = useMutation({
            userId.trim().length <= 16 &&
            userId === userId.trim() &&
            userIdRegex.test(userId.trim()) &&
-           !/(.)\1{2,}/.test(userId.trim());
-  }, [nickName, userId]);
+           !/(.)\1{2,}/.test(userId.trim()) &&
+           userIdCheckStatus === 'available'; // 중복체크 통과 조건 추가
+  }, [nickName, userId, userIdCheckStatus]);
 
   const step2Valid = useMemo(() => pwdOk, [pwdOk]);
 
@@ -184,6 +192,182 @@ const registerMutation = useMutation({
   const closeModal = () => {
     setShowModal(false);
     setModalMessage("");
+  };
+
+  const handleNext = useCallback(() => {
+    if (currentStep === 1) {
+      if (!step1Valid) {
+        if (!nickName.trim()) {
+          showErrorModal("닉네임을 입력해주세요.");
+          return;
+        }
+        if (nickName !== nickName.trim()) {
+          showErrorModal("닉네임의 앞뒤 공백을 제거해주세요.");
+          return;
+        }
+        if (nickName.trim().length < 2) {
+          showErrorModal("닉네임은 2자 이상 입력해주세요.");
+          return;
+        }
+        if (nickName.trim().length > 12) {
+          showErrorModal("닉네임은 12자 이하로 입력해주세요.");
+          return;
+        }
+        const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
+        if (!nickNameRegex.test(nickName.trim())) {
+          showErrorModal("닉네임은 한글, 영문, 숫자만 사용 가능합니다.");
+          return;
+        }
+        if (/(.)\1{2,}/.test(nickName.trim())) {
+          showErrorModal("닉네임에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
+          return;
+        }
+        if (/^\d+$/.test(nickName.trim())) {
+          showErrorModal("닉네임은 숫자로만 구성할 수 없습니다.");
+          return;
+        }
+        if (!userId.trim()) {
+          showErrorModal("아이디를 입력해주세요.");
+          return;
+        }
+        if (userId !== userId.trim()) {
+          showErrorModal("아이디의 앞뒤 공백을 제거해주세요.");
+          return;
+        }
+        if (userId.trim().length < 4) {
+          showErrorModal("아이디는 4자 이상 입력해주세요.");
+          return;
+        }
+        if (userId.trim().length > 16) {
+          showErrorModal("아이디는 16자 이하로 입력해주세요.");
+          return;
+        }
+        const userIdRegex = /^[a-zA-Z0-9]+$/;
+        if (!userIdRegex.test(userId.trim())) {
+          showErrorModal("아이디는 영문자와 숫자만 사용 가능합니다.");
+          return;
+        }
+        if (/(.)\1{2,}/.test(userId.trim())) {
+          showErrorModal("아이디에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
+          return;
+        }
+        if (userIdCheckStatus !== 'available') {
+          console.log('현재 userIdCheckStatus:', userIdCheckStatus);
+          showErrorModal("아이디 중복 확인을 해주세요.");
+          return;
+        }
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!step2Valid) {
+        if (!password.trim()) {
+          showErrorModal("비밀번호를 입력해주세요.");
+          return;
+        }
+        if (!pwdValid) {
+          showErrorModal("비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다.");
+          return;
+        }
+        if (!pwdOk) {
+          showErrorModal("비밀번호가 일치하지 않습니다.");
+          return;
+        }
+        return;
+      }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      if (!step3Valid) {
+        if (!birthDate) {
+          showErrorModal("생년월일을 선택해주세요.");
+          return;
+        }
+        
+        const today = new Date();
+        const birthDateObj = new Date(birthDate);
+        today.setHours(0, 0, 0, 0);
+        birthDateObj.setHours(0, 0, 0, 0);
+
+        if (birthDateObj.getTime() > today.getTime()) {
+          showErrorModal("생년월일이 올바르지 않습니다. 미래 날짜는 선택할 수 없습니다.");
+          return;
+        }
+        
+        if (!address.trim()) {
+          showErrorModal("주소를 입력해주세요.");
+          return;
+        }
+        return;
+      }
+      setCurrentStep(4);
+    } else if (currentStep === 4) {
+      if (!step4Valid) {
+        showErrorModal("프로필 사진은 필수입니다.");
+        return;
+      }
+    }
+  }, [currentStep, step1Valid, step2Valid, step3Valid, step4Valid, nickName, userId, password, confirm, birthDate, address, selectedImageFile, userIdCheckStatus, showErrorModal]);
+
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (currentStep < 4) {
+          handleNext();
+        } else if (currentStep === 4) {
+          const submitButton = document.querySelector('button[type="submit"]');
+          if (submitButton && !submitButton.disabled) {
+            submitButton.click();
+          }
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
+  }, [currentStep, handleNext]);
+
+  const handleUserIdCheck = async () => {
+    if (!userId.trim()) {
+      showErrorModal("아이디를 입력해주세요.");
+      return;
+    }
+
+    if (userId.trim().length < 4 || userId.trim().length > 16) {
+      showErrorModal("아이디는 4자 이상 16자 이하로 입력해주세요.");
+      return;
+    }
+
+    const userIdRegex = /^[a-zA-Z0-9]+$/;
+    if (!userIdRegex.test(userId.trim())) {
+      showErrorModal("아이디는 영문자와 숫자만 사용 가능합니다.");
+      return;
+    }
+
+    if (/(.)\1{2,}/.test(userId.trim())) {
+      showErrorModal("아이디에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
+      return;
+    }
+
+    setIsCheckingUserId(true);
+    setUserIdCheckStatus('checking');
+
+    try {
+      const result = await checkUserIdDuplicate(userId.trim());
+      console.log('중복체크 결과:', result);
+      setUserIdCheckStatus(result.isDuplicate ? 'duplicate' : 'available');
+      console.log('userIdCheckStatus 업데이트:', result.isDuplicate ? 'duplicate' : 'available');
+      
+      if (result.isDuplicate) {
+        showErrorModal(result.message);
+      }
+    } catch (error) {
+      console.error('아이디 중복 확인 오류:', error);
+      setUserIdCheckStatus(null);
+      showErrorModal(error.message);
+    } finally {
+      setIsCheckingUserId(false);
+    }
   };
 
   const compressImage = useCallback((file, maxSize = 150, quality = 0.7) => {
@@ -267,115 +451,6 @@ const registerMutation = useMutation({
       e.target.value = '';
       setImgPath(null);
       setSelectedImageFile(null);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentStep === 1) {
-      if (!step1Valid) {
-        if (!nickName.trim()) {
-          showErrorModal("닉네임을 입력해주세요.");
-          return;
-        }
-        if (nickName !== nickName.trim()) {
-          showErrorModal("닉네임의 앞뒤 공백을 제거해주세요.");
-          return;
-        }
-        if (nickName.trim().length < 2) {
-          showErrorModal("닉네임은 2자 이상 입력해주세요.");
-          return;
-        }
-        if (nickName.trim().length > 12) {
-          showErrorModal("닉네임은 12자 이하로 입력해주세요.");
-          return;
-        }
-        const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
-        if (!nickNameRegex.test(nickName.trim())) {
-          showErrorModal("닉네임은 한글, 영문, 숫자만 사용 가능합니다.");
-          return;
-        }
-        if (/(.)\1{2,}/.test(nickName.trim())) {
-          showErrorModal("닉네임에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
-          return;
-        }
-        if (/^\d+$/.test(nickName.trim())) {
-          showErrorModal("닉네임은 숫자로만 구성할 수 없습니다.");
-          return;
-        }
-        if (!userId.trim()) {
-          showErrorModal("아이디를 입력해주세요.");
-          return;
-        }
-        if (userId !== userId.trim()) {
-          showErrorModal("아이디의 앞뒤 공백을 제거해주세요.");
-          return;
-        }
-        if (userId.trim().length < 4) {
-          showErrorModal("아이디는 4자 이상 입력해주세요.");
-          return;
-        }
-        if (userId.trim().length > 16) {
-          showErrorModal("아이디는 16자 이하로 입력해주세요.");
-          return;
-        }
-        const userIdRegex = /^[a-zA-Z0-9]+$/;
-        if (!userIdRegex.test(userId.trim())) {
-          showErrorModal("아이디는 영문자와 숫자만 사용 가능합니다.");
-          return;
-        }
-        if (/(.)\1{2,}/.test(userId.trim())) {
-          showErrorModal("아이디에 같은 문자를 3번 이상 연속 사용할 수 없습니다.");
-          return;
-        }
-        return;
-      }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      if (!step2Valid) {
-        if (!password.trim()) {
-          showErrorModal("비밀번호를 입력해주세요.");
-          return;
-        }
-        if (!pwdValid) {
-          showErrorModal("비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다.");
-          return;
-        }
-        if (!pwdOk) {
-          showErrorModal("비밀번호가 일치하지 않습니다.");
-          return;
-        }
-        return;
-      }
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      if (!step3Valid) {
-        if (!birthDate) {
-          showErrorModal("생년월일을 선택해주세요.");
-          return;
-        }
-        
-        const today = new Date();
-        const birthDateObj = new Date(birthDate);
-        today.setHours(0, 0, 0, 0);
-        birthDateObj.setHours(0, 0, 0, 0);
-
-        if (birthDateObj.getTime() > today.getTime()) {
-          showErrorModal("생년월일이 올바르지 않습니다. 미래 날짜는 선택할 수 없습니다.");
-          return;
-        }
-        
-        if (!address.trim()) {
-          showErrorModal("주소를 입력해주세요.");
-          return;
-        }
-        return;
-      }
-      setCurrentStep(4);
-    } else if (currentStep === 4) {
-      if (!step4Valid) {
-        showErrorModal("프로필 사진은 필수입니다.");
-        return;
-      }
     }
   };
 
@@ -500,18 +575,32 @@ const registerMutation = useMutation({
 
               <div>
                 <label className="block text-sm font-medium mb-2" htmlFor="userId">아이디</label>
-                <Input
-                  id="userId"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  placeholder="영문/숫자 4-16자"
-                  className={`h-12 text-base ${getInputStatus(
-                    userId,
-                    userId.trim().length >= 4 && userId.trim().length <= 16 && /^[a-zA-Z0-9]+$/.test(userId.trim()) && !/(.)\1{2,}/.test(userId.trim()),
-                    userId && (userId !== userId.trim() || userId.trim().length < 4 || userId.trim().length > 16 || !/^[a-zA-Z0-9]+$/.test(userId.trim()) || /(.)\1{2,}/.test(userId.trim()))
-                  )}`}
-                  aria-label="아이디 입력"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="userId"
+                    value={userId}
+                    onChange={(e) => {
+                      setUserId(e.target.value);
+                      setUserIdCheckStatus(null); // 아이디 변경 시 중복체크 상태 초기화
+                    }}
+                    placeholder="영문/숫자 4-16자"
+                    className={`flex-1 h-12 text-base ${getInputStatus(
+                      userId,
+                      userId.trim().length >= 4 && userId.trim().length <= 16 && /^[a-zA-Z0-9]+$/.test(userId.trim()) && !/(.)\1{2,}/.test(userId.trim()) && userIdCheckStatus === 'available',
+                      userId && (userId !== userId.trim() || userId.trim().length < 4 || userId.trim().length > 16 || !/^[a-zA-Z0-9]+$/.test(userId.trim()) || /(.)\1{2,}/.test(userId.trim()) || userIdCheckStatus === 'duplicate')
+                    )}`}
+                    aria-label="아이디 입력"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleUserIdCheck}
+                    disabled={isCheckingUserId || !userId.trim() || userId.trim().length < 4 || userId.trim().length > 16 || !/^[a-zA-Z0-9]+$/.test(userId.trim()) || /(.)\1{2,}/.test(userId.trim())}
+                    className="bg-blue-500 text-white hover:bg-blue-600 px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                    aria-label="아이디 중복 확인"
+                  >
+                    {isCheckingUserId ? "확인중..." : "중복확인"}
+                  </Button>
+                </div>
                 
                 <div className="mt-1">
                   {userId && userId !== userId.trim() && (
@@ -529,8 +618,14 @@ const registerMutation = useMutation({
                   {userId && /(.)\1{2,}/.test(userId.trim()) && (
                     <p className="text-xs text-red-600" role="alert">같은 문자를 3번 이상 연속 사용할 수 없습니다</p>
                   )}
-                  {userId.trim().length >= 4 && userId.trim().length <= 16 && /^[a-zA-Z0-9]+$/.test(userId.trim()) && !/(.)\1{2,}/.test(userId.trim()) && (
-                    <p className="text-xs text-green-600">올바른 아이디 형식입니다</p>
+                  {userIdCheckStatus === 'available' && (
+                    <p className="text-xs text-green-600">사용 가능한 아이디입니다</p>
+                  )}
+                  {userIdCheckStatus === 'duplicate' && (
+                    <p className="text-xs text-red-600">이미 사용 중인 아이디입니다</p>
+                  )}
+                  {userIdCheckStatus === 'checking' && (
+                    <p className="text-xs text-blue-600">중복 확인 중...</p>
                   )}
                 </div>
               </div>

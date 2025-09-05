@@ -4,113 +4,138 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import useUserStore from "@/Store/userStore";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 
 // Suspense로 감쌀 메인 대시보드 컴포넌트
 function DashboardContent() {
   const searchParams = useSearchParams();
+  
+  // 전역 상태에서 사용자 정보 가져오기
+  const user = useUserStore((state) => state.user);
+  const isLoggedIn = useUserStore((state) => state.isLoggedIn);
+  const notifications = useUserStore((state) => state.notifications);
 
-  const [user, setUser] = useState(null);
-  const [notifications, setNotifications] = useState([]);
+  // 사용자 더미 데이터 (지갑 정보 등 추가 데이터)
+  const [userData, setUserData] = useState(null);
 
-  // 사용자 더미 데이터
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-    if (!currentUser) return;
-    setUser({
-      ...currentUser,
-      did: currentUser.did || "did:ethr:0x1234567890abcdef1234567890abcdef12345678",
-      wallet: currentUser.wallet || "0x7474cd35c569c0532fe5b966f37daf59c145b5cf",
+    if (!user || !isLoggedIn) return;
+    
+    setUserData({
+      ...user,
+      did: user.did || "did:ethr:0x1234567890abcdef1234567890abcdef12345678",
+      wallet: user.wallet || "0x7474cd35c569c0532fe5b966f37daf59c145b5cf",
       stats: { totalVCs: 3, verified: 2, pending: 1, onChain: 3 },
       // 관리자 승인 후 발급된 인증서들 (verified 상태만)
       certificates: [
         {
           id: 1,
           title: "블록체인 개발자 자격증",
-          issuer: "한국블록체인협회",
+          issuer: "경일IT게임아카데미",
           date: "2024-03-15",
           status: "verified",
           approvedAt: "2024-03-15T10:30:00"
         },
         {
           id: 2,
-          title: "컴퓨터공학 학사",
-          issuer: "한국대학교",
-          date: "2023-02-28",
+          title: "웹 개발 전문가 수료증",
+          issuer: "경일IT게임아카데미",
+          date: "2024-03-10",
           status: "verified",
           approvedAt: "2024-03-10T14:20:00"
         },
         {
           id: 3,
-          title: "한식 수료증",
-          issuer: "수호 아카데미",
-          date: "2024-01-28",
+          title: "게임 개발 수료증",
+          issuer: "경일IT게임아카데미",
+          date: "2024-03-08",
           status: "verified",
           approvedAt: "2024-03-08T09:15:00"
         },
         {
           id: 4,
-          title: "일식 수료증",
-          issuer: "수호 아카데미",
-          date: "2024-01-27",
+          title: "데이터 분석 수료증",
+          issuer: "경일IT게임아카데미",
+          date: "2024-03-05",
           status: "verified",
           approvedAt: "2024-03-05T16:45:00"
         },
         {
           id: 5,
-          title: "중식 수료증",
-          issuer: "수호 아카데미",
-          date: "2024-01-26",
+          title: "AI/ML 개발 수료증",
+          issuer: "경일IT게임아카데미",
+          date: "2024-03-01",
           status: "verified",
           approvedAt: "2024-03-01T11:30:00"
-        }
-      ],
-      // 대기 중인 신청서들 (별도 관리)
-      pendingApplications: [
-        {
-          id: 101,
-          title: "파이썬 프로그래밍 수료증",
-          issuer: "코딩아카데미",
-          requestedAt: "2024-03-18",
-          status: "pending"
         },
         {
-          id: 102,
-          title: "웹 디자인 수료증",
-          issuer: "디자인스쿨",
-          requestedAt: "2024-03-17",
-          status: "pending"
+          id: 6,
+          title: "모바일 앱 개발 수료증",
+          issuer: "경일IT게임아카데미",
+          date: "2024-02-25",
+          status: "verified",
+          approvedAt: "2024-02-25T13:20:00"
+        },
+        {
+          id: 7,
+          title: "클라우드 컴퓨팅 수료증",
+          issuer: "경일IT게임아카데미",
+          date: "2024-02-20",
+          status: "verified",
+          approvedAt: "2024-02-20T16:45:00"
         }
-      ]
+      ],
     });
+  }, [user, isLoggedIn]);
 
-    // 알림 로딩 추가
-    const savedNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    setNotifications(savedNotifications);
-  }, []);
+  if (!user || !isLoggedIn || !userData) return <p className="text-center mt-10">로딩 중...</p>;
 
-  // 로컬스토리지 변경 감지
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const savedNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-      setNotifications(savedNotifications);
-    };
+  const displayName = user.nickName || user.name || user.userName;
+  const certs = Array.isArray(userData?.certificates) ? userData.certificates : [];
+  const pendingApps = Array.isArray(userData?.pendingApplications) ? userData.pendingApplications : [];
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  // 차트 데이터 생성 함수 (더미 데이터 포함)
+  const generateChartData = () => {
+    const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
+    
+    // 더미 데이터로 차트를 풍부하게 만들기
+    const dummyData = [2, 5, 3, 8, 6, 4, 1]; // 각 요일별 더미 발급 수
+    
+    return daysOfWeek.map((day, index) => {
+      // 실제 데이터와 더미 데이터 합산
+      const actualIssued = certs.filter(cert => {
+        const certDate = new Date(cert.approvedAt);
+        return certDate.getDay() === index;
+      }).length;
+      
+      return {
+        name: day,
+        issued: actualIssued + dummyData[index]
+      };
+    });
+  };
 
-  // 알림 상태 변경 시 로컬스토리지에 저장
-  useEffect(() => {
-    if (notifications.length > 0) {
-      localStorage.setItem('notifications', JSON.stringify(notifications));
-    }
-  }, [notifications]);
+  const chartData = generateChartData();
 
-  if (!user) return <p className="text-center mt-10">로딩 중...</p>;
+  // 파이 차트 데이터 (수료증 유형별 통계)
+  const pieData = [
+    { name: '블록체인 개발', value: 2, color: '#f43f5e' },
+    { name: '웹 개발', value: 2, color: '#3b82f6' },
+    { name: '데이터 분석', value: 1, color: '#10b981' },
+    { name: '게임 개발', value: 1, color: '#f59e0b' },
+    { name: 'AI/ML', value: 1, color: '#8b5cf6' }
+  ];
 
-  const displayName = user.isKakaoUser ?? user.name ?? user.userName;
-  const certs = Array.isArray(user?.certificates) ? user.certificates : [];
-  const pendingApps = Array.isArray(user?.pendingApplications) ? user.pendingApplications : [];
+  // 라인 차트 데이터 (월별 발급 추이)
+  const lineData = [
+    { month: '1월', issued: 2 },
+    { month: '2월', issued: 4 },
+    { month: '3월', issued: 6 },
+    { month: '4월', issued: 8 },
+    { month: '5월', issued: 5 },
+    { month: '6월', issued: 7 }
+  ];
 
   // 최근 발급된 인증서 (관리자 승인 후 발급) - 최신 5개만
   const recentIssuedCerts = certs
@@ -118,19 +143,19 @@ function DashboardContent() {
     .sort((a, b) => new Date(b.approvedAt) - new Date(a.approvedAt)) // 승인일 기준 최신순
     .slice(0, 5); // 상위 5개만
 
-  // 통계 계산
+  // 통계 계산 (더미 데이터 포함)
   const stats = {
     todayIssued: certs.filter(cert => {
       const today = new Date().toDateString();
       return new Date(cert.approvedAt).toDateString() === today;
-    }).length,
+    }).length + 3, // 더미 데이터 추가
     last30Days: certs.filter(cert => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       return new Date(cert.approvedAt) >= thirtyDaysAgo;
-    }).length,
-    totalIssued: certs.length,
-    pendingCount: pendingApps.length
+    }).length + 15, // 더미 데이터 추가
+    totalIssued: certs.length + 25, // 더미 데이터 추가
+    pendingCount: pendingApps.length + 2 // 더미 데이터 추가
   };
 
   const copyToClipboard = (text) => {
@@ -148,191 +173,378 @@ function DashboardContent() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
-        <div className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
-          {/* 환영 */}
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              환영합니다, {user.nickName ?? user.name}님
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600">
-              분산 신원 증명(DID) 기반 수료증 관리 플랫폼입니다. 블록체인으로 안전하게
-              보호된 당신의 자격증명을 관리하세요.
-            </p>
+      <main className="min-h-screen bg-gray-50 lg:ml-64">
+        <div className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
+          {/* 헤더 섹션 */}
+          <div className="mb-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                    안녕하세요, {displayName}님
+                  </h1>
+                  <p className="text-gray-600 text-base lg:text-lg">
+                    수료증 관리 대시보드에 오신 것을 환영합니다.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between lg:justify-end lg:space-x-6">
+                  <div className="text-center lg:text-right">
+                    <p className="text-sm text-gray-500 mb-1">총 발급된 수료증</p>
+                    <p className="text-2xl lg:text-3xl font-bold text-rose-500">{stats.totalIssued}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* 메인 그리드 */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-            {/* VC 목록 */}
-            <section className="col-span-1 lg:col-span-8 space-y-4 lg:space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            {/* 메인 콘텐츠 */}
+            <section className="col-span-1 xl:col-span-8 space-y-6">
 
-              {/* 인증서 발급 통계 */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-6">인증서 발급 통계</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">오늘 발급 건수</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.todayIssued}</p>
+              {/* 통계 카드 */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-2">오늘 발급</p>
+                      <p className="text-3xl font-bold text-gray-900">{stats.todayIssued}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-blue-500 rounded"></div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">지난 30일간 발급 건수</p>
-                    <p className="text-3xl font-bold text-blue-600">{stats.last30Days}</p>
+                </div>
+                <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-2">30일간 발급</p>
+                      <p className="text-3xl font-bold text-gray-900">{stats.last30Days}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-green-500 rounded"></div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">총 발급 건수</p>
-                    <p className="text-3xl font-bold text-green-600">{stats.totalIssued}</p>
+                </div>
+                <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-2">총 발급</p>
+                      <p className="text-3xl font-bold text-rose-500">{stats.totalIssued}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-rose-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-rose-500 rounded"></div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">승인 대기 중</p>
-                    <p className="text-3xl font-bold text-orange-600">{stats.pendingCount}</p>
+                </div>
+                <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-2">승인 대기</p>
+                      <p className="text-3xl font-bold text-gray-900">{stats.pendingCount}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-yellow-500 rounded"></div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* 최근 발급된 VC 목록 (관리자 승인 후) */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
+              {/* 수료증 발급 현황 차트 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-lg font-bold">최근 발급된 VC 목록</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-1">수료증 발급 현황</h2>
+                    <p className="text-sm text-gray-500">요일별 발급된 수료증 수</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="hidden lg:flex items-center space-x-6">
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">오늘 발급</p>
+                      <p className="text-lg font-bold text-blue-500">{stats.todayIssued}개</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">30일간 총 발급</p>
+                      <p className="text-lg font-bold text-rose-500">{stats.last30Days}개</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">전체 발급</p>
+                      <p className="text-lg font-bold text-gray-900">{stats.totalIssued}개</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Recharts 바 차트 */}
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        tickFormatter={(value) => `${value}개`}
+                      />
+                      <Tooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                                {`${payload[0].value}개 발급`}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="issued" 
+                        fill="#f43f5e" 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* 최근 발급된 VC 목록 (관리자 승인 후) */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-1">발급된 수료증</h2>
+                    <p className="text-sm text-gray-500">최근 발급된 수료증 목록입니다</p>
+                  </div>
+                  <div className="flex gap-3">
                     <Link
                       href="/certificates/issue"
-                      className="px-4 py-2 bg-black text-white rounded-lg hover:bg-rose-500 text-sm font-medium"
+                      className="px-4 py-2 bg-rose-500 text-white text-sm font-medium rounded-lg hover:bg-rose-600 transition-colors"
                     >
-                      발급 요청
+                      새 발급 요청
                     </Link>
                   </div>
                 </div>
 
                 {recentIssuedCerts.length > 0 ? (
-                  <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-3">
                     {recentIssuedCerts.map((cert, idx) => (
                       <div
                         key={cert.id || idx}
-                        className="border border-gray-200 rounded-xl p-3 sm:p-4 hover:shadow-md transition-all cursor-pointer group"
+                        className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-                            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-medium bg-green-100 border-2 border-green-300 text-green-700">
-                              발급됨
+                        <div className="flex items-center justify-between gap-4">
+                          {/* 왼쪽: 아이콘과 기본 정보 */}
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <div className="w-5 h-5 bg-green-500 rounded"></div>
                             </div>
-
+                            
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                              <h3 className="text-base font-semibold text-gray-900 mb-1 truncate">
                                 {cert.title}
                               </h3>
-                              <div className="mt-1 space-y-0.5 sm:space-y-1">
-                                <p className="text-xs sm:text-sm text-gray-600">
-                                  <span className="font-medium">발급기관:</span> {cert.issuer}
-                                </p>
-                                <p className="text-xs sm:text-sm text-gray-600">
-                                  <span className="font-medium">발급일:</span> {cert.date}
-                                </p>
-                                <p className="text-xs sm:text-sm text-gray-500">
-                                  <span className="font-medium">승인일:</span> {formatDate(cert.approvedAt)}
-                                </p>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-gray-500">
+                                <span className="font-medium">{cert.issuer}</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span>{cert.date}</span>
                               </div>
                             </div>
+                          </div>
+
+                          {/* 오른쪽: 상태와 액션 */}
+                          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
+                            <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                              발급 완료
+                            </div>                      
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <Link
-                    href="/certificates/issue"
-                    className="group relative block border-2 border-double border-gray-300 rounded-2xl p-8 sm:p-10 text-center hover:border-rose-400 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                  >
-                    <div className="mx-auto mb-4 px-5 py-3 rounded-full group-hover:scale-105 transition-transform duration-300">
-                      <span className="text-xl sm:text-2xl font-bold text-rose-500">발급하기</span>
+                  <div className="text-center py-16">
+                    <div className="mx-auto mb-6 w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 bg-gray-400 rounded"></div>
                     </div>
-                    <p className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-rose-500 transition-colors">
-                      첫 수료증을 발급해보세요
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                      아직 발급된 수료증이 없습니다
+                    </h3>
+                    <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                      블록체인 기반의 안전하고 신뢰할 수 있는 수료증을 발급받아보세요.
                     </p>
-                    <p className="text-sm text-gray-600 mt-2 group-hover:text-gray-800 transition-colors">
-                      클릭하여 수료증 발급 요청이 시작됩니다.
-                    </p>
-                  </Link>
+                    <Link
+                      href="/certificates/issue"
+                      className="inline-flex items-center px-6 py-3 bg-rose-500 text-white font-medium rounded-lg hover:bg-rose-600 transition-colors"
+                    >
+                      발급 요청하기
+                    </Link>
+                  </div>
                 )}
               </div>
 
             </section>
 
             {/* 사이드 패널 */}
-            {/* <aside className="col-span-1 lg:col-span-4 space-y-4 lg:space-y-6">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
-                  DID 신원 정보
-                </h3>
-
-                <div className="text-center mb-4">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                    {user?.profile ? (
+            <aside className="col-span-1 xl:col-span-4 space-y-6">
+              {/* 사용자 & 지갑 통합 카드 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                {/* 사용자 프로필 헤더 */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                    {user?.imgPath || user?.kakaoData?.profile_image ? (
                       <img
-                        src={user.profile}
+                        src={user.imgPath || user.kakaoData?.profile_image}
                         alt="프로필"
-                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover"
+                        className="w-16 h-16 rounded-lg object-cover"
                       />
                     ) : (
-                      <span className="text-white text-lg sm:text-xl font-bold">
-                        {displayName?.charAt(0) || "U"}
+                      <span className="text-gray-600 text-xl font-bold">
+                        {displayName?.charAt(0) || 'U'}
                       </span>
                     )}
                   </div>
-                  <h4 className="font-semibold text-gray-900">{user.userName ?? user.name}</h4>
-                  <div className="flex items-center justify-center gap-2 mt-2">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {displayName || '사용자'}
+                    </h3>
+                    <p className="text-sm text-gray-500">Sealium 사용자</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-green-600 font-medium">온라인</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      DID 식별자
-                    </label>
-                    <div className="mt-1 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                      <p className="text-xs font-mono text-gray-700 break-all flex-1">
-                        {user.did}
-                      </p>
+                {/* 지갑 정보 */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-gray-700">지갑 정보</p>
+                    <span className="text-xs text-gray-500">Avalanche C-Chain</span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-mono text-gray-900 font-medium">
+                            {userData.wallet?.slice(0, 7)}...{userData.wallet?.slice(-4)}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">지갑 주소</p>
+                        </div>
+                      </div>
                       <button
-                        onClick={() => copyToClipboard(user.did)}
-                        className="ml-2 px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded text-gray-600 hover:text-gray-800"
-                        title="복사"
+                        onClick={() => copyToClipboard(userData.wallet)}
+                        className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                        title="전체 주소 복사"
                       >
                         복사
                       </button>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      지갑 주소
-                    </label>
-                    <div className="mt-1 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                      <p className="text-xs font-mono text-gray-700 break-all flex-1">
-                        {user.wallet}
-                      </p>
-                      <button
-                        onClick={() => copyToClipboard(user.wallet)}
-                        className="ml-2 px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded text-gray-600 hover:text-gray-800"
-                        title="복사"
+              </div>
+
+              {/* 수료증 유형별 통계 (파이 차트) */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">수료증 유형별 통계</h3>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
                       >
-                        복사
-                      </button>
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                                {data.name}: {data.value}개
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {pieData.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{backgroundColor: item.color}}></div>
+                        <span className="text-gray-700">{item.name}</span>
+                      </div>
+                      <span className="font-medium text-gray-900">{item.value}개</span>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      연결된 네트워크
-                    </label>
-                    <div className="mt-1 flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm text-gray-700">아발란체</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </aside> */}
+
+              {/* 월별 발급 추이 (라인 차트) */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">월별 발급 추이</h3>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={lineData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="month" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: '#6b7280' }}
+                        tickFormatter={(value) => `${value}개`}
+                      />
+                      <Tooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                                {label}: {payload[0].value}개 발급
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="issued" 
+                        stroke="#f43f5e" 
+                        strokeWidth={3}
+                        dot={{ fill: '#f43f5e', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6, stroke: '#f43f5e', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+  
+            </aside>
           </div>
         </div>
       </main>
@@ -343,9 +555,9 @@ function DashboardContent() {
 // Loading fallback 컴포넌트
 function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 lg:ml-64 flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 mx-auto mb-4"></div>
         <p className="text-gray-600">대시보드를 불러오는 중...</p>
       </div>
     </div>
@@ -361,113 +573,6 @@ export default function DashboardPage() {
   );
 }
 
-function NotificationBell({ notifications, setNotifications }) {
-  const btnRef = useRef(null);
-  const popRef = useRef(null);
-  const [open, setOpen] = useState(false);
-
-  // 안 읽은 개수
-  const unread = notifications.filter((n) => !n.read).length;
-
-  // 바깥 클릭 닫기
-  useEffect(() => {
-    const onDown = (e) => {
-      if (!open) return;
-      const withinBtn = btnRef.current && btnRef.current.contains(e.target);
-      const withinPop = popRef.current && popRef.current.contains(e.target);
-      if (!withinBtn && !withinPop) setOpen(false);
-    };
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
-
-  const toggleOneRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  return (
-    <div className="relative">
-      <button
-        ref={btnRef}
-        onClick={() => setOpen((v) => !v)}
-        className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 relative"
-        aria-label="알림"
-      >
-        <Image src="/icons/bell.png" width={20} height={20} alt="알림" />
-        {unread > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full font-semibold">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div
-          ref={popRef}
-          className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden"
-        >
-          <div className="flex items-center justify-between px-3 py-2 border-b">
-            <span className="text-sm font-semibold">알림</span>
-            <div className="flex items-center gap-2">
-              {notifications.length > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="text-xs text-gray-600 hover:text-gray-900"
-                >
-                  모두 읽음
-                </button>
-              )}
-              {notifications.length > 0 && (
-                <button
-                  onClick={clearAll}
-                  className="text-xs text-red-500 hover:text-red-600"
-                >
-                  전체 삭제
-                </button>
-              )}
-            </div>
-          </div>
-
-          {notifications.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500">새 알림이 없습니다.</div>
-          ) : (
-            <ul className="max-h-[60vh] overflow-auto divide-y">
-              {notifications.map((n) => (
-                <li
-                  key={n.id}
-                  className={`p-3 hover:bg-gray-50 cursor-pointer ${!n.read ? "bg-amber-50" : ""
-                    }`}
-                  onClick={() => toggleOneRead(n.id)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{n.title}</p>
-                      <p className="text-sm text-gray-700 mt-0.5 break-words">{n.message}</p>
-                      <p className="text-[11px] text-gray-500 mt-1">{formatRelativeTime(n.ts)}</p>
-                    </div>
-                    {!n.read && (
-                      <span className="mt-0.5 shrink-0 w-2 h-2 rounded-full bg-amber-500" />
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* 유틸: 상대 시간 포맷 */
 function formatRelativeTime(ts) {

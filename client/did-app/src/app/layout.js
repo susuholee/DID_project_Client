@@ -1,12 +1,11 @@
 'use client';
-
 import { usePathname } from 'next/navigation';
-import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import './globals.css';
 import Sidebar from '@/components/layout/Sidebar';
+import ClientNav from '@/components/layout/ClientNav';
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
@@ -24,6 +23,7 @@ export default function RootLayout({ children }) {
             <>{children}</>
           ) : (
             <div className="flex min-h-screen">
+              <ClientNav />
               <div className="flex flex-col flex-1">
                 <Sidebar />
                 <main className="flex-1">{children}</main>

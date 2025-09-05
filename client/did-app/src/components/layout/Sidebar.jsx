@@ -2,13 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useMemo } from 'react';
-import NotificationBell from '@/components/UI/NotificationBell';
+import { useState, useEffect } from 'react';
 import useUserStore from '@/Store/userStore';
 
 export default function UserSidebar() {
   const pathname = usePathname();
-  const { user, userType, isLoggedIn, logout } = useUserStore();
+  const { user, logout } = useUserStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -16,33 +15,6 @@ export default function UserSidebar() {
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-
-
-  // 로그인 타입에 따른 사용자 이름 표시 (헤더에서 가져옴)
-  const displayName = useMemo(() => {
-    if (!user) return '사용자';
-    
-    // 카카오 로그인 사용자
-    if (user.isKakaoUser) {
-      return user.nickName || user.kakaoData?.nickname || '카카오 사용자';
-    }
-    
-    // 일반 로그인 사용자
-    return user.nickName || user.userName || user.name || '사용자';
-  }, [user]);
-
-  // 로그인 타입에 따른 프로필 이미지 (헤더에서 가져옴)
-  const profileImage = useMemo(() => {
-    if (!user) return '/images/default.png';
-    
-    // 카카오 로그인 사용자
-    if (user.isKakaoUser) {
-      return user.imgPath || user.kakaoData?.profile_image || '/images/default.png';
-    }
-    
-    // 일반 로그인 사용자
-    return user.imgPath || user.profile || '/images/default.png';
-  }, [user]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -178,39 +150,6 @@ const isActive = (href) => {
             </div>
           </button>
         </div>
-
-    
-
-
-        {/* 사용자 프로필 정보 */}
-        {user && (
-          <div className="p-4 bg-gray-50">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16  flex items-center justify-center shadow-lg">
-                {profileImage !== '/images/default.png' ? (
-                  <img
-                    src={profileImage}
-                    alt="프로필"
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                ) : (
-                  <span className="text-white font-bold text-xl">
-                    {displayName.charAt(0)}
-                  </span>
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">{displayName}</p>
-              </div>
-            </div>
-            
-              {/* 알림 벨 - 데스크톱에서만 표시 */}
-             <div className="hidden lg:flex items-center justify-between mt-3 p-2 bg-white rounded-lg shadow-sm">
-               <span className="text-xs font-medium text-gray-600">알림</span>
-               <NotificationBell />
-             </div>
-          </div>
-        )}
 
         {/* 메뉴 네비게이션 */}
         <nav className="p-4 pb-20">
