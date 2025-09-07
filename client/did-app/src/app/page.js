@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import useUserStore from "@/Store/userStore";
 import { useRouter } from "next/navigation";
@@ -116,7 +116,7 @@ export default function MainPage() {
               <p className="text-lg sm:text-xl lg:text-2xl font-semibold mb-2 lg:mb-4 drop-shadow-lg text-white/90">
                 당신의 신뢰를 봉인하는
               </p>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-tight text-rose-500 mb-4 lg:mb-5 drop-shadow-lg">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-tight text-cyan-500 mb-4 lg:mb-5 drop-shadow-lg">
                 Sealium
               </h1>
               <p className="text-base sm:text-lg lg:text-xl leading-relaxed max-w-2xl mx-auto lg:mx-0 drop-shadow-lg text-gray-200">
@@ -143,7 +143,7 @@ export default function MainPage() {
                   </p>
                   <button
                     onClick={() => router.push('/dashboard')}
-                    className="w-full bg-rose-500 hover:bg-rose-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+                    className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg"
                   >
                     대시보드로 이동
                   </button>
@@ -172,7 +172,7 @@ export default function MainPage() {
               </div>
               
               <div className="flex-1 text-center lg:text-left">
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 lg:mb-6 text-rose-500">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 lg:mb-6 text-cyan-500">
                   수료증 발급 · 관리 자동화
                 </h2>
                 <div className="space-y-4">
@@ -180,7 +180,7 @@ export default function MainPage() {
                     <span className="font-semibold text-gray-800">DID 인증 기반 시스템</span>으로 과정 종료 시 자동으로 수료증이 발급됩니다.
                   </p>
                   <p className="text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed">
-                    관리자는 <span className="text-rose-500 font-medium">운영 부담을 줄이고</span>, 학습자는 <span className="text-rose-500 font-medium">즉시 성과를 확인</span>할 수 있습니다.
+                    관리자는 <span className="text-cyan-500 font-medium">운영 부담을 줄이고</span>, 학습자는 <span className="text-cyan-500 font-medium">즉시 성과를 확인</span>할 수 있습니다.
                   </p>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export default function MainPage() {
         {/* 초고속 검증 */}
         <section {...sectionProps(2, "bg-white")}>
           <div className="mx-auto max-w-4xl lg:max-w-6xl text-center lg:text-left">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 lg:mb-6 text-rose-500">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 lg:mb-6 text-cyan-500">
               1초 만에 끝나는 신뢰 검증
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto lg:mx-0">

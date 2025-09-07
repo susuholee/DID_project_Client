@@ -49,6 +49,11 @@ export default function UserSidebar() {
   }, [isMobileMenuOpen]);
 
 const isActive = (href) => {
+  // 상세 페이지에서는 사이드바를 숨김
+  if (pathname?.includes('/certificates/detail')) {
+    return false;
+  }
+
   if (href === '/profile') {
     return pathname === '/profile';
   }
@@ -93,17 +98,19 @@ const isActive = (href) => {
   return (
     <>
       {/* 모바일 햄버거 메뉴 버튼 */}
-      <button
-        onClick={toggleMobileMenu}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
-        aria-label="메뉴 열기"
-      >
-        <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
-          <div className="w-5 h-0.5 bg-gray-500"></div>
-          <div className="w-5 h-0.5 bg-gray-500"></div>
-          <div className="w-5 h-0.5 bg-gray-500"></div>
-        </div>
-      </button>
+      {!pathname?.includes('/certificates/detail') && (
+        <button
+          onClick={toggleMobileMenu}
+          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+          aria-label="메뉴 열기"
+        >
+          <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
+            <div className="w-5 h-0.5 bg-gray-500"></div>
+            <div className="w-5 h-0.5 bg-gray-500"></div>
+            <div className="w-5 h-0.5 bg-gray-500"></div>
+          </div>
+        </button>
+      )}
 
       {/* 모바일 오버레이 */}
       {isMobileMenuOpen && (
@@ -118,7 +125,7 @@ const isActive = (href) => {
       <aside
         className={`
           fixed
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${pathname?.includes('/certificates/detail') ? '-translate-x-full' : isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           transition-transform duration-300 ease-in-out
           w-80 lg:w-64 h-screen
           bg-white
@@ -132,7 +139,7 @@ const isActive = (href) => {
           <div className="flex items-center space-x-3">
             <img src="/icons/sealium_logo.png" alt="Sealium" className="w-10 h-10" />
             <Link href="/">
-              <span className="text-2xl font-bold text-rose-500 tracking-tight">
+              <span className="text-2xl font-bold text-cyan-500 tracking-tight">
                 Sealium
               </span>
             </Link>
@@ -165,7 +172,7 @@ const isActive = (href) => {
                                              <div className={`
                          flex items-center justify-between px-4 py-3 text-sm rounded-xl transition-all duration-200 shadow-sm
                          ${isActive(item.href) 
-                           ? 'bg-rose-500 text-white font-semibold shadow-md transform scale-105' 
+                           ? 'bg-cyan-500 text-white font-semibold shadow-md transform scale-105' 
                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-md'
                          }
                        `}>
@@ -186,14 +193,14 @@ const isActive = (href) => {
         </nav>
                 {/* 하단 로그아웃 버튼 */}
          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white">
-               <button
-               onClick={handleLogout}
-               className="w-full flex items-center justify-center px-4 py-3 text-sm font-semibold text-white bg-rose-500 border-0 rounded-xl hover:bg-rose-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-             >
-            <div className="w-4 h-4 mr-2 relative">
-            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center px-4 py-3 text-sm font-semibold text-white bg-cyan-500 border-0 rounded-xl hover:bg-cyan-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+            >
+              <div className="w-4 h-4 mr-2 relative">
+              </div>
               로그아웃
-          </button>
+            </button>
         </div>
       </aside>
     </>

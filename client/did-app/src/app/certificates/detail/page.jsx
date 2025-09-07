@@ -81,10 +81,10 @@ function CertificateDetailContent() {
   const displayName = user?.isKakaoUser ? user?.nickname : user?.name || '사용자';
 
   const getStatusBadge = (status) => {
-    if (status === '유효') return 'bg-green-100 text-green-700 border-green-300';
+    if (status === '유효') return 'bg-cyan-100 text-cyan-700 border-cyan-300';
     if (status === '폐기') return 'bg-gray-100 text-gray-600 border-gray-200';
-    if (status === '만료') return 'bg-red-100 text-red-700 border-red-200';
-    if (status === '대기중') return 'bg-amber-100 text-amber-700 border-amber-200';
+    if (status === '만료') return 'bg-gray-100 text-gray-600 border-gray-200';
+    if (status === '대기중') return 'bg-cyan-50 text-cyan-600 border-cyan-200';
     return 'bg-gray-100 text-gray-600 border-gray-200';
   };
 
@@ -159,9 +159,9 @@ function CertificateDetailContent() {
 
   if (!certificate) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
           <p className="text-gray-600">수료증을 불러오는 중...</p>
         </div>
       </div>
@@ -170,23 +170,42 @@ function CertificateDetailContent() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-          <button
-            onClick={() => router.back()}
-            className="mb-6 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            돌아가기
-          </button>
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 hover:text-cyan-600 focus:z-10 focus:ring-2 focus:ring-cyan-200 transition-all duration-200 group"
+            >
+              <svg
+                className="w-5 h-5 mr-2 transform group-hover:-translate-x-1 transition-transform duration-200"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              목록으로 돌아가기
+            </button>
+            <div className="text-sm text-gray-500">
+              수료증 상세 정보
+            </div>
+          </div>
 
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-8 py-6 text-white">
+            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-8 py-6 text-white">
               <div className="flex items-start justify-between">
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold mb-2">
                     {certificate.title}
                   </h1>
-                  <p className="text-indigo-100 text-lg">
+                  <p className="text-cyan-100 text-lg">
                     {certificate.issuer}
                   </p>
                 </div>
@@ -201,14 +220,14 @@ function CertificateDetailContent() {
                       <>
                         <button
                           onClick={handleShare}
-                          className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors backdrop-blur-sm border border-white/30"
+                          className="px-4 py-2 bg-white text-cyan-600 rounded-lg hover:bg-cyan-50 transition-colors font-medium border border-white/50 shadow-sm"
                         >
                           공유하기
                         </button>
 
                         <button
                           onClick={openRevokeModal}
-                          className="px-4 py-2 bg-red-500/90 text-white rounded-lg hover:bg-red-600 transition-colors backdrop-blur-sm"
+                          className="px-4 py-2 bg-white/90 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium border border-white/50 shadow-sm"
                         >
                           폐기 요청
                         </button>
@@ -240,7 +259,7 @@ function CertificateDetailContent() {
                   className="hidden w-full h-96 bg-gray-50 flex-col items-center justify-center border-2 border-dashed border-gray-200"
                   style={{ display: 'none' }}
                 >
-                  <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
+                  <div className="w-20 h-20 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center mb-4">
                     <span className="text-white text-2xl font-bold">VC</span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -260,7 +279,7 @@ function CertificateDetailContent() {
       {shareModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
+            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-4">
               <h3 className="text-xl font-bold text-white flex items-center gap-2">
                 공유 링크
               </h3>
@@ -299,7 +318,7 @@ function CertificateDetailContent() {
                 </button>
                 <button
                   onClick={copyToClipboard}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-medium shadow-lg transform hover:-translate-y-0.5"
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 font-medium shadow-lg transform hover:-translate-y-0.5"
                 >
                   복사하기
                 </button>
@@ -313,7 +332,7 @@ function CertificateDetailContent() {
       {revokeModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-            <div className="bg-gradient-to-r from-red-500 to-pink-500 px-6 py-4">
+            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-4">
               <h3 className="text-xl font-bold text-white flex items-center gap-2">
                 폐기 요청
               </h3>
@@ -329,7 +348,7 @@ function CertificateDetailContent() {
                   onChange={(e) => setRevokeReason(e.target.value)}
                   rows={4}
                   placeholder="예) 오타가 있어요 / 정보 변경 필요 / 분실"
-                  className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none transition-all duration-300 bg-gray-50/50"
+                  className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all duration-300 bg-gray-50/50"
                 />
               </div>
 
@@ -344,7 +363,7 @@ function CertificateDetailContent() {
                 <button
                   onClick={handleRevoke}
                   disabled={!revokeReason.trim() || submitting}
-                  className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl hover:from-red-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg transform hover:-translate-y-0.5"
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg transform hover:-translate-y-0.5"
                 >
                   {submitting ? (
                     <span className="flex items-center gap-2">
@@ -367,9 +386,9 @@ function CertificateDetailContent() {
 // Loading fallback 컴포넌트
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
         <p className="text-gray-600">페이지를 불러오는 중...</p>
       </div>
     </div>

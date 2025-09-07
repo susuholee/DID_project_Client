@@ -259,39 +259,37 @@ export default function IssueCertificatePage() {
         formData.name.trim();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="max-w-3xl mx-auto py-8 px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">수료증 발급 요청</h1>
-          <p className="text-gray-600">기관에서 승인한 수료증 목록에서 선택하여 발급을 요청할 수 있습니다.</p>
-        </div>
-
-        <div className="space-y-8 bg-white p-8 rounded-2xl shadow-lg">
-          {/* 수료증 정보 섹션 */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">수료증 정보</h2>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <div className="flex-1 flex flex-col lg:ml-64">
+        <div className="flex-1 flex items-start justify-center py-8 px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-3xl">
+      
+            <form className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-200 space-y-8">
+              {/* 수료증 정보 섹션 */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">수료증 정보</h2>
             
-            {/* 수료증 선택 */}
-            <div>
-              <label className="block mb-2 text-sm font-semibold text-gray-700">
-                수료증 종류 <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="certificateId"
-                value={formData.certificateId}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-              >
-                <option value="" disabled>
-                  수료증을 선택하세요
-                </option>
-                {AVAILABLE_CERTIFICATES.map((cert) => (
-                  <option key={cert.id} value={cert.id}>
-                    {cert.name} ({cert.issuer})
+              {/* 수료증 선택 */}
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  수료증 종류 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="certificateId"
+                  value={formData.certificateId}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white"
+                >
+                  <option value="" disabled>
+                    수료증을 선택하세요
                   </option>
-                ))}
-              </select>
+                  {AVAILABLE_CERTIFICATES.map((cert) => (
+                    <option key={cert.id} value={cert.id}>
+                      {cert.name} ({cert.issuer})
+                    </option>
+                  ))}
+                </select>
             </div>
 
             {/* 발급 기관 */}
@@ -323,7 +321,7 @@ export default function IssueCertificatePage() {
                 onChange={handleChange}
                 required
                 rows={4}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -332,7 +330,7 @@ export default function IssueCertificatePage() {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">개인 정보</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block mb-2 text-sm font-semibold text-gray-700">
                   이름 <span className="text-red-500">*</span>
@@ -344,7 +342,7 @@ export default function IssueCertificatePage() {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
 
@@ -358,7 +356,7 @@ export default function IssueCertificatePage() {
                   value={formData.dateOfBirth}
                   onChange={handleChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -418,7 +416,7 @@ export default function IssueCertificatePage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors flex flex-col items-center"
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-cyan-500 hover:bg-cyan-50 transition-colors flex flex-col items-center"
                   >
                     <div className="w-8 h-8 text-gray-400 mb-2">
                       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -435,7 +433,7 @@ export default function IssueCertificatePage() {
 
           {/* 선택된 수료증 미리보기 */}
           {selectedCertificate && (
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 border border-indigo-200">
+            <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-6 border border-cyan-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">요청 정보 미리보기</h3>
               <div className="bg-white rounded-lg p-6 border space-y-4">
                 <div className="flex justify-between items-start">
@@ -475,7 +473,7 @@ export default function IssueCertificatePage() {
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="w-full bg-rose-500 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+              className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 hover:from-cyan-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-lg transform hover:-translate-y-0.5"
             >
               {!canSubmit ? "모든 필수 정보를 입력해주세요" : "발급 요청하기"}
             </button>
@@ -485,11 +483,12 @@ export default function IssueCertificatePage() {
                 <span className="text-red-500">*</span> 표시된 항목들을 모두 입력해주세요.
               </div>
             )}
-                     </div>
-         </div>
-       </div>
+              </div>
+            </form>
+          </div>
+        </div>
 
-               {/* 모달 */}
+        {/* 모달 */}
         <Modal
           isOpen={showModal}
           onClose={() => modalType !== "loading" && setShowModal(false)}
@@ -499,45 +498,46 @@ export default function IssueCertificatePage() {
             "처리 중"
           }
         >
-          <div className="p-6">
-            <div className={`text-center ${
-              modalType === "success" ? "text-green-600" : 
-              modalType === "error" ? "text-red-600" : 
-              "text-blue-600"
-            }`}>
-              <div className="mb-4">
-                {modalType === "success" ? (
-                  <svg className="w-12 h-12 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : modalType === "error" ? (
-                  <svg className="w-12 h-12 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <div className="w-12 h-12 mx-auto">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  </div>
-                )}
-              </div>
-              <p className="text-lg font-medium">{modalMessage}</p>
+        <div className="p-6">
+          <div className={`text-center ${
+            modalType === "success" ? "text-green-600" : 
+            modalType === "error" ? "text-red-600" : 
+            "text-blue-600"
+          }`}>
+            <div className="mb-4">
+              {modalType === "success" ? (
+                <svg className="w-12 h-12 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : modalType === "error" ? (
+                <svg className="w-12 h-12 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <div className="w-12 h-12 mx-auto">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              )}
             </div>
-            {modalType !== "loading" && (
-              <div className="mt-6 flex justify-center">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    modalType === "success" 
-                      ? "bg-green-500 text-white hover:bg-green-600" 
-                      : "bg-red-500 text-white hover:bg-red-600"
-                  }`}
-                >
-                  확인
-                </button>
-              </div>
-            )}
+            <p className="text-lg font-medium">{modalMessage}</p>
           </div>
+          {modalType !== "loading" && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setShowModal(false)}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  modalType === "success" 
+                    ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700" 
+                    : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
+                }`}
+              >
+                확인
+              </button>
+            </div>
+          )}
+        </div>
         </Modal>
-     </div>
-   );
- }
+      </div>
+    </div>
+  );
+}

@@ -14,7 +14,7 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-  const { setUser } = useUserStore(); // setIsLoggedIn 제거 - setUser에서 자동 처리
+  const { setUser, setToken } = useUserStore();
   const router = useRouter();
 
   const showErrorModal = (message) => {
@@ -52,40 +52,41 @@ export default function LoginForm() {
         { withCredentials: true }
       );
 
-      const { state, message, data } = loginUser.data;
-      console.log("응답 데이터:", loginUser.data);
-      console.log("state 값:", state, "타입:", typeof state);
-      console.log("message 값:", message);
+      const { state, message } = loginUser.data;
+      console.log("로그인 응답:", loginUser.data);
 
       // 로그인 성공 처리
       if (state === 200) {
-        console.log("로그인 성공 - 사용자 정보 조회 시작");
-
+        // 로그인 성공 후 사용자 정보 조회
         try {
-          // GET /user/:userId로 사용자 정보 조회
-          const userInfoResponse = await axios.get(
+          const userResponse = await axios.get(
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`,
             { withCredentials: true }
           );
-
-          console.log("사용자 정보 API 응답:", userInfoResponse.data);
-
-          if (userInfoResponse.data.state === 200) {
-            // 전역 상태에 사용자 정보 저장
-            setUser(userInfoResponse.data, "local");
-            
-            console.log("사용자 정보 저장 완료 - 대시보드로 이동");
-            router.push("/dashboard");
+          
+          if (userResponse.data.state === 200) {
+            const userData = Array.isArray(userResponse.data.data) 
+              ? userResponse.data.data[0] 
+              : userResponse.data.data;
+              
+             setUser(userData, "local");
+             console.log("사용자 정보 저장 완료:", userData);
+             
+             // 전역 상태 확인
+             setTimeout(() => {
+               const currentState = useUserStore.getState();
+               console.log("현재 전역 상태:", currentState);
+               router.push("/dashboard");
+             }, 100);
           } else {
             showErrorModal("사용자 정보를 가져올 수 없습니다.");
           }
-        } catch (userInfoError) {
-          console.error("사용자 정보 조회 실패:", userInfoError);
-          showErrorModal("사용자 정보 조회 중 오류가 발생했습니다.");
+        } catch (error) {
+          console.error("인증 상태 확인 실패:", error);
+          showErrorModal("인증 상태 확인 중 오류가 발생했습니다.");
         }
-
       } else {
-        console.log("로그인 실패 - state가 200이 아님");
+        console.log("로그인 실패:", message);
         showErrorModal(message || "로그인에 실패했습니다.");
       }
     } catch (error) {

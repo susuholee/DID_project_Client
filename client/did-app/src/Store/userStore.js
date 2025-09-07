@@ -119,33 +119,44 @@ const useUserStore = create((set) => ({
   // 서버에서 인증 상태 확인하는 함수 추가
   checkAuthStatus: async () => {
     try {
+      console.log('인증 상태 확인 시작...');
+      
       const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, {
         withCredentials: true,
       });
+      
       console.log('인증 상태 확인 응답:', response.data);
       
-      if (response.data) {
+      if (response.data && response.data.state === 200) {
         // 응답 데이터가 있는 경우 (일반 계정 또는 카카오 계정)
         let userData;
         let userType;
         
-        if (response.data.id && response.data.properties) {
+        const responseData = response.data.data || response.data;
+        
+        if (responseData.id && responseData.properties) {
           // 카카오 계정인 경우
           userData = {
-            id: response.data.id,
-            userName: `kakao_${response.data.id}`,
-            userId: `kakao_${response.data.id}`,
-            nickName: response.data.properties?.nickname || "카카오 사용자",
-            imgPath: response.data.properties?.profile_image || response.data.properties?.thumbnail_image,
+            id: responseData.id,
+            userName: `kakao_${responseData.id}`,
+            userId: `kakao_${responseData.id}`,
+            nickName: responseData.properties?.nickname || "카카오 사용자",
+            imgPath: responseData.properties?.profile_image || responseData.properties?.thumbnail_image,
             type: "kakao",
-            kakaoData: response.data.properties,
+            kakaoData: responseData.properties,
+            isKakaoUser: true,
           };
           userType = "kakao";
         } else {
           // 일반 계정인 경우 (서버에서 표준 사용자 정보 반환)
-          userData = response.data;
+          userData = {
+            ...responseData,
+            isKakaoUser: false,
+          };
           userType = "user";
         }
+        
+        console.log('설정할 사용자 데이터:', userData);
         
         set(() => ({
           user: userData,
@@ -154,6 +165,7 @@ const useUserStore = create((set) => ({
         }));
         return true;
       } else {
+        console.log('인증 실패 - 응답 데이터 없음');
         set(() => ({
           user: null,
           userType: null,
@@ -163,6 +175,12 @@ const useUserStore = create((set) => ({
       }
     } catch (error) {
       console.error('인증 상태 확인 실패:', error);
+      
+      // 401 Unauthorized인 경우 쿠키가 만료되었거나 유효하지 않음
+      if (error.response?.status === 401) {
+        console.log('쿠키 만료 또는 인증 실패');
+      }
+      
       set(() => ({
         user: null,
         userType: null,

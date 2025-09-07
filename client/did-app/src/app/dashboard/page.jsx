@@ -14,14 +14,18 @@ function DashboardContent() {
   // 전역 상태에서 사용자 정보 가져오기
   const user = useUserStore((state) => state.user);
   const isLoggedIn = useUserStore((state) => state.isLoggedIn);
-  const notifications = useUserStore((state) => state.notifications);
 
   // 사용자 더미 데이터 (지갑 정보 등 추가 데이터)
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
-    if (!user || !isLoggedIn) return;
+    console.log("대시보드 useEffect 실행:", { user, isLoggedIn });
+    if (!user || !isLoggedIn) {
+      console.log("사용자 정보 또는 로그인 상태 없음");
+      return;
+    }
     
+    console.log("userData 설정 중...");
     setUserData({
       ...user,
       did: user.did || "did:ethr:0x1234567890abcdef1234567890abcdef12345678",
@@ -89,7 +93,12 @@ function DashboardContent() {
     });
   }, [user, isLoggedIn]);
 
-  if (!user || !isLoggedIn || !userData) return <p className="text-center mt-10">로딩 중...</p>;
+  console.log("대시보드 렌더링 조건 확인:", { user: !!user, isLoggedIn, userData: !!userData });
+  
+  if (!user || !isLoggedIn || !userData) {
+    console.log("로딩 중... 조건:", { user: !!user, isLoggedIn, userData: !!userData });
+    return <p className="text-center mt-10">로딩 중...</p>;
+  }
 
   const displayName = user.nickName || user.name || user.userName;
   const certs = Array.isArray(userData?.certificates) ? userData.certificates : [];
@@ -120,11 +129,11 @@ function DashboardContent() {
 
   // 파이 차트 데이터 (수료증 유형별 통계)
   const pieData = [
-    { name: '블록체인 개발', value: 2, color: '#f43f5e' },
-    { name: '웹 개발', value: 2, color: '#3b82f6' },
-    { name: '데이터 분석', value: 1, color: '#10b981' },
-    { name: '게임 개발', value: 1, color: '#f59e0b' },
-    { name: 'AI/ML', value: 1, color: '#8b5cf6' }
+    { name: '블록체인 개발', value: 2, color: '#06B6D4' },
+    { name: '웹 개발', value: 2, color: '#22D3EE' },
+    { name: '데이터 분석', value: 1, color: '#67E8F9' },
+    { name: '게임 개발', value: 1, color: '#A5F3FC' },
+    { name: 'AI/ML', value: 1, color: '#CFFAFE' }
   ];
 
   // 라인 차트 데이터 (월별 발급 추이)
@@ -190,7 +199,7 @@ function DashboardContent() {
                 <div className="flex items-center justify-between lg:justify-end lg:space-x-6">
                   <div className="text-center lg:text-right">
                     <p className="text-sm text-gray-500 mb-1">총 발급된 수료증</p>
-                    <p className="text-2xl lg:text-3xl font-bold text-rose-500">{stats.totalIssued}</p>
+                    <p className="text-2xl lg:text-3xl font-bold text-cyan-500">{stats.totalIssued}</p>
                   </div>
                 </div>
               </div>
@@ -210,8 +219,8 @@ function DashboardContent() {
                       <p className="text-sm text-gray-500 mb-2">오늘 발급</p>
                       <p className="text-3xl font-bold text-gray-900">{stats.todayIssued}</p>
                     </div>
-                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                      <div className="w-6 h-6 bg-blue-500 rounded"></div>
+                    <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-cyan-500 rounded"></div>
                     </div>
                   </div>
                 </div>
@@ -221,8 +230,8 @@ function DashboardContent() {
                       <p className="text-sm text-gray-500 mb-2">30일간 발급</p>
                       <p className="text-3xl font-bold text-gray-900">{stats.last30Days}</p>
                     </div>
-                    <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                      <div className="w-6 h-6 bg-green-500 rounded"></div>
+                    <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-cyan-500 rounded"></div>
                     </div>
                   </div>
                 </div>
@@ -230,10 +239,10 @@ function DashboardContent() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500 mb-2">총 발급</p>
-                      <p className="text-3xl font-bold text-rose-500">{stats.totalIssued}</p>
+                      <p className="text-3xl font-bold text-cyan-500">{stats.totalIssued}</p>
                     </div>
-                    <div className="w-12 h-12 bg-rose-50 rounded-lg flex items-center justify-center">
-                      <div className="w-6 h-6 bg-rose-500 rounded"></div>
+                    <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-cyan-500 rounded"></div>
                     </div>
                   </div>
                 </div>
@@ -243,8 +252,8 @@ function DashboardContent() {
                       <p className="text-sm text-gray-500 mb-2">승인 대기</p>
                       <p className="text-3xl font-bold text-gray-900">{stats.pendingCount}</p>
                     </div>
-                    <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center">
-                      <div className="w-6 h-6 bg-yellow-500 rounded"></div>
+                    <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
+                      <div className="w-6 h-6 bg-cyan-500 rounded"></div>
                     </div>
                   </div>
                 </div>
@@ -260,11 +269,11 @@ function DashboardContent() {
                   <div className="hidden lg:flex items-center space-x-6">
                     <div className="text-right">
                       <p className="text-sm text-gray-500">오늘 발급</p>
-                      <p className="text-lg font-bold text-blue-500">{stats.todayIssued}개</p>
+                      <p className="text-lg font-bold text-cyan-500">{stats.todayIssued}개</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">30일간 총 발급</p>
-                      <p className="text-lg font-bold text-rose-500">{stats.last30Days}개</p>
+                      <p className="text-lg font-bold text-cyan-500">{stats.last30Days}개</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">전체 발급</p>
@@ -304,7 +313,7 @@ function DashboardContent() {
                       />
                       <Bar 
                         dataKey="issued" 
-                        fill="#f43f5e" 
+                        fill="#06B6D4" 
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -322,7 +331,7 @@ function DashboardContent() {
                   <div className="flex gap-3">
                     <Link
                       href="/certificates/issue"
-                      className="px-4 py-2 bg-rose-500 text-white text-sm font-medium rounded-lg hover:bg-rose-600 transition-colors"
+                      className="px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 transition-colors"
                     >
                       새 발급 요청
                     </Link>
@@ -378,7 +387,7 @@ function DashboardContent() {
                     </p>
                     <Link
                       href="/certificates/issue"
-                      className="inline-flex items-center px-6 py-3 bg-rose-500 text-white font-medium rounded-lg hover:bg-rose-600 transition-colors"
+                      className="inline-flex items-center px-6 py-3 bg-cyan-500 text-white font-medium rounded-lg hover:bg-cyan-600 transition-colors"
                     >
                       발급 요청하기
                     </Link>
@@ -433,13 +442,13 @@ function DashboardContent() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-mono text-gray-900 font-medium">
-                            {userData.wallet?.slice(0, 7)}...{userData.wallet?.slice(-4)}
+                            {userData.walletAddress?.slice(0, 7)}...{userData.walletAddress?.slice(-4)}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">지갑 주소</p>
                         </div>
                       </div>
                       <button
-                        onClick={() => copyToClipboard(userData.wallet)}
+                        onClick={() => copyToClipboard(userData.walletAddress)}
                         className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium rounded-lg transition-colors"
                         title="전체 주소 복사"
                       >
@@ -533,10 +542,10 @@ function DashboardContent() {
                       <Line 
                         type="monotone" 
                         dataKey="issued" 
-                        stroke="#f43f5e" 
+                        stroke="#06B6D4" 
                         strokeWidth={3}
-                        dot={{ fill: '#f43f5e', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, stroke: '#f43f5e', strokeWidth: 2 }}
+                        dot={{ fill: '#06B6D4', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6, stroke: '#06B6D4', strokeWidth: 2 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>

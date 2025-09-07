@@ -4,11 +4,14 @@ import { useRouter } from "next/navigation";
 import useModal from "@/hooks/useModal";
 import Modal from "@/components/UI/Modal";
 import Link from "next/link";
+import axios from "axios";
+import useUserStore from "@/Store/userStore";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { isOpen, message, openModal, closeModal } = useModal();
-  const [user, setUser] = useState(null);
+  const { user, updateUser, isLoggedIn } = useUserStore();
+  const [isLoading, setIsLoading] = useState(false);
 
   // 프로필, 주소, 생년월일
   const [profilePreview, setProfilePreview] = useState("/images/default-avatar.png");
@@ -82,18 +85,18 @@ export default function ProfilePage() {
       document.body.appendChild(s);
     }
 
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-    if (!currentUser) {
+    // 로그인 상태 확인
+    if (!isLoggedIn || !user) {
       router.push("/");
       return;
     }
 
-    setUser(currentUser);
-    setAddress(currentUser.address || "");
-    setAddressDetail(currentUser.addressDetail || "");
-    setProfilePreview(currentUser.profile || "/images/default-avatar.png");
-    setBirthday(currentUser.birthday || "");
-  }, [router]);
+    // 전역 상태에서 사용자 정보 설정
+    setAddress(user.address || "");
+    setAddressDetail(user.addressDetail || "");
+    setProfilePreview(user.profile || user.imgPath || "/images/default-avatar.png");
+    setBirthday(user.birthday || user.birthDate || "");
+  }, [user, isLoggedIn, router]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -104,10 +107,10 @@ export default function ProfilePage() {
       setNameError(error);
     }
     
-    setUser((prev) => ({
-      ...prev,
+    // 전역 상태 업데이트
+    updateUser({
       [name]: value,
-    }));
+    });
   };
 
   const handleProfileUpload = (e) => {
@@ -133,7 +136,7 @@ export default function ProfilePage() {
     const reader = new FileReader();
     reader.onload = () => {
       setProfilePreview(reader.result);
-      setUser((prev) => ({ ...prev, profile: reader.result }));
+      updateUser({ profile: reader.result });
     };
     reader.readAsDataURL(file);
   };
@@ -152,7 +155,7 @@ export default function ProfilePage() {
     }).open();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!user) return;
 
     // 현재 사용자 이름 가져오기
@@ -171,16 +174,8 @@ export default function ProfilePage() {
 
     // 일반 회원만 비밀번호 변경 로직 적용
     if (!user.isKakaoUser && wantsPwChange) {
-      if (currentPassword !== user.password) {
-        setPwError("현재 비밀번호가 올바르지 않습니다.");
-        return;
-      }
       if (!pwValid) {
         setPwError("새 비밀번호는 8자 이상이며, 문자/숫자/특수문자를 포함해야 합니다.");
-        return;
-      }
-      if (newPassword === currentPassword) {
-        setPwError("새 비밀번호는 현재 비밀번호와 달라야 합니다.");
         return;
       }
       if (newPassword !== newPasswordConfirm) {
@@ -190,34 +185,58 @@ export default function ProfilePage() {
     }
     setPwError("");
 
-    // 카카오/일반 계정에 따라 다른 필드 업데이트
-    const updatedUser = {
-      ...user,
-      ...(user.isKakaoUser 
-        ? { name: (user.name || "").trim() } // 카카오는 name 필드
-        : { userName: (user.userName || "").trim() } // 일반은 userName 필드
-      ),
-      password: !user.isKakaoUser
-        ? wantsPwChange
-          ? newPassword
-          : user.password
-        : user.password,
-      address,
-      addressDetail: addressDetail.trim(),
-      profile: profilePreview,
-      birthday,
-    };
+    try {
+      setIsLoading(true);
+      
+      // 업데이트할 데이터 준비
+      const updateData = {
+        ...(user.isKakaoUser 
+          ? { name: (user.name || "").trim() } // 카카오는 name 필드
+          : { userName: (user.userName || "").trim() } // 일반은 userName 필드
+        ),
+        address,
+        addressDetail: addressDetail.trim(),
+        profile: profilePreview,
+        birthday,
+      };
 
-    localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      // 일반 회원이고 비밀번호 변경을 원하는 경우
+      if (!user.isKakaoUser && wantsPwChange) {
+        updateData.currentPassword = currentPassword;
+        updateData.newPassword = newPassword;
+      }
 
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const userIndex = users.findIndex((u) => u.id === user.id);
-    if (userIndex !== -1) {
-      users[userIndex] = updatedUser;
-      localStorage.setItem("users", JSON.stringify(users));
+      const response = await axios.put(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.id}`, updateData, {
+        withCredentials: true
+      });
+
+      if (response.data && response.data.state === 200) {
+        // 전역 상태 업데이트
+        updateUser({
+          address,
+          addressDetail: addressDetail.trim(),
+          profile: profilePreview,
+          birthday,
+          ...(user.isKakaoUser 
+            ? { name: (user.name || "").trim() }
+            : { userName: (user.userName || "").trim() }
+          ),
+        });
+        
+        openModal("프로필이 수정되었습니다.");
+      } else {
+        openModal(response.data?.message || "프로필 수정에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("프로필 수정 실패:", error);
+      if (error.response?.data?.message) {
+        openModal(error.response.data.message);
+      } else {
+        openModal("프로필 수정 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
     }
-
-    openModal("프로필이 수정되었습니다.");
   };
 
   // 회원탈퇴 모달 열기
@@ -244,42 +263,35 @@ export default function ProfilePage() {
       return;
     }
 
-    if (!user.isKakaoUser && withdrawPassword !== user.password) {
-      setWithdrawError("비밀번호가 올바르지 않습니다.");
-      return;
-    }
-
     setWithdrawError("");
     setIsWithdrawing(true);
 
     try {
-      // 탈퇴 처리 시뮬레이션 (실제로는 서버 API 호출)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.id}`, {
+        withCredentials: true,
+        data: {
+          password: withdrawPassword
+        }
+      });
 
-      // 1. 사용자 데이터 삭제
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const updatedUsers = users.filter(u => u.id !== user.id);
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-
-      // 2. 현재 사용자 세션 삭제
-      localStorage.removeItem("currentUser");
-
-      // 3. 관련 데이터 삭제
-      localStorage.removeItem(`certificate_requests`);
-      localStorage.removeItem(`revokeRequests`);
-      localStorage.removeItem(`notifications`);
-
-      // 4. 홈으로 리다이렉트
-      closeWithdrawModal();
-      openModal("회원탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
-      
-      // 모달 닫힌 후 홈으로 이동
-      setTimeout(() => {
-        router.push("/");
-      }, 2000);
-
+      if (response.data && response.data.state === 200) {
+        closeWithdrawModal();
+        openModal("회원탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
+        
+        // 모달 닫힌 후 홈으로 이동
+        setTimeout(() => {
+          router.push("/");
+        }, 2000);
+      } else {
+        setWithdrawError(response.data?.message || "회원탈퇴에 실패했습니다.");
+      }
     } catch (error) {
-      setWithdrawError("탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      console.error("회원탈퇴 실패:", error);
+      if (error.response?.data?.message) {
+        setWithdrawError(error.response.data.message);
+      } else {
+        setWithdrawError("탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      }
     } finally {
       setIsWithdrawing(false);
     }
@@ -288,17 +300,42 @@ export default function ProfilePage() {
   const handleModalClose = () => {
     closeModal();
     if (message === "프로필이 수정되었습니다.") {
-      router.push("/dashboard");
+      router.push("/profile");
     }
   };
 
-  if (!user) return <p className="text-center mt-10">로딩 중...</p>;
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">저장 중...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">사용자 정보를 불러올 수 없습니다.</p>
+          <button 
+            onClick={() => router.push("/")}
+            className="mt-4 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
+          >
+            홈으로 이동
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-lg mx-auto bg-white rounded-xl shadow p-6">
-        <Link href="/dashboard">
-          <h2 className="text-2xl font-semibold mb-6 cursor-pointer hover:text-blue-600">← 이전</h2>
+        <Link href="/profile">
+          <h2 className="text-2xl font-semibold mb-6 cursor-pointer hover:text-cyan-600">← 이전</h2>
         </Link>
 
         {/* 카카오 계정 안내 메시지 */}
@@ -449,9 +486,10 @@ export default function ProfilePage() {
         {/* 저장 버튼 */}
         <button
           onClick={handleSave}
-          className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 mb-4"
+          disabled={isLoading}
+          className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 rounded-lg hover:from-cyan-600 hover:to-cyan-700 mb-4 transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          저장하기
+          {isLoading ? "저장 중..." : "저장하기"}
         </button>
 
         {/* 회원탈퇴 버튼 */}

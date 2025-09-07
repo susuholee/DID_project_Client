@@ -161,8 +161,8 @@ export default function MyCertificatesPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           {/* 상단 */}
           <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
             <div>
@@ -171,23 +171,25 @@ export default function MyCertificatesPage() {
             </div>
 
             {/* 검색/정렬 */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               {/* 검색 입력 */}
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={getPlaceholder()}
-                className="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[220px]"
-              />
+              <div className="flex-1 min-w-[240px]">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={getPlaceholder()}
+                  className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                />
+              </div>
               
               {/* 정렬 선택 */}
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm"
+                className="h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer"
               >
-                <option value="date_desc">발급일: 최신순</option>
-                <option value="date_asc">발급일: 오래된순</option>
+                <option value="date_desc">최신순</option>
+                <option value="date_asc">오래된순</option>
                 <option value="title">제목순</option>
                 <option value="issuer">기관순</option>
               </select>
@@ -208,7 +210,7 @@ export default function MyCertificatesPage() {
                   onClick={() => setStatus(opt.key)}
                   className={`h-9 px-3 rounded-full border text-sm ${
                     active
-                      ? 'bg-rose-500 border-rose-500 text-white'
+                      ? 'bg-cyan-500 border-cyan-500 text-white'
                       : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -247,7 +249,10 @@ export default function MyCertificatesPage() {
           {/* 목록(카드형) */}
           {pageData.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
-              <p className="text-gray-600 mb-4">조건에 맞는 수료증이 없습니다.</p>
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-2xl text-gray-400">📄</span>
+              </div>
+              <p className="text-gray-600">조건에 맞는 수료증이 없습니다.</p>
             </div>
           ) : (
             <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -255,36 +260,45 @@ export default function MyCertificatesPage() {
                 <article
                   key={c.id}
                   onClick={() => handleCertificateClick(c)}
-                  className="relative rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer group hover:-translate-y-1"
+                  className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg transition-all duration-200 cursor-pointer"
                 >
-                  {/* 상태 뱃지 */}
-                  <div className="absolute top-3 right-3">
+                  <div className="flex justify-between items-start mb-4">
+                    {/* 발급 기관 */}
+                    <p className="text-sm font-medium text-cyan-600">
+                      {c.issuer}
+                    </p>
+                    {/* 상태 뱃지 */}
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${badgeOf(c.status)}`}>
                       {c.status}
                     </span>
                   </div>
 
-                  <div className="p-5">
-                    {/* 썸네일 대체(브랜드 컬러 블록) */}
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <span className="text-sm font-bold">VC</span>
-                    </div>
+                  {/* 제목 */}
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors">
+                    {c.title}
+                  </h3>
 
-                    <h3 className="mt-3 text-[17px] font-semibold text-gray-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                      {c.title}
-                    </h3>
-
-                    <ul className="mt-3 space-y-1.5 text-sm text-gray-700">
-                      <li>발급기관: {c.issuer}</li>
-                      <li>발급일: {c.issueDate}</li>
-                    </ul>
-
-                
-                    {/* 클릭 힌트 */}
-                    <div className="mt-2 text-center">
-                      <span className="text-xs text-gray-400 group-hover:text-indigo-500 transition-colors">
-                        클릭하여 상세보기
-                      </span>
+                  <div className="flex items-center justify-between">
+                    {/* 발급일 */}
+                    <p className="text-sm text-gray-500">
+                      발급일: {c.issueDate}
+                    </p>
+                    
+                    {/* 액션 버튼 */}
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={(e) => handleDownload(c, e)}
+                        className="text-xs font-medium text-gray-500 hover:text-cyan-600 transition-colors"
+                      >
+                        다운로드
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button 
+                        onClick={(e) => handleShare(c, e)}
+                        className="text-xs font-medium text-gray-500 hover:text-cyan-600 transition-colors"
+                      >
+                        공유
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -294,21 +308,35 @@ export default function MyCertificatesPage() {
 
           {/* 페이지네이션 */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
+            <div className="flex items-center justify-center gap-3 mt-8">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 h-9 rounded-lg border bg-white disabled:opacity-40"
+                className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
               >
                 이전
               </button>
-              <span className="text-sm text-gray-700">
-                {page} / {totalPages}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {Array.from({length: totalPages}, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`
+                      w-10 h-10 rounded-xl text-sm font-medium transition-colors
+                      ${page === p 
+                        ? 'bg-cyan-500 text-white' 
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                      }
+                    `}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 h-9 rounded-lg border bg-white disabled:opacity-40"
+                className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
               >
                 다음
               </button>
