@@ -1,10 +1,12 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import NotificationBell from "../UI/NotificationBell";
 import useUserStore from "@/Store/userStore";
 
 export default function ClientNav() {
+  const [mounted, setMounted] = useState(false);
+  
   // zustand store에서 사용자 정보와 알림 가져오기
   const user = useUserStore((state) => state.user);
   const notifications = useUserStore((state) => state.notifications);
@@ -12,27 +14,34 @@ export default function ClientNav() {
   const isLoggedIn = useUserStore((state) => state.isLoggedIn);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     // 로그인하지 않은 경우 테스트용 알림 데이터 설정
     if (!isLoggedIn || !user) {
+      const now = Date.now();
       const testNotifications = [
         {
           id: 1,
           title: "새 보고서 등록됨",
           message: "2025년 8월 보고서가 업로드되었습니다.",
-          ts: Date.now() - 1000 * 60 * 5,
+          ts: now - 1000 * 60 * 5,
           read: false,
         },
         {
           id: 2,
           title: "비밀번호 변경 완료",
           message: "계정 보안 강화를 위해 비밀번호를 변경했습니다.",
-          ts: Date.now() - 1000 * 60 * 60 * 3,
+          ts: now - 1000 * 60 * 60 * 3,
           read: true,
         },
       ];
       setNotifications(user?.id || user?.userId, testNotifications);
     }
-  }, [isLoggedIn, user]);
+  }, [mounted, isLoggedIn, user, setNotifications]);
 
   return (
     <div className="fixed top-4 right-6 flex items-center gap-4 z-50">

@@ -105,17 +105,7 @@ export default function LoginForm() {
       }
     };
     
-    const testUserAPI = async () => {
-      try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, { 
-          withCredentials: true 
-        });
-        console.log("현재 사용자 정보:", res.data);
-      } catch (error) {
-        console.error("API 호출 실패:", error.response?.data || error.message);
-      }
-    };
-
+   
    
     // 카카오 로그인 버튼 클릭 시
     const handleKakaoLogin = () => {
@@ -124,12 +114,9 @@ export default function LoginForm() {
     
     return (
       <>
-
-
       <main className="flex min-h-screen items-center justify-center">
         <div className="w-full max-w-md rounded-2xl bg-gray-200 shadow-lg p-8">
           <h1 className="text-black text-3xl font-extrabold mb-8">로그인</h1>
-          <button onClick={testUserAPI}>사용자 정보 확인</button>
           {/* 일반 로그인 (아이디 / 비밀번호) */}
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div>

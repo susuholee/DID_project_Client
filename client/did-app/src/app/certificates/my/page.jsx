@@ -3,49 +3,105 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import useUserStore from '@/Store/userStore';
+import Certificate from '@/components/certificates/certificate';
 
 export default function MyCertificatesPage() {
   const router = useRouter();
+  const { user, isLoggedIn, addNotification } = useUserStore();
 
-  // 헤더용 사용자
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (cu) setUser(cu);
-  }, []);
-  const displayName = useMemo(
-    () => (user?.isKakaoUser ? user?.nickname : user?.name) || '사용자',
-    [user]
-  );
+  // TanStack Query로 수료증 데이터 가져오기
+  const { 
+    data: allCerts = [], 
+    isLoading: loading, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['certificates', user?.userId],
+    queryFn: async () => {
+      if (!user?.userId) {
+        throw new Error('사용자 정보가 없습니다.');
+      }
+      
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${user.userId}`,
+        { withCredentials: true }
+      );
+      
+      // VC 형태의 복잡한 응답 구조에서 데이터 추출
+      if (Array.isArray(response.data)) {
+        return response.data.map(item => {
+          // 각 VC에서 credentialSubject 정보 추출
+          const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
+                                   item.message?.verifiableCredential?.credentialSubject;
+          
+          if (!credentialSubject) {
+            console.warn('credentialSubject를 찾을 수 없음:', item);
+            return null;
+          }
 
-  // 알림 (헤더에 주입) - 로컬스토리지 연동
-  const [notifications, setNotifications] = useState([]);
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('notifications') || '[]');
-    if (Array.isArray(saved) && saved.length) setNotifications(saved);
-  }, []);
-  useEffect(() => {
-    localStorage.setItem('notifications', JSON.stringify(notifications));
-  }, [notifications]);
-  const pushNotif = (title, message) =>
-    setNotifications((prev) => [
-      { id: Date.now(), title, message, ts: Date.now(), read: false },
-      ...prev,
-    ]);
+          // 디버깅을 위한 로그 추가
+          console.log('VC 데이터 확인:', {
+            credentialSubject,
+            item: item
+          });
 
-  // 더미 수료증 데이터 (유효/폐기만)
-  const [allCerts] = useState([
-    { id: 1,  title: '블록체인 기초 과정 수료증', issuer: '경일IT게임아카데미', issueDate: '2025-01-15', status: '유효',   imageUrl: '/images/dummy_certificate.jpg' },
-    { id: 2,  title: '스마트컨트랙트 개발 심화',   issuer: '크로스허브',         issueDate: '2024-05-20', status: '폐기',   imageUrl: '/images/dummy_certificate2.jpg' },
-    { id: 3,  title: 'DID 인증 시스템 실습',      issuer: '경일IT게임아카데미', issueDate: '2025-03-02', status: '유효',   imageUrl: '/images/dummy_certificate3.png' },
-    { id: 4,  title: '웹3 서비스 아키텍처',       issuer: '크로스허브',         issueDate: '2024-11-30', status: '유효',   imageUrl: '/images/dummy_certificate.jpg' },
-    { id: 5,  title: '인증 배지 운영 가이드',     issuer: '경일IT게임아카데미', issueDate: '2025-02-18', status: '유효',   imageUrl: '/images/dummy_certificate2.jpg' },
-    { id: 6,  title: '암호학 개론',               issuer: '크로스허브',         issueDate: '2024-09-10', status: '유효',   imageUrl: '/images/dummy_certificate3.png' },
-    { id: 7,  title: 'NFT 개발 실습',             issuer: '크로스허브',         issueDate: '2024-08-15', status: '유효',   imageUrl: '/images/dummy_certificate3.png' },
-    { id: 8,  title: 'DeFi 프로토콜 분석',        issuer: '경일IT게임아카데미', issueDate: '2024-07-20', status: '폐기',   imageUrl: '/images/dummy_certificate3.png' },
-    { id: 9,  title: '솔리디티 프로그래밍',       issuer: '크로스허브',         issueDate: '2024-06-10', status: '유효',   imageUrl: '/images/dummy_certificate3.png' },
-    { id: 10, title: '토큰이코노믹스 설계',       issuer: '경일IT게임아카데미', issueDate: '2024-05-05', status: '유효',   imageUrl: '/images/dummy_certificate3.png' },
-  ]);
+          // Certificate 컴포넌트와 동일한 구조로 정규화
+          return {
+            id: credentialSubject.id,
+            certificateName: credentialSubject.certificateName,
+            issuer: credentialSubject.issuer,
+            // 발급일은 여러 위치에서 확인
+            issueDate: credentialSubject.issueDate || 
+                      item.message?.payload?.issuseDate || 
+                      item.message?.payload?.issuanceDate ||
+                      item.message?.verifiableCredential?.issuanceDate,
+            status: credentialSubject.status === 'approved' ? '유효' : '폐기',
+            imagePath: credentialSubject.ImagePath,
+            userName: credentialSubject.userName,
+            userId: credentialSubject.userId,
+            description: credentialSubject.description,
+            userDid: credentialSubject.userDid,
+            issuerId: credentialSubject.issuerId,
+            DOB: credentialSubject.DOB,
+            requestDate: credentialSubject.requestDate,
+            request: credentialSubject.request,
+            // Certificate 컴포넌트에서 사용하는 전체 구조 보관
+            rawData: item,
+            // Certificate 스토어에서 기대하는 구조
+            vc: {
+              credentialSubject: credentialSubject
+            },
+            jwt: item.message?.jwt || item.message?.payload?.jwt
+          };
+        }).filter(Boolean); // null 값 제거
+      }
+      
+      return [];
+    },
+    enabled: !!isLoggedIn && !!user?.userId,
+    staleTime: 5 * 60 * 1000, // 5분간 fresh
+    cacheTime: 10 * 60 * 1000, // 10분간 캐시 유지
+    retry: 2,
+    onError: (error) => {
+      console.error('수료증 조회 실패:', error);
+    }
+  });
+
+  // 알림 추가 함수
+  const pushNotif = (title, message) => {
+    if (user?.id || user?.userId) {
+      addNotification(user.id || user.userId, {
+        id: Date.now(),
+        title,
+        message,
+        ts: Date.now(),
+        read: false,
+      });
+    }
+  };
 
   // 검색/정렬/상태필터/페이지
   const [q, setQ] = useState('');
@@ -60,19 +116,28 @@ export default function MyCertificatesPage() {
     let arr = allCerts.filter((c) => {
       // 제목과 기관명 모두에서 검색
       const matchText = !text || 
-        c.title.toLowerCase().includes(text) || 
-        c.issuer.toLowerCase().includes(text);
+        (c.certificateName || c.title || '').toLowerCase().includes(text) || 
+        (c.issuer || '').toLowerCase().includes(text);
       
-      const matchStatus = status === 'all' ? true : c.status === status;
+      // 상태 필터링
+      const certStatus = c.status || c.state || '유효';
+      const matchStatus = status === 'all' ? true : certStatus === status;
       return matchText && matchStatus;
     });
 
     // 정렬
     arr = [...arr].sort((a, b) => {
-      if (sort === 'date_desc') return b.issueDate.localeCompare(a.issueDate);
-      if (sort === 'date_asc')  return a.issueDate.localeCompare(b.issueDate);
-      if (sort === 'title')     return a.title.localeCompare(b.title, 'ko');
-      if (sort === 'issuer')    return a.issuer.localeCompare(b.issuer, 'ko');
+      const aDate = a.issueDate || a.requestDate || a.createdAt || '1970-01-01';
+      const bDate = b.issueDate || b.requestDate || b.createdAt || '1970-01-01';
+      const aTitle = a.certificateName || a.title || '';
+      const bTitle = b.certificateName || b.title || '';
+      const aIssuer = a.issuer || '';
+      const bIssuer = b.issuer || '';
+
+      if (sort === 'date_desc') return bDate.localeCompare(aDate);
+      if (sort === 'date_asc')  return aDate.localeCompare(bDate);
+      if (sort === 'title')     return aTitle.localeCompare(bTitle, 'ko');
+      if (sort === 'issuer')    return aIssuer.localeCompare(bIssuer, 'ko');
       return 0;
     });
 
@@ -115,13 +180,18 @@ export default function MyCertificatesPage() {
     e.stopPropagation(); // 카드 클릭 이벤트 방지
     
     try {
+      // 원본 데이터에서 DID 정보 추출
+      const rawData = cert.rawData;
+      const userDid = cert.userDid || rawData?.message?.payload?.sub || 'did:example:1234567890abcdef';
+      const jwt = rawData?.message?.jwt || '';
+      
       // DID 기반 공유 링크 생성
       const shareData = {
-        did: cert.holderDID || 'did:example:1234567890abcdef',
-        title: cert.title,
+        did: userDid,
+        title: cert.certificateName || cert.title,
         issuer: cert.issuer,
-        vcHash: cert.vcHash || 'hash_' + cert.id,
-        publicKey: cert.publicKey || '0x1234567890abcdef'
+        jwt: jwt,
+        certificateId: cert.id
       };
       
       const encoded = btoa(JSON.stringify(shareData));
@@ -142,10 +212,17 @@ export default function MyCertificatesPage() {
     try {
       console.log('폐기 요청:', { certId: cert.id, reason });
       
-      // 성공 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 실제 폐기 API 호출
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/certificates/${cert.id}/revoke`,
+        { reason },
+        { withCredentials: true }
+      );
       
-      pushNotif('폐기 요청 완료', `"${cert.title}" 폐기 요청이 관리자에게 전송되었습니다.`);
+      // 성공 시 데이터 다시 가져오기
+      refetch();
+      
+      pushNotif('폐기 요청 완료', `"${cert.certificateName || cert.title}" 폐기 요청이 관리자에게 전송되었습니다.`);
     } catch (error) {
       console.error('폐기 요청 실패:', error);
       pushNotif('폐기 요청 실패', '폐기 요청 중 오류가 발생했습니다.');
@@ -155,9 +232,69 @@ export default function MyCertificatesPage() {
   const handleDownload = (cert, e) => {
     e.stopPropagation(); // 카드 클릭 이벤트 방지
     
-    // 더미 다운로드 동작
-    pushNotif('다운로드 시작', `"${cert.title}" 다운로드를 시작합니다.`);
+    // 실제 다운로드 로직 구현
+    try {
+      // PDF 다운로드 또는 이미지 다운로드
+      const link = document.createElement('a');
+      link.href = cert.imagePath || cert.downloadUrl || '#';
+      link.download = `${cert.certificateName || cert.title || '수료증'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      pushNotif('다운로드 시작', `"${cert.certificateName || cert.title}" 다운로드를 시작합니다.`);
+    } catch (error) {
+      console.error('다운로드 실패:', error);
+      pushNotif('다운로드 실패', '다운로드 중 오류가 발생했습니다.');
+    }
   };
+
+  // 로그인 체크
+  useEffect(() => {
+    if (!isLoggedIn || !user) {
+      router.push('/');
+      return;
+    }
+  }, [isLoggedIn, user, router]);
+
+  // 로딩 상태
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">수료증을 불러오는 중...</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+              <span className="text-2xl text-red-500">⚠️</span>
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">오류 발생</h2>
+            <p className="text-gray-600 mb-4">{error.message || '수료증 조회 중 오류가 발생했습니다.'}</p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -246,7 +383,7 @@ export default function MyCertificatesPage() {
             </div>
           )}
 
-          {/* 목록(카드형) */}
+          {/* 목록(수료증 직접 표시) */}
           {pageData.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
@@ -255,54 +392,63 @@ export default function MyCertificatesPage() {
               <p className="text-gray-600">조건에 맞는 수료증이 없습니다.</p>
             </div>
           ) : (
-            <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {pageData.map((c) => (
-                <article
-                  key={c.id}
-                  onClick={() => handleCertificateClick(c)}
-                  className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg transition-all duration-200 cursor-pointer"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    {/* 발급 기관 */}
-                    <p className="text-sm font-medium text-cyan-600">
-                      {c.issuer}
-                    </p>
-                    {/* 상태 뱃지 */}
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${badgeOf(c.status)}`}>
-                      {c.status}
-                    </span>
-                  </div>
+            <div className="space-y-8">
+              {pageData.map((c) => {
+                // 각 수료증을 위한 임시 certInfo 설정
+                const tempCertInfo = {
+                  vc: {
+                    credentialSubject: c.rawData?.message?.payload?.vc?.credentialSubject || {}
+                  },
+                  payload: c.rawData?.message?.payload,
+                  verifiableCredential: c.rawData?.message?.verifiableCredential
+                };
 
-                  {/* 제목 */}
-                  <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors">
-                    {c.title}
-                  </h3>
+                return (
+                  <div key={c.id} className="relative">
+                    {/* 수료증 제목 */}
+                    <div className="mb-4 p-4 bg-cyan-50 rounded-lg">
+                      <h3 className="text-lg font-bold text-cyan-700">
+                        {c.certificateName}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        수료자: {c.userName} | 발급기관: {c.issuer}
+                      </p>
+                    </div>
 
-                  <div className="flex items-center justify-between">
-                    {/* 발급일 */}
-                    <p className="text-sm text-gray-500">
-                      발급일: {c.issueDate}
-                    </p>
-                    
-                    {/* 액션 버튼 */}
-                    <div className="flex gap-2">
+                    {/* Certificate 컴포넌트를 축소해서 표시 */}
+                    <div 
+                      className="transform scale-50 origin-top cursor-pointer hover:scale-55 transition-transform duration-200"
+                      onClick={() => handleCertificateClick(c)}
+                    >
+                      <div className="pointer-events-none">
+                        <Certificate certInfo={tempCertInfo} />
+                      </div>
+                    </div>
+
+                    {/* 액션 버튼들 */}
+                    <div className="flex justify-center gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
                       <button 
                         onClick={(e) => handleDownload(c, e)}
-                        className="text-xs font-medium text-gray-500 hover:text-cyan-600 transition-colors"
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                       >
                         다운로드
                       </button>
-                      <span className="text-gray-300">|</span>
                       <button 
                         onClick={(e) => handleShare(c, e)}
-                        className="text-xs font-medium text-gray-500 hover:text-cyan-600 transition-colors"
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                       >
                         공유
                       </button>
+                      <button 
+                        onClick={() => handleCertificateClick(c)}
+                        className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+                      >
+                        상세보기
+                      </button>
                     </div>
                   </div>
-                </article>
-              ))}
+                );
+              })}
             </div>
           )}
 

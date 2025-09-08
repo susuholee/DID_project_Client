@@ -1,21 +1,57 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useUserStore from '@/Store/userStore';
 import UserSidebar from '@/components/layout/Sidebar';
 
 export default function ProfilePage() {
+  const [mounted, setMounted] = useState(false);
   const { user, isLoggedIn } = useUserStore();
   const router = useRouter();
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     // 로그인 체크
     if (!isLoggedIn || !user) {
       router.push('/');
       return;
     }
-  }, [isLoggedIn, user, router]);
+  }, [mounted, isLoggedIn, user, router]);
+
+  // 안전한 날짜 포맷팅 함수
+  const formatDate = (dateString) => {
+    if (!mounted || !dateString) return '미설정';
+    try {
+      return new Date(dateString).toLocaleDateString('ko-KR');
+    } catch (error) {
+      return '미설정';
+    }
+  };
+
+  // 서버 사이드 렌더링 중에는 로딩 표시
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <UserSidebar />
+        <div className="lg:ml-64 p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-xl shadow-sm p-8">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+                <span className="ml-3 text-lg text-gray-600">로딩 중...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 로그인하지 않은 경우 로딩 표시
   if (!isLoggedIn || !user) {
@@ -85,15 +121,21 @@ export default function ProfilePage() {
                   </h3>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                      <span className="text-gray-600 font-medium">이름</span>
+                      <span className="text-gray-600 font-medium">실명</span>
                                              <span className="text-gray-800 font-semibold">
-                         {user?.name || user?.nickName || '미설정'}
+                         {user?.userName || '미설정'}
+                       </span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                      <span className="text-gray-600 font-medium">닉네임</span>
+                                             <span className="text-gray-800 font-semibold">
+                         {user?.nickName || '미설정'}
                        </span>
                     </div>
                     <div className="flex justify-between items-center py-3 border-b border-gray-100">
                       <span className="text-gray-600 font-medium">생년월일</span>
                                              <span className="text-gray-800 font-semibold">
-                         {user?.birthDate ? new Date(user.birthDate).toLocaleDateString('ko-KR') : '미설정'}
+                         {formatDate(user?.birthDate)}
                        </span>
                     </div>
                      <div className="flex justify-between items-center py-3 border-b border-gray-100">
@@ -105,7 +147,7 @@ export default function ProfilePage() {
                      <div className="flex justify-between items-center py-3 border-b border-gray-100">
                        <span className="text-gray-600 font-medium">가입일</span>
                                               <span className="text-gray-800 font-semibold">
-                         {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('ko-KR') : 'N/A'}
+                         {formatDate(user?.createdAt) || 'N/A'}
                        </span>
                      </div>
                   </div>
@@ -126,7 +168,7 @@ export default function ProfilePage() {
                      <div className="flex justify-between items-center py-3 border-b border-gray-100">
                        <span className="text-gray-600 font-medium">마지막 로그인</span>
                                               <span className="text-gray-800 font-semibold">
-                         {user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString('ko-KR') : 'N/A'}
+                         {formatDate(user?.lastLoginAt) || 'N/A'}
                        </span>
                      </div>
                      {(user?.didAddress || user?.walletAddress) && (

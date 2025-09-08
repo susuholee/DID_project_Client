@@ -14,7 +14,8 @@ import useUserStore from "@/Store/userStore";
 
 export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [nickName, setNickName] = useState("");
+  const [userName, setUserName] = useState(""); // 실명
+  const [nickName, setNickName] = useState(""); // 닉네임
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -38,16 +39,7 @@ export default function SignupPage() {
     onSuccess: async (data) => {
       showErrorModal("회원가입이 완료되었습니다!");
       
-      setUser(
-        {
-          userId: data.userId,
-          userName: data.userName,
-          nickName: data.nickName,
-          profile: data.imgPath, // 프로필 이미지 경로
-          type: "local",
-        }
-      );
-      
+
       router.push('/'); // 메인 페이지로 이동
     },
     onError: (error) => {
@@ -88,9 +80,6 @@ const createUser = async (userData, file) => {
      `${process.env.NEXT_PUBLIC_API_BASE_URL}/user`,
       formData,
       {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
         withCredentials: false,
       }
     );
@@ -150,10 +139,15 @@ const getInputStatus = (value, isValid, hasError = false) => {
   );
 
   const step1Valid = useMemo(() => {
+    const userNameRegex = /^[가-힣]{2,10}$/;
     const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
     const userIdRegex = /^[a-zA-Z0-9]+$/;
     
-    return nickName.trim().length >= 2 && 
+    return userName.trim().length >= 2 && 
+           userName.trim().length <= 10 &&
+           userName === userName.trim() &&
+           userNameRegex.test(userName.trim()) &&
+           nickName.trim().length >= 2 && 
            nickName.trim().length <= 12 &&
            nickName === nickName.trim() &&
            nickNameRegex.test(nickName.trim()) &&
@@ -197,6 +191,28 @@ const getInputStatus = (value, isValid, hasError = false) => {
   const handleNext = useCallback(() => {
     if (currentStep === 1) {
       if (!step1Valid) {
+        if (!userName.trim()) {
+          showErrorModal("실명을 입력해주세요.");
+          return;
+        }
+        if (userName !== userName.trim()) {
+          showErrorModal("실명의 앞뒤 공백을 제거해주세요.");
+          return;
+        }
+        if (userName.trim().length < 2) {
+          showErrorModal("실명은 2자 이상 입력해주세요.");
+          return;
+        }
+        if (userName.trim().length > 10) {
+          showErrorModal("실명은 10자 이하로 입력해주세요.");
+          return;
+        }
+        const userNameRegex = /^[가-힣]{2,10}$/;
+        if (!userNameRegex.test(userName.trim())) {
+          showErrorModal("실명은 한글만 사용 가능합니다.");
+          return;
+        }
+        
         if (!nickName.trim()) {
           showErrorModal("닉네임을 입력해주세요.");
           return;
@@ -358,9 +374,8 @@ const getInputStatus = (value, isValid, hasError = false) => {
       setUserIdCheckStatus(result.isDuplicate ? 'duplicate' : 'available');
       console.log('userIdCheckStatus 업데이트:', result.isDuplicate ? 'duplicate' : 'available');
       
-      if (result.isDuplicate) {
-        showErrorModal(result.message);
-      }
+      // 중복 여부에 관계없이 모달창으로 결과 표시
+      showErrorModal(result.message);
     } catch (error) {
       console.error('아이디 중복 확인 오류:', error);
       setUserIdCheckStatus(null);
@@ -470,7 +485,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
 
     const userData = {
       userId: userId.trim(),
-      userName: userId.trim(),
+      userName: userName.trim(),
       nickName: nickName.trim(),
       password,
       birthDate,
@@ -533,7 +548,38 @@ const getInputStatus = (value, isValid, hasError = false) => {
             <div className="space-y-4">
               <div className="text-center mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">기본 정보</h2>
-                <p className="text-xs sm:text-sm text-gray-600">닉네임과 아이디를 입력해주세요</p>
+                <p className="text-xs sm:text-sm text-gray-600">실명, 닉네임, 아이디를 입력해주세요</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" htmlFor="userName">실명</label>
+                <Input
+                  id="userName"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="한글 2-10자 (예: 홍길동)"
+                  className={`h-12 text-base ${getInputStatus(
+                    userName,
+                    userName.trim().length >= 2 && userName.trim().length <= 10 && /^[가-힣]{2,10}$/.test(userName.trim()),
+                    userName && (userName !== userName.trim() || userName.trim().length < 2 || userName.trim().length > 10 || !/^[가-힣]{2,10}$/.test(userName.trim()))
+                  )}`}
+                  aria-label="실명 입력"
+                />
+                {userName && userName !== userName.trim() && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
+                )}
+                {userName.trim() && userName.trim().length > 0 && userName.trim().length < 2 && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">2자 이상 입력해주세요</p>
+                )}
+                {userName.trim() && userName.trim().length > 10 && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">10자 이하로 입력해주세요</p>
+                )}
+                {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 10 && !/^[가-힣]{2,10}$/.test(userName.trim()) && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">한글만 사용 가능합니다</p>
+                )}
+                {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 10 && /^[가-힣]{2,10}$/.test(userName.trim()) && (
+                  <p className="text-xs text-green-600 mt-1">올바른 실명입니다</p>
+                )}
               </div>
 
               <div>

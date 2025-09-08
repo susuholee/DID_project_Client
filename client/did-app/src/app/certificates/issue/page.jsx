@@ -5,9 +5,33 @@ import { useRouter } from "next/navigation";
 import { useMutation } from '@tanstack/react-query';
 import axios from "axios";
 import Modal from "@/components/UI/Modal";
+import useUserStore from "@/Store/userStore";
 
 // 고정 발급 기관
 const FIXED_ISSUER = "경일IT게임아카데미";
+
+// 수료증 이름 옵션
+const CERTIFICATE_OPTIONS = [
+  { value: "블록체인 기초 과정 수료증", label: "블록체인 기초 과정 수료증" },
+  { value: "웹 개발 풀스택 과정 수료증", label: "웹 개발 풀스택 과정 수료증" },
+  { value: "모바일 앱 개발 과정 수료증", label: "모바일 앱 개발 과정 수료증" },
+  { value: "AI/머신러닝 기초 과정 수료증", label: "AI/머신러닝 기초 과정 수료증" },
+  { value: "데이터 분석 과정 수료증", label: "데이터 분석 과정 수료증" },
+  { value: "게임 개발 과정 수료증", label: "게임 개발 과정 수료증" },
+  { value: "UI/UX 디자인 과정 수료증", label: "UI/UX 디자인 과정 수료증" },
+  { value: "클라우드 컴퓨팅 과정 수료증", label: "클라우드 컴퓨팅 과정 수료증" },
+  { value: "사이버보안 과정 수료증", label: "사이버보안 과정 수료증" },
+  { value: "IT 프로젝트 관리 과정 수료증", label: "IT 프로젝트 관리 과정 수료증" }
+];
+
+// 발급 요청 사유 옵션
+const REQUEST_REASONS = [
+  { value: "기업/회사", label: "기업/회사" },
+  { value: "면접", label: "면접" },
+  { value: "학교", label: "학교" },
+  { value: "학원", label: "학원" },
+  { value: "기타", label: "기타" }
+];
 
 // 수료증 발급 요청 API 함수
 // 수정된 requestCertificate 함수
@@ -102,11 +126,8 @@ export default function IssueCertificatePage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
 
-  // zustand store 연결 (더미 구현)
-  const user = { id: 1, name: "사용자" }; // useUserStore((state) => state.user);
-  const addNotification = (userId, notification) => {
-    console.log("알림 추가:", notification);
-  }; // useUserStore((state) => state.addNotification);
+  // zustand store 연결
+  const { user, addNotification } = useUserStore();
 
   // useMutation 설정
   const certificateMutation = useMutation({
@@ -155,11 +176,7 @@ export default function IssueCertificatePage() {
 
   const [formData, setFormData] = useState({
     certificateName: "",
-    reason: "",
-    // 추가된 필드들
-    dateOfBirth: "",
-    profileImage: null,
-    name: "",
+    reason: "", // 선택 옵션으로 변경
   });
 
   // 실제 파일 객체를 저장할 상태 추가
@@ -222,47 +239,36 @@ export default function IssueCertificatePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!user) {
       setModalMessage("로그인이 필요합니다.");
       setModalType("error");
       setShowModal(true);
       return;
     }
-  
+
     // 필수 필드 검증
-    if (!formData.certificateName.trim() || !formData.name.trim() || !formData.reason.trim() || !formData.dateOfBirth) {
+    if (!formData.certificateName.trim() || !formData.reason.trim()) {
       setModalMessage("모든 필수 정보를 입력해주세요.");
       setModalType("error");
       setShowModal(true);
       return;
     }
-  
-    // 생년월일 유효성 검사 추가
-    const birthDate = new Date(formData.dateOfBirth);
-    const today = new Date();
-    
-    if (birthDate >= today) {
-      setModalMessage("올바른 생년월일을 입력해주세요.");
-      setModalType("error");
-      setShowModal(true);
-      return;
-    }
-  
+
     // 로딩 모달 표시
     setModalMessage("수료증 발급 요청을 처리하고 있습니다...");
     setModalType("loading");
     setShowModal(true);
-  
-    // 요청 데이터 준비 (수정된 버전)
+
+    // 요청 데이터 준비 (전역 상태에서 사용자 정보 가져오기)
     const requestData = {
-      userName: formData.name.trim(),
-      userId: user.id,
+      userName: user.userName, // 전역 상태에서 가져오기
+      userId: user.userId, // 전역 상태에서 가져오기
       certificateName: formData.certificateName.trim(),
-      description: formData.reason.trim(),
+      description: formData.reason, // 선택된 사유
       requestDate: new Date().toISOString().split('T')[0], // 오늘 날짜 (요청 날짜)
       request: 'issue', // 발급 요청
-      DOB: formData.dateOfBirth, // 사용자가 입력한 실제 생년월일
+      DOB: user.birthDate, // 전역 상태에서 가져오기
       imageFile: imageFile
     };
   
@@ -273,8 +279,6 @@ export default function IssueCertificatePage() {
 
   const canSubmit = formData.certificateName.trim() && 
         formData.reason.trim() &&
-        formData.dateOfBirth &&
-        formData.name.trim() &&
         !certificateMutation.isPending;
 
   return (
@@ -288,21 +292,26 @@ export default function IssueCertificatePage() {
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">수료증 정보</h2>
             
-              {/* 수료증 이름 입력 */}
+              {/* 수료증 이름 선택 */}
               <div>
                 <label className="block mb-2 text-sm font-semibold text-gray-700">
                   수료증 이름 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   name="certificateName"
-                  placeholder="예: 블록체인 기초 과정 수료증"
                   value={formData.certificateName}
                   onChange={handleChange}
                   required
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                />
-              </div>
+                >
+                  <option value="">수료증을 선택해주세요</option>
+                  {CERTIFICATE_OPTIONS.map((certificate) => (
+                    <option key={certificate.value} value={certificate.value}>
+                      {certificate.label}
+                    </option>
+                  ))}
+                </select>
+            </div>
 
             {/* 발급 기관 */}
             <div>
@@ -320,55 +329,25 @@ export default function IssueCertificatePage() {
             {/* 발급 요청 사유 */}
             <div>
               <label className="block mb-2 text-sm font-semibold text-gray-700">
-                발급 요청 사유 <span className="text-red-500">*</span>
+                발급 용도 <span className="text-red-500">*</span>
               </label>
-              <textarea
+              <select
                 name="reason"
-                placeholder="수료증 발급이 필요한 사유를 입력해주세요."
                 value={formData.reason}
                 onChange={handleChange}
                 required
-                rows={4}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              >
+                <option value="">발급 용도를 선택해주세요</option>
+                {REQUEST_REASONS.map((reason) => (
+                  <option key={reason.value} value={reason.value}>
+                    {reason.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* 개인 정보 섹션 */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">개인 정보</h2>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">
-                  이름 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="홍길동"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">
-                  생년월일 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
 
           {/* 프로필 사진 섹션 */}
           <div className="space-y-6">
@@ -440,7 +419,7 @@ export default function IssueCertificatePage() {
           </div>
 
           {/* 수료증 정보 미리보기 */}
-          {(formData.certificateName || formData.name) && (
+          {(formData.certificateName || formData.reason) && (
             <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-6 border border-cyan-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">요청 정보 미리보기</h3>
               <div className="bg-white rounded-lg p-6 border space-y-4">
@@ -448,7 +427,7 @@ export default function IssueCertificatePage() {
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-900 text-lg">{formData.certificateName || "수료증 이름 미입력"}</h4>
                     <p className="text-sm text-gray-600 mt-1">발급기관: {FIXED_ISSUER}</p>
-                    <p className="text-sm text-gray-600">요청사유: {formData.reason || "미입력"}</p>
+                    <p className="text-sm text-gray-600">발급 용도: {formData.reason || "미입력"}</p>
                   </div>
                   {imagePreview && (
                     <div className="ml-4">
@@ -458,15 +437,18 @@ export default function IssueCertificatePage() {
                 </div>
                 
                 <div className="border-t border-gray-200 pt-4">
+                  <h5 className="text-sm font-semibold text-gray-700 mb-3">수료자 정보</h5>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">이름:</span>
-                      <span className="ml-2 font-medium">{formData.name || "미입력"}</span>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <span className="text-gray-500 block text-xs">이름</span>
+                      <span className="font-semibold text-gray-900 text-base">{user?.userName || "미입력"}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-500">생년월일:</span>
-                      <span className="ml-2 font-medium">
-                        {formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString('ko-KR') : "미입력"}
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <span className="text-gray-500 block text-xs">생년월일</span>
+                      <span className="font-semibold text-gray-900 text-base">
+                        {user?.birthDate ? 
+                          new Date(user.birthDate).toLocaleDateString('ko-KR') : 
+                          "미입력"}
                       </span>
                     </div>
                   </div>
@@ -483,7 +465,7 @@ export default function IssueCertificatePage() {
               disabled={!canSubmit}
               className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 hover:from-cyan-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-lg transform hover:-translate-y-0.5"
             >
-              {!canSubmit ? "모든 필수 정보를 입력해주세요" : "발급 요청하기"}
+              {!canSubmit ? "수료증과 발급 용도를 선택해주세요" : "발급 요청하기"}
             </button>
             
             {!canSubmit && (
