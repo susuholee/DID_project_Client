@@ -9,31 +9,28 @@ export default function KakaoCallbackPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-   try {
-    const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, { 
-    withCredentials: true 
-  });
-  
-  console.log("사용자 정보:", res.data);
-  
-  // 사용자 정보 추출 및 상태 업데이트
-  const userData = {
-    id: res.data.id,
-    nickname: res.data.properties.nickname,
-    profileImage: res.data.properties.profile_image,
-    thumbnailImage: res.data.properties.thumbnail_image
-  };
-  
-  setUser(userData);
-  setIsLoggedIn(true);
-  
-  // 토큰 확인 후 무조건 signup/did로 이동
-  router.replace("/signup/did");
-  
-  } catch (error) {
-    console.error("API 호출 오류:", error);
-    router.replace("/login?error=auth_failed");
-  }
+      try {
+        // API 요청 제거 - 더미 데이터로 처리
+        console.log("더미 카카오 사용자 정보 생성");
+        
+        // 사용자 정보 추출 및 상태 업데이트
+        const userData = {
+          id: 1,
+          nickname: "카카오 사용자",
+          profileImage: null,
+          thumbnailImage: null
+        };
+        
+        setUser(userData);
+        setIsLoggedIn(true);
+        
+        // 토큰 확인 후 무조건 signup/did로 이동
+        router.replace("/signup/did");
+        
+      } catch (error) {
+        console.error("카카오 로그인 처리 오류:", error);
+        router.replace("/login?error=auth_failed");
+      }
     };
 
     checkAuth();

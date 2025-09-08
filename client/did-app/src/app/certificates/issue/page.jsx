@@ -2,25 +2,102 @@
 
 import { useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from '@tanstack/react-query';
 import axios from "axios";
 import Modal from "@/components/UI/Modal";
 
-// 더미 수료증 목록
-const AVAILABLE_CERTIFICATES = [
-  { id: "blockchain-basic", name: "블록체인 기초 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "blockchain-advanced", name: "블록체인 심화 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "smart-contract", name: "스마트컨트랙트 개발 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "did-system", name: "DID 인증 시스템 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "web3-architecture", name: "웹3 서비스 아키텍처 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "crypto-basics", name: "암호학 기초 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "nft-development", name: "NFT 개발 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "defi-basics", name: "DeFi 기초 과정 수료증", issuer: "경일IT게임아카데미" },
-  { id: "frontend-react", name: "React 프론트엔드 개발 과정 수료증", issuer: "크로스허브" },
-  { id: "backend-nodejs", name: "Node.js 백엔드 개발 과정 수료증", issuer: "크로스허브" },
-  { id: "fullstack-web", name: "풀스택 웹 개발 과정 수료증", issuer: "크로스허브" },
-  { id: "mobile-react-native", name: "React Native 모바일 개발 과정 수료증", issuer: "크로스허브" },
-];
+// 고정 발급 기관
+const FIXED_ISSUER = "경일IT게임아카데미";
 
+// 수료증 발급 요청 API 함수
+// 수정된 requestCertificate 함수
+const requestCertificate = async (requestData) => {
+  const formDataToSend = new FormData();
+  
+  // 필수 필드들 추가
+  formDataToSend.append('userName', requestData.userName.trim());
+  formDataToSend.append('userId', requestData.userId.toString());
+  formDataToSend.append('certificateName', requestData.certificateName.trim());
+  formDataToSend.append('description', requestData.description.trim());
+  formDataToSend.append('requestDate', requestData.requestDate);
+  formDataToSend.append('request', requestData.request);
+  formDataToSend.append('DOB', requestData.DOB);
+  
+  // 이미지 파일이 있으면 추가
+  if (requestData.imageFile) {
+    formDataToSend.append('file', requestData.imageFile);
+  }
+
+
+  const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/request`, formDataToSend, {
+    withCredentials: true,
+  });
+
+  return response.data;
+};
+
+// 수정된 handleSubmit 함수 
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!user) {
+    setModalMessage("로그인이 필요합니다.");
+    setModalType("error");
+    setShowModal(true);
+    return;
+  }
+
+  // 필수 필드 검증
+  if (!formData.certificateName.trim() || !formData.name.trim() || !formData.reason.trim() || !formData.dateOfBirth) {
+    setModalMessage("모든 필수 정보를 입력해주세요.");
+    setModalType("error");
+    setShowModal(true);
+    return;
+  }
+
+  // 생년월일 유효성 검사
+  const birthDate = new Date(formData.dateOfBirth);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // 시간 부분 제거
+  
+  if (birthDate >= today) {
+    setModalMessage("올바른 생년월일을 입력해주세요. (과거 날짜여야 합니다)");
+    setModalType("error");
+    setShowModal(true);
+    return;
+  }
+
+  // 나이 검증 (만 14세 이상)
+  const age = Math.floor((today - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+  if (age < 14 || age > 100) {
+    setModalMessage("올바른 생년월일을 입력해주세요.");
+    setModalType("error");
+    setShowModal(true);
+    return;
+  }
+
+
+  // 로딩 모달 표시
+  setModalMessage("수료증 발급 요청을 처리하고 있습니다...");
+  setModalType("loading");
+  setShowModal(true);
+
+  // 요청 데이터 준비
+  const requestData = {
+    userName: formData.name.trim(),
+    userId: user.id,
+    certificateName: formData.certificateName.trim(),
+    description: formData.reason.trim(),
+    requestDate: new Date().toISOString().split('T')[0], // 오늘 날짜 (요청 날짜)
+    request: 'issue',
+    DOB: formData.dateOfBirth, // 사용자가 입력한 실제 생년월일
+    imageFile: imageFile
+  };
+
+
+  // useMutation 실행
+  certificateMutation.mutate(requestData);
+};
 export default function IssueCertificatePage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
@@ -31,9 +108,53 @@ export default function IssueCertificatePage() {
     console.log("알림 추가:", notification);
   }; // useUserStore((state) => state.addNotification);
 
+  // useMutation 설정
+  const certificateMutation = useMutation({
+    mutationFn: requestCertificate,
+    onSuccess: (data) => {
+      console.log("서버 응답:", data);
+      
+      // 알림 추가
+      const newNotification = {
+        id: Date.now(),
+        title: "수료증 발급 요청",
+        message: `${formData.certificateName} 발급 요청이 제출되었습니다.`,
+        ts: Date.now(),
+        read: false,
+      };
+      addNotification(user.id, newNotification);
+
+
+      setModalMessage("수료증 발급 요청이 성공적으로 제출되었습니다!");
+      setModalType("success");
+      setShowModal(true);
+      
+      // 성공 시 잠시 후 페이지 이동
+      setTimeout(() => {
+        setShowModal(false);
+        router.push("/certificates/request");
+      }, 2000);
+    },
+    onError: (error) => {
+      console.error("발급 요청 실패:", error);
+      
+      // 간단한 에러 처리
+      if (error.response) {
+        const serverMessage = error.response.data?.message || error.response.data?.error || "서버 오류가 발생했습니다.";
+        setModalMessage(`발급 요청 실패: ${serverMessage}`);
+      } else if (error.request) {
+        setModalMessage("서버에 연결할 수 없습니다. 네트워크를 확인해주세요.");
+      } else {
+        setModalMessage("요청 처리 중 오류가 발생했습니다.");
+      }
+      
+      setModalType("error");
+      setShowModal(true);
+    }
+  });
+
   const [formData, setFormData] = useState({
-    certificateId: "",
-    issuer: "",
+    certificateName: "",
     reason: "",
     // 추가된 필드들
     dateOfBirth: "",
@@ -52,24 +173,9 @@ export default function IssueCertificatePage() {
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState("success"); // success, error, loading
 
-  // 선택된 수료증
-  const selectedCertificate = useMemo(() => {
-    return AVAILABLE_CERTIFICATES.find((cert) => cert.id === formData.certificateId);
-  }, [formData.certificateId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === "certificateId") {
-      const selected = AVAILABLE_CERTIFICATES.find((cert) => cert.id === value);
-      setFormData((prev) => ({
-        ...prev,
-        certificateId: value,
-        issuer: selected?.issuer || "",
-      }));
-      return;
-    }
-
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -116,147 +222,60 @@ export default function IssueCertificatePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!user) {
       setModalMessage("로그인이 필요합니다.");
       setModalType("error");
       setShowModal(true);
       return;
     }
-
+  
     // 필수 필드 검증
-    if (!formData.certificateId || !formData.name.trim() || !formData.reason.trim() || !formData.dateOfBirth) {
+    if (!formData.certificateName.trim() || !formData.name.trim() || !formData.reason.trim() || !formData.dateOfBirth) {
       setModalMessage("모든 필수 정보를 입력해주세요.");
       setModalType("error");
       setShowModal(true);
       return;
     }
-
+  
+    // 생년월일 유효성 검사 추가
+    const birthDate = new Date(formData.dateOfBirth);
+    const today = new Date();
+    
+    if (birthDate >= today) {
+      setModalMessage("올바른 생년월일을 입력해주세요.");
+      setModalType("error");
+      setShowModal(true);
+      return;
+    }
+  
     // 로딩 모달 표시
     setModalMessage("수료증 발급 요청을 처리하고 있습니다...");
     setModalType("loading");
     setShowModal(true);
-
-    // FormData 객체 생성
-    const formDataToSend = new FormData();
-    
-    // 필수 필드들 추가
-    formDataToSend.append('userName', formData.name.trim());
-    formDataToSend.append('userId', user.id.toString());
-    formDataToSend.append('certificateName', selectedCertificate?.name || '');
-    formDataToSend.append('description', formData.reason.trim());
-    formDataToSend.append('requestDate', new Date().toISOString());
-    formDataToSend.append('request', '발급 요청');
-    formDataToSend.append('DOB', formData.dateOfBirth);
-    
-    // 이미지 파일이 있으면 추가
-    if (imageFile) {
-      console.log("이미지 파일 추가:", imageFile.name, imageFile.size, imageFile.type);
-      formDataToSend.append('imagefile', imageFile);
-    } else {
-      console.log("이미지 파일이 없습니다.");
-    }
-
-    // FormData 내용 확인을 위한 디버깅
-    console.log("FormData 내용:");
-    for (let [key, value] of formDataToSend.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
-      } else {
-        console.log(`${key}: ${value}`);
-      }
-    }
-
-    console.log("발급 요청 데이터:", {
-      userName: formData.name,
+  
+    // 요청 데이터 준비 (수정된 버전)
+    const requestData = {
+      userName: formData.name.trim(),
       userId: user.id,
-      certificateName: selectedCertificate?.name,
-      description: formData.reason,
-      requestDate: new Date().toISOString(),
-      request: "발급 요청",
-      DOB: formData.dateOfBirth,
-      hasImage: !!imageFile,
-      imageFileName: imageFile?.name,
-      imageFileSize: imageFile?.size
-    });
-
-    try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/request`, formDataToSend, {
-        withCredentials: true,
-        // Content-Type을 명시하지 않으면 브라우저가 자동으로 multipart/form-data와 boundary를 설정합니다
-      });
-      console.log(process.env.NEXT_PUBLIC_API_URL);
-
-      console.log("서버 응답:", response.data);
-
-      // 알림 추가
-      const newNotification = {
-        id: Date.now(),
-        title: "수료증 발급 요청",
-        message: `${selectedCertificate?.name} 발급 요청이 제출되었습니다.`,
-        ts: Date.now(),
-        read: false,
-      };
-
-      addNotification(user.id, newNotification);
-
-      // 발급 요청 저장 (로컬 백업)
-      const existingRequests = JSON.parse(localStorage.getItem("certificate_requests") || "[]");
-      const requestData = {
-        userName: formData.name,
-        userId: user.id,
-        certificateName: selectedCertificate?.name,
-        description: formData.reason,
-        requestDate: new Date().toISOString(),
-        request: "발급 요청",
-        DOB: formData.dateOfBirth,
-        hasImage: !!imageFile,
-        id: Date.now(),
-        requestedAt: new Date().toISOString(),
-        status: "pending",
-      };
-      const updatedRequests = [requestData, ...existingRequests];
-      localStorage.setItem("certificate_requests", JSON.stringify(updatedRequests));
-
-      setModalMessage("수료증 발급 요청이 성공적으로 제출되었습니다!");
-       setModalType("success");
-       setShowModal(true);
-       
-       // 성공 시 잠시 후 페이지 이동
-       setTimeout(() => {
-         setShowModal(false);
-         router.push("/certificates/request");
-       }, 2000);
-    } catch (error) {
-      console.error("발급 요청 실패:", error);
-      
-      // 서버 응답 상세 정보 확인
-      if (error.response) {
-        console.error("서버 응답 상태:", error.response.status);
-        console.error("서버 응답 데이터:", error.response.data);
-        console.error("서버 응답 헤더:", error.response.headers);
-        
-        // 서버에서 보낸 오류 메시지가 있으면 사용
-        const serverMessage = error.response.data?.message || error.response.data?.error || "서버 오류가 발생했습니다.";
-        setModalMessage(`발급 요청 실패: ${serverMessage}`);
-      } else if (error.request) {
-        console.error("요청 전송 실패:", error.request);
-        setModalMessage("서버에 연결할 수 없습니다. 네트워크를 확인해주세요.");
-      } else {
-        console.error("요청 설정 오류:", error.message);
-        setModalMessage("요청 처리 중 오류가 발생했습니다.");
-      }
-      
-      setModalType("error");
-      setShowModal(true);
-    }
+      certificateName: formData.certificateName.trim(),
+      description: formData.reason.trim(),
+      requestDate: new Date().toISOString().split('T')[0], // 오늘 날짜 (요청 날짜)
+      request: 'issue', // 발급 요청
+      DOB: formData.dateOfBirth, // 사용자가 입력한 실제 생년월일
+      imageFile: imageFile
+    };
+  
+  
+    // useMutation 실행
+    certificateMutation.mutate(requestData);
   };
 
-  const canSubmit = formData.certificateId && 
-        formData.issuer && 
+  const canSubmit = formData.certificateName.trim() && 
         formData.reason.trim() &&
         formData.dateOfBirth &&
-        formData.name.trim();
+        formData.name.trim() &&
+        !certificateMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
@@ -269,41 +288,30 @@ export default function IssueCertificatePage() {
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">수료증 정보</h2>
             
-              {/* 수료증 선택 */}
+              {/* 수료증 이름 입력 */}
               <div>
                 <label className="block mb-2 text-sm font-semibold text-gray-700">
-                  수료증 종류 <span className="text-red-500">*</span>
+                  수료증 이름 <span className="text-red-500">*</span>
                 </label>
-                <select
-                  name="certificateId"
-                  value={formData.certificateId}
+                <input
+                  type="text"
+                  name="certificateName"
+                  placeholder="예: 블록체인 기초 과정 수료증"
+                  value={formData.certificateName}
                   onChange={handleChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white"
-                >
-                  <option value="" disabled>
-                    수료증을 선택하세요
-                  </option>
-                  {AVAILABLE_CERTIFICATES.map((cert) => (
-                    <option key={cert.id} value={cert.id}>
-                      {cert.name} ({cert.issuer})
-                    </option>
-                  ))}
-                </select>
-            </div>
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                />
+              </div>
 
             {/* 발급 기관 */}
             <div>
               <label className="block mb-2 text-sm font-semibold text-gray-700">
-                발급 기관 <span className="text-red-500">*</span>
+                발급 기관
               </label>
               <input
                 type="text"
-                name="issuer"
-                placeholder="경일IT게임아카데미"
-                value={formData.issuer}
-                onChange={handleChange}
-                required
+                value={FIXED_ISSUER}
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-50"
                 readOnly
               />
@@ -431,15 +439,15 @@ export default function IssueCertificatePage() {
             </div>
           </div>
 
-          {/* 선택된 수료증 미리보기 */}
-          {selectedCertificate && (
+          {/* 수료증 정보 미리보기 */}
+          {(formData.certificateName || formData.name) && (
             <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-6 border border-cyan-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">요청 정보 미리보기</h3>
               <div className="bg-white rounded-lg p-6 border space-y-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 text-lg">{selectedCertificate.name}</h4>
-                    <p className="text-sm text-gray-600 mt-1">발급기관: {selectedCertificate.issuer}</p>
+                    <h4 className="font-semibold text-gray-900 text-lg">{formData.certificateName || "수료증 이름 미입력"}</h4>
+                    <p className="text-sm text-gray-600 mt-1">발급기관: {FIXED_ISSUER}</p>
                     <p className="text-sm text-gray-600">요청사유: {formData.reason || "미입력"}</p>
                   </div>
                   {imagePreview && (
@@ -490,9 +498,10 @@ export default function IssueCertificatePage() {
 
         {/* 모달 */}
         <Modal
-          isOpen={showModal}
-          onClose={() => modalType !== "loading" && setShowModal(false)}
+          isOpen={showModal || certificateMutation.isPending}
+          onClose={() => !certificateMutation.isPending && setShowModal(false)}
           title={
+            certificateMutation.isPending ? "처리 중" :
             modalType === "success" ? "성공" : 
             modalType === "error" ? "오류" : 
             "처리 중"
@@ -500,12 +509,17 @@ export default function IssueCertificatePage() {
         >
         <div className="p-6">
           <div className={`text-center ${
+            certificateMutation.isPending ? "text-blue-600" :
             modalType === "success" ? "text-green-600" : 
             modalType === "error" ? "text-red-600" : 
             "text-blue-600"
           }`}>
             <div className="mb-4">
-              {modalType === "success" ? (
+              {certificateMutation.isPending ? (
+                <div className="w-12 h-12 mx-auto">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              ) : modalType === "success" ? (
                 <svg className="w-12 h-12 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -519,9 +533,11 @@ export default function IssueCertificatePage() {
                 </div>
               )}
             </div>
-            <p className="text-lg font-medium">{modalMessage}</p>
+            <p className="text-lg font-medium">
+              {certificateMutation.isPending ? "수료증 발급 요청을 처리하고 있습니다..." : modalMessage}
+            </p>
           </div>
-          {modalType !== "loading" && (
+          {!certificateMutation.isPending && (
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setShowModal(false)}

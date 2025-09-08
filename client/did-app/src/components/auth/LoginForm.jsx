@@ -52,9 +52,10 @@ export default function LoginForm() {
         { withCredentials: true }
       );
 
+      
       const { state, message } = loginUser.data;
       console.log("로그인 응답:", loginUser.data);
-
+      
       // 로그인 성공 처리
       if (state === 200) {
         // 로그인 성공 후 사용자 정보 조회
@@ -66,55 +67,69 @@ export default function LoginForm() {
           
           if (userResponse.data.state === 200) {
             const userData = Array.isArray(userResponse.data.data) 
-              ? userResponse.data.data[0] 
-              : userResponse.data.data;
-              
-             setUser(userData, "local");
-             console.log("사용자 정보 저장 완료:", userData);
-             
-             // 전역 상태 확인
-             setTimeout(() => {
+            ? userResponse.data.data[0] 
+            : userResponse.data.data;
+            
+            setUser(userData, "local");
+            console.log("사용자 정보 저장 완료:", userData);
+            
+            // 전역 상태 확인
+            setTimeout(() => {
                const currentState = useUserStore.getState();
                console.log("현재 전역 상태:", currentState);
                router.push("/dashboard");
-             }, 100);
-          } else {
-            showErrorModal("사용자 정보를 가져올 수 없습니다.");
+              }, 100);
+            } else {
+              showErrorModal("사용자 정보를 가져올 수 없습니다.");
+            }
+          } catch (error) {
+            console.error("인증 상태 확인 실패:", error);
+            showErrorModal("인증 상태 확인 중 오류가 발생했습니다.");
           }
-        } catch (error) {
-          console.error("인증 상태 확인 실패:", error);
-          showErrorModal("인증 상태 확인 중 오류가 발생했습니다.");
+        } else {
+          console.log("로그인 실패:", message);
+          showErrorModal(message || "로그인에 실패했습니다.");
         }
-      } else {
-        console.log("로그인 실패:", message);
-        showErrorModal(message || "로그인에 실패했습니다.");
-      }
-    } catch (error) {
-      console.error("로그인 실패:", error);
-
-      if (error.response) {
-        const msg =
+      } catch (error) {
+        console.error("로그인 실패:", error);
+        
+        if (error.response) {
+          const msg =
           error.response.data?.message || "아이디 또는 비밀번호가 올바르지 않습니다.";
-        showErrorModal(msg);
-      } else {
-        showErrorModal("서버와 연결할 수 없습니다.");
+          showErrorModal(msg);
+        } else {
+          showErrorModal("서버와 연결할 수 없습니다.");
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    const testUserAPI = async () => {
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, { 
+          withCredentials: true 
+        });
+        console.log("현재 사용자 정보:", res.data);
+      } catch (error) {
+        console.error("API 호출 실패:", error.response?.data || error.message);
+      }
+    };
 
-  // 카카오 로그인 버튼 클릭 시
-  const handleKakaoLogin = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/auth`;
-  };
+   
+    // 카카오 로그인 버튼 클릭 시
+    const handleKakaoLogin = () => {
+      window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/auth`;
+    };
+    
+    return (
+      <>
 
-  return (
-    <>
+
       <main className="flex min-h-screen items-center justify-center">
         <div className="w-full max-w-md rounded-2xl bg-gray-200 shadow-lg p-8">
           <h1 className="text-black text-3xl font-extrabold mb-8">로그인</h1>
-
+          <button onClick={testUserAPI}>사용자 정보 확인</button>
           {/* 일반 로그인 (아이디 / 비밀번호) */}
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div>
