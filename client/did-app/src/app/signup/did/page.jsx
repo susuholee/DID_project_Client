@@ -184,7 +184,7 @@ export default function DIDSignupPage() {
         { withCredentials: true }
       );
 
-      router.replace("/dashboard");
+      router.push("/dashboard");
     } catch (error) {
       console.error('DID 정보 저장 실패:', error);
       alert('정보 저장에 실패했습니다. 다시 시도해주세요.');

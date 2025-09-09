@@ -9,62 +9,36 @@ import axios from "axios";
 export default function MainPage() {
   const sectionsRef = useRef([]);
   const { user, isLoggedIn, setUser, setIsLoggedIn } = useUserStore();
-  const router = useRouter();
+  const [currentPath, setCurrentPath] = useState(''); // 추가
+  console.log("현재 상태:", isLoggedIn, user);  
+  const router = useRouter();  
+  // console.log("현재 사용자:", user);
+  // console.log("로그인 상태:", isLoggedIn);
+useEffect(() => {
+  if (window.location.pathname === '/signup/did') {
+    // 페이지 전체 새로고침으로 강제 이동
+    window.location.href = '/signup/did';
+  }
+}, []);
+
+ // 경로 체크 및 카카오 로그인 처리
+useEffect(() => {
+  const currentPath = window.location.pathname;
   
-  console.log("현재 사용자:", user);
-  console.log("로그인 상태:", isLoggedIn);
-
-  // 경로 체크 및 카카오 로그인 처리
-  useEffect(() => {
-    const currentPath = window.location.pathname;
-    console.log("현재 경로:", currentPath);
-    
-    // 카카오 로그인 콜백 처리 (특정 경로에서만)
-    if (currentPath === '/signup/did') {
-      console.log("카카오 로그인 콜백 처리 시작");
-      
-      const checkAuth = async () => {
-        try {
-          const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, { 
-            withCredentials: true 
-          });
-          
-          console.log("사용자 정보:", res.data);
-          
-          const userData = {
-            id: res.data.id,
-            nickname: res.data.properties?.nickname,
-            profileImage: res.data.properties?.profile_image,
-            thumbnailImage: res.data.properties?.thumbnail_image,
-            provider: 'kakao'
-          };
-          
-          setUser(userData);
-          setIsLoggedIn(true);
-          router.replace("/signup/did");
-          
-        } catch (error) {
-          console.error("카카오 로그인 API 호출 오류:", error);
-          router.replace("/login?error=auth_failed");
-        }
-      };
-
-      checkAuth();
-      return;
+  // 메인 페이지(/)에서만 리다이렉트 처리
+  if (currentPath === '/' && isLoggedIn && user?.provider === 'kakao') {
+    if (user.name && user.address && user.birth) {
+      // DID 정보가 완료된 사용자는 dashboard로
+      console.log("DID 정보 완료된 사용자 - dashboard로 이동");
+      router.push("/dashboard");
+    } else {
+      // DID 정보가 없는 사용자는 signup/did로
+      console.log("DID 정보 미완료 사용자 - /signup/did로 이동");
+      router.push("/signup/did");
     }
+  }
 
-    // 사용자가 의도적으로 메인 페이지에 왔다면 그대로 보여줌
-    
-    // 만약 카카오 사용자인데 DID 정보가 불완전한 경우에만 리디렉션
-    if (isLoggedIn && user && user.provider === 'kakao') {
-      if (!user.name || !user.address || !user.birth) {
-        console.log("카카오 사용자 DID 정보 불완전 - /signup/did로 이동");
-        router.push("/signup/did");
-      }
-    }
-    
-  }, [isLoggedIn, user, router, setUser, setIsLoggedIn]);
-
+}, [isLoggedIn, user, router]);
   // 섹션 스크롤 애니메이션
   useEffect(() => {
     const handleScroll = () => {
