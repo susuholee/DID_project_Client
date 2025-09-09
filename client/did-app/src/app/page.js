@@ -127,23 +127,23 @@ export default function MainPage() {
             <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl animate-none">
               {/* 로그인된 사용자에게는 대시보드 바로가기 버튼 표시 */}
               {isLoggedIn && user ? (
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center">
+                <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-2xl p-6 text-center shadow-lg">
                   <div className="flex items-center justify-center mb-4">
                     <img
                       src={user.imgPath || '/images/default.png'}
                       alt="프로필"
-                      className="w-16 h-16 rounded-full object-cover"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-white/30"
                     />
                   </div>
                   <h3 className="text-xl font-semibold text-white mb-2">
                     환영합니다, {user.nickName}님!
                   </h3>
-                  <p className="text-white/80 mb-4">
+                  <p className="text-white/90 mb-4">
                     이미 로그인되어 있습니다.
                   </p>
                   <button
                     onClick={() => router.push('/dashboard')}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg border border-white/30"
                   >
                     대시보드로 이동
                   </button>
