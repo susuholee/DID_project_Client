@@ -3,80 +3,170 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import useUserStore from '@/Store/userStore';
+import Certificate from '@/components/certificates/certificate';
+import api from '@/lib/axios';
+import axios from 'axios';
 // Suspense로 감쌀 컴포넌트 분리
 function CertificateDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const certificateId = searchParams.get('id');
+  const { user, isLoggedIn, addNotification } = useUserStore();
+  const queryClient = useQueryClient();
 
-  const [certificate, setCertificate] = useState(null);
-  const [user, setUser] = useState(null);
-  const [notifications, setNotifications] = useState([]);
   const [revokeModalOpen, setRevokeModalOpen] = useState(false);
   const [revokeReason, setRevokeReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
 
-  // 사용자 정보 로드
-  useEffect(() => {
-    const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (cu) setUser(cu);
-  }, []);
+  const pushNotif = (title, message) => {
+    if (user?.id || user?.userId) {
+      addNotification(user.id || user.userId, {
+        id: Date.now(),
+        title,
+        message,
+        ts: Date.now(),
+        read: false,
+      });
+    }
+  };
 
-  // 알림 설정
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('notifications') || '[]');
-    if (Array.isArray(saved) && saved.length) setNotifications(saved);
-  }, []);
+  // TanStack Query로 수료증 데이터 가져오기
+  const { 
+    data: certificate, 
+    isLoading: loading, 
+    error 
+  } = useQuery({
+    queryKey: ['certificate-detail', certificateId, user?.userId],
+    queryFn: async () => {
+      if (!certificateId) {
+        throw new Error('수료증 ID가 제공되지 않았습니다.');
+      }
 
-  useEffect(() => {
-    localStorage.setItem('notifications', JSON.stringify(notifications));
-  }, [notifications]);
+      if (!isLoggedIn || !user) {
+        throw new Error('로그인이 필요합니다.');
+      }
 
-  const pushNotif = (title, message) =>
-    setNotifications((prev) => [
-      { id: Date.now(), title, message, ts: Date.now(), read: false },
-      ...prev,
-    ]);
+      const userId = user.userId || user.id;
+      if (!userId) {
+        throw new Error('사용자 ID를 찾을 수 없습니다.');
+      }
 
-  // 수료증 데이터 로드
+      // sessionStorage에서 먼저 확인
+      const saved = sessionStorage.getItem('selectedCertificate');
+      if (saved) {
+        const cert = JSON.parse(saved);
+        if (cert.id == certificateId) {
+          return cert;
+        }
+      }
+
+      // API에서 수료증 목록 가져와서 해당 ID 찾기
+      const response = await api.get(`/user/vc/${userId}`);
+      
+      if (Array.isArray(response.data)) {
+        const foundCertificate = response.data.find(item => {
+          const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
+                                 item.message?.verifiableCredential?.credentialSubject;
+          return credentialSubject?.id == certificateId;
+        });
+
+        if (!foundCertificate) {
+          throw new Error('해당 수료증을 찾을 수 없습니다.');
+        }
+
+        // Certificate 컴포넌트와 동일한 구조로 정규화
+        const credentialSubject = foundCertificate.message?.payload?.vc?.credentialSubject || 
+                               foundCertificate.message?.verifiableCredential?.credentialSubject;
+        
+        return {
+          id: credentialSubject.id,
+          title: credentialSubject.certificateName,
+          certificateName: credentialSubject.certificateName,
+          issuer: credentialSubject.issuer,
+          issueDate: credentialSubject.issueDate || 
+                   foundCertificate.message?.payload?.issuseDate || 
+                   foundCertificate.message?.payload?.issuanceDate ||
+                   foundCertificate.message?.verifiableCredential?.issuanceDate,
+          status: credentialSubject.status === 'approved' ? '유효' : '폐기',
+          imageUrl: credentialSubject.ImagePath,
+          imagePath: credentialSubject.ImagePath,
+          userName: credentialSubject.userName,
+          userId: credentialSubject.userId,
+          description: credentialSubject.description,
+          userDid: credentialSubject.userDid,
+          issuerId: credentialSubject.issuerId,
+          DOB: credentialSubject.DOB,
+          requestDate: credentialSubject.requestDate,
+          request: credentialSubject.request,
+          publicKey: credentialSubject.userDid,
+          rawData: foundCertificate,
+        };
+      } else {
+        throw new Error('수료증 데이터 형식이 올바르지 않습니다.');
+      }
+    },
+    enabled: !!certificateId && !!user && isLoggedIn,
+    staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
+    cacheTime: 10 * 60 * 1000, // 10분간 메모리에 유지
+  });
+
+  // 폐기 요청 mutation
+  const revokeMutation = useMutation({
+    mutationFn: async ({ userId, vcId, reason }) => {
+      const formData = new FormData();
+      
+      // 폐기 요청 데이터 추가
+      formData.append('userName', certificate.userName);
+      formData.append('userId', userId);
+      formData.append('certificateName', certificate.certificateName);
+      formData.append('description', reason.trim());
+      formData.append('request', 'revoke');
+      formData.append('DOB', certificate.DOB);
+      
+      // 이미지 파일이 있으면 추가
+      if (certificate.imagePath) {
+        // 이미지 URL을 파일로 변환하거나 기본값 사용
+        try {
+          const response = await fetch(certificate.imagePath);
+          const blob = await response.blob();
+          const file = new File([blob], 'certificate-image.jpg', { type: blob.type });
+          formData.append('file', file);
+        } catch (error) {
+          console.warn('이미지 파일 변환 실패:', error);
+        }
+      }
+
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/request`, formData, {
+        withCredentials: true,
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      pushNotif('폐기 요청 완료', `"${certificate?.title}" 폐기 요청이 관리자에게 전송되었습니다.`);
+      
+      // 관련 쿼리들 무효화하여 데이터 새로고침
+      queryClient.invalidateQueries(['certificates', user?.userId]);
+      queryClient.invalidateQueries(['certificate-detail', certificateId, user?.userId]);
+      
+      setRevokeModalOpen(false);
+      setRevokeReason('');
+    },
+    onError: (error) => {
+      console.error('폐기 요청 실패:', error);
+      pushNotif('폐기 요청 실패', '폐기 요청 중 오류가 발생했습니다.');
+    }
+  });
+
+  // 로그인 체크
   useEffect(() => {
-    if (!certificateId) {
-      router.push('/certificates/my');
+    if (!isLoggedIn || !user) {
+      router.push('/');
       return;
     }
-
-    // sessionStorage에서 먼저 확인
-    const saved = sessionStorage.getItem('selectedCertificate');
-    if (saved) {
-      const cert = JSON.parse(saved);
-      if (cert.id == certificateId) {
-        setCertificate(cert);
-        return;
-      }
-    }
-
-    // localStorage의 certificates에서 ID로 찾기
-    const certificatesData = localStorage.getItem('userCertificates');
-    if (certificatesData) {
-      try {
-        const certificates = JSON.parse(certificatesData);
-        const foundCertificate = certificates.find(cert =>
-          cert.id == certificateId
-        );
-        if (foundCertificate) {
-          setCertificate(foundCertificate);
-          return;
-        }
-      } catch (error) {
-        console.error('Error parsing certificates:', error);
-      }
-    }
-
-    // 찾지 못했으면 목록으로 돌아가기
-    router.push('/certificates/my');
-  }, [certificateId, router]);
+  }, [isLoggedIn, user, router]);
 
   const displayName = user?.isKakaoUser ? user?.nickname : user?.name || '사용자';
 
@@ -118,33 +208,24 @@ function CertificateDetailContent() {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const revokeRequest = {
-        id: Date.now(),
-        certificateId: certificate.id,
-        certificateName: certificate.title,
-        issuer: certificate.issuer,
-        reason: revokeReason.trim(),
-        requestedAt: new Date().toISOString(),
-        status: 'pending'
-      };
-
-      const existingRevokeRequests = JSON.parse(localStorage.getItem('revokeRequests') || '[]');
-      const updatedRevokeRequests = [revokeRequest, ...existingRevokeRequests];
-      localStorage.setItem('revokeRequests', JSON.stringify(updatedRevokeRequests));
-
-      pushNotif('폐기 요청 완료', `"${certificate.title}" 폐기 요청이 관리자에게 전송되었습니다.`);
-
-      setRevokeModalOpen(false);
-      setRevokeReason('');
-    } catch (error) {
-      pushNotif('폐기 요청 실패', '폐기 요청 중 오류가 발생했습니다.');
-    } finally {
-      setSubmitting(false);
+    const userId = user.userId || user.id;
+    if (!userId) {
+      pushNotif('오류', '사용자 ID를 찾을 수 없습니다.');
+      return;
     }
+
+    console.log('폐기 요청 시작:', {
+      userId,
+      vcId: certificate.id,
+      reason: revokeReason,
+      url: `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/request`
+    });
+
+    revokeMutation.mutate({
+      userId,
+      vcId: certificate.id,
+      reason: revokeReason
+    });
   };
 
   const openRevokeModal = () => {
@@ -157,12 +238,55 @@ function CertificateDetailContent() {
     setRevokeReason('');
   };
 
-  if (!certificate) {
+  // 로딩 상태
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
           <p className="text-gray-600">수료증을 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+            <span className="text-2xl text-red-500">⚠️</span>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">오류 발생</h2>
+          <p className="text-gray-600 mb-4">{error.message || '수료증을 불러오는데 실패했습니다.'}</p>
+          <button
+            onClick={() => router.push('/certificates/my')}
+            className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+          >
+            목록으로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 수료증이 없는 경우
+  if (!certificate) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+            <span className="text-2xl text-gray-400">📄</span>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">수료증을 찾을 수 없습니다</h2>
+          <p className="text-gray-600 mb-4">요청하신 수료증이 존재하지 않습니다.</p>
+          <button
+            onClick={() => router.push('/certificates/my')}
+            className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+          >
+            목록으로 돌아가기
+          </button>
         </div>
       </div>
     );
@@ -193,9 +317,6 @@ function CertificateDetailContent() {
               </svg>
               목록으로 돌아가기
             </button>
-            <div className="text-sm text-gray-500">
-              수료증 상세 정보
-            </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
@@ -245,30 +366,32 @@ function CertificateDetailContent() {
             </div>
 
             <div className="p-8">
-              <div className="mb-8 bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <img
-                  src={certificate.imageUrl}
-                  alt={certificate.title}
-                  className="w-full h-auto min-h-[600px] max-h-[800px] object-contain"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
+              {/* 전체 수료증 표시 */}
+              <div className="mb-8">
+                <Certificate 
+                  certInfo={{
+                    vc: {
+                      credentialSubject: {
+                        id: certificate.id,
+                        certificateName: certificate.certificateName,
+                        issuer: certificate.issuer,
+                        issueDate: certificate.issueDate,
+                        status: certificate.status,
+                        ImagePath: certificate.imagePath,
+                        userName: certificate.userName,
+                        userId: certificate.userId,
+                        description: certificate.description,
+                        userDid: certificate.userDid,
+                        issuerId: certificate.issuerId,
+                        DOB: certificate.DOB,
+                        requestDate: certificate.requestDate,
+                        request: certificate.request,
+                      }
+                    },
+                    payload: certificate.rawData?.message?.payload,
+                    verifiableCredential: certificate.rawData?.message?.verifiableCredential
                   }}
                 />
-                <div
-                  className="hidden w-full h-96 bg-gray-50 flex-col items-center justify-center border-2 border-dashed border-gray-200"
-                  style={{ display: 'none' }}
-                >
-                  <div className="w-20 h-20 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center mb-4">
-                    <span className="text-white text-2xl font-bold">VC</span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Verifiable Credential
-                  </h3>
-                  <p className="text-gray-600 text-sm">
-                    블록체인에 안전하게 저장된 검증 가능한 자격증명입니다.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
@@ -355,17 +478,17 @@ function CertificateDetailContent() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={closeRevokeModal}
-                  disabled={submitting}
+                  disabled={revokeMutation.isPending}
                   className="px-6 py-3 border-2 border-gray-200 rounded-2xl text-gray-700 hover:bg-gray-50 transition-all duration-300 disabled:opacity-50 font-medium"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleRevoke}
-                  disabled={!revokeReason.trim() || submitting}
+                  disabled={!revokeReason.trim() || revokeMutation.isPending}
                   className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg transform hover:-translate-y-0.5"
                 >
-                  {submitting ? (
+                  {revokeMutation.isPending ? (
                     <span className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       요청 중...

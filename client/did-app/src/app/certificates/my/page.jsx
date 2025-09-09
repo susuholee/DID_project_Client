@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import useUserStore from '@/Store/userStore';
-import Certificate from '@/components/certificates/certificate';
 
 export default function MyCertificatesPage() {
   const router = useRouter();
@@ -212,11 +211,38 @@ export default function MyCertificatesPage() {
     try {
       console.log('폐기 요청:', { certId: cert.id, reason });
       
+      const formData = new FormData();
+      
+      // 폐기 요청 데이터 추가
+      formData.append('userName', cert.userName);
+      formData.append('userId', user.userId || user.id);
+      formData.append('certificateName', cert.certificateName);
+      formData.append('description', reason.trim());
+      formData.append('request', 'revoke');
+      formData.append('DOB', cert.DOB);
+      
+      // 이미지 파일이 있으면 추가
+      if (cert.imagePath) {
+        try {
+          const response = await fetch(cert.imagePath);
+          const blob = await response.blob();
+          const file = new File([blob], 'certificate-image.jpg', { type: blob.type });
+          formData.append('file', file);
+        } catch (error) {
+          console.warn('이미지 파일 변환 실패:', error);
+        }
+      }
+      
       // 실제 폐기 API 호출
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/certificates/${cert.id}/revoke`,
-        { reason },
-        { withCredentials: true }
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/request`,
+        formData,
+        { 
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
       
       // 성공 시 데이터 다시 가져오기
@@ -383,7 +409,7 @@ export default function MyCertificatesPage() {
             </div>
           )}
 
-          {/* 목록(수료증 직접 표시) */}
+          {/* 목록(카드 형태) */}
           {pageData.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
@@ -392,63 +418,75 @@ export default function MyCertificatesPage() {
               <p className="text-gray-600">조건에 맞는 수료증이 없습니다.</p>
             </div>
           ) : (
-            <div className="space-y-8">
-              {pageData.map((c) => {
-                // 각 수료증을 위한 임시 certInfo 설정
-                const tempCertInfo = {
-                  vc: {
-                    credentialSubject: c.rawData?.message?.payload?.vc?.credentialSubject || {}
-                  },
-                  payload: c.rawData?.message?.payload,
-                  verifiableCredential: c.rawData?.message?.verifiableCredential
-                };
-
-                return (
-                  <div key={c.id} className="relative">
-                    {/* 수료증 제목 */}
-                    <div className="mb-4 p-4 bg-cyan-50 rounded-lg">
-                      <h3 className="text-lg font-bold text-cyan-700">
-                        {c.certificateName}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        수료자: {c.userName} | 발급기관: {c.issuer}
-                      </p>
-                    </div>
-
-                    {/* Certificate 컴포넌트를 축소해서 표시 */}
-                    <div 
-                      className="transform scale-50 origin-top cursor-pointer hover:scale-55 transition-transform duration-200"
-                      onClick={() => handleCertificateClick(c)}
-                    >
-                      <div className="pointer-events-none">
-                        <Certificate certInfo={tempCertInfo} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pageData.map((c) => (
+                <div 
+                  key={c.id} 
+                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                  onClick={() => handleCertificateClick(c)}
+                >
+                  {/* 썸네일 이미지 */}
+                  <div className="relative h-48 bg-gradient-to-br from-cyan-50 to-blue-50 flex items-center justify-center overflow-hidden">
+                    {c.imagePath ? (
+                      <img 
+                        src={c.imagePath} 
+                        alt={c.certificateName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-cyan-100 flex items-center justify-center">
+                          <span className="text-2xl text-cyan-600">📜</span>
+                        </div>
+                        <p className="text-sm text-gray-500">수료증</p>
                       </div>
-                    </div>
-
-                    {/* 액션 버튼들 */}
-                    <div className="flex justify-center gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
-                      <button 
-                        onClick={(e) => handleDownload(c, e)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                      >
-                        다운로드
-                      </button>
-                      <button 
-                        onClick={(e) => handleShare(c, e)}
-                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                      >
-                        공유
-                      </button>
-                      <button 
-                        onClick={() => handleCertificateClick(c)}
-                        className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-                      >
-                        상세보기
-                      </button>
+                    )}
+                    
+                    {/* 상태 배지 */}
+                    <div className="absolute top-3 right-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeOf(c.status)}`}>
+                        {c.status}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
+
+                  {/* 카드 내용 */}
+                  <div className="p-6">
+                    {/* 수료증 제목 */}
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-cyan-600 transition-colors">
+                      {c.certificateName}
+                    </h3>
+                    
+                    {/* 발급기관 */}
+                    <p className="text-sm text-gray-600 mb-3">
+                      {c.issuer}
+                    </p>
+                    
+                    {/* 수료자 정보 */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-xs font-medium text-gray-600">
+                          {c.userName?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{c.userName}</p>
+                        <p className="text-xs text-gray-500">수료자</p>
+                      </div>
+                    </div>
+                    
+                    {/* 발급일 */}
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                      <span>발급일</span>
+                      <span className="font-medium">
+                        {c.issueDate ? new Date(c.issueDate).toLocaleDateString('ko-KR') : 'N/A'}
+                      </span>
+                    </div>
+                    
+            
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

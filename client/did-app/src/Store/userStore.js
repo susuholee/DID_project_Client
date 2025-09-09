@@ -1,12 +1,15 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import axios from "axios";
 
-const useUserStore = create((set) => ({
-  user: null,
-  userType: null,
-  token: null,
-  notifications: [],
-  isLoggedIn: false,
+const useUserStore = create(
+  persist(
+    (set) => ({
+      user: null,
+      userType: null,
+      token: null,
+      notifications: [],
+      isLoggedIn: false,
 
   // 통합된 setUser 함수 (일반/카카오 로그인 지원)
   setUser: (userData, type = "local") =>
@@ -116,7 +119,20 @@ const useUserStore = create((set) => ({
       return { user: updatedUser };
     }),
 
-}));
+    }),
+    {
+      name: 'user-storage', // 로컬 스토리지 키
+      // 민감한 정보는 제외하고 저장
+      partialize: (state) => ({
+        user: state.user,
+        userType: state.userType,
+        isLoggedIn: state.isLoggedIn,
+        notifications: state.notifications,
+        // token은 보안상 제외
+      }),
+    }
+  )
+);
 
 
 export default useUserStore;

@@ -1,25 +1,145 @@
 'use client';
 
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
+import { useQuery } from '@tanstack/react-query';
 import { useCertInfoStore } from "@/Store/certStore";
+import useUserStore from "@/Store/userStore";
 import { toPng } from "html-to-image";
+import api from '@/lib/axios';
 
-const Certificate = () => {
+
+
+const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
   const certificateRef = useRef();
-  const { certInfo } = useCertInfoStore();
+  const { certInfo, setCertInfo } = useCertInfoStore();
+  const { user, isLoggedIn } = useUserStore();
   
-  // credentialSubject에서 데이터 추출
-  const credentialSubject = certInfo?.vc?.credentialSubject || {};
+  const date = Number(Date.now().toString().slice(-6));
+
+  // TanStack Query로 수료증 데이터 가져오기
+  const { 
+    data: certificateData, 
+    isLoading: loading, 
+    error: queryError,
+    refetch 
+  } = useQuery({
+    queryKey: ['certificate', certificateId, user?.userId],
+    queryFn: async () => {
+      if (!certificateId) {
+        throw new Error('수료증 ID가 제공되지 않았습니다.');
+      }
+
+      if (!isLoggedIn || !user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const userId = user.userId || user.id;
+      if (!userId) {
+        throw new Error('사용자 ID를 찾을 수 없습니다.');
+      }
+
+      // /user/vc/:userId 엔드포인트로 수료증 목록 가져오기
+      const response = await api.get(`/user/vc/${userId}`);
+      
+      if (Array.isArray(response.data)) {
+        const certificate = response.data.find(item => {
+          const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
+                                 item.message?.verifiableCredential?.credentialSubject;
+          return credentialSubject?.id === certificateId;
+        });
+
+        if (!certificate) {
+          throw new Error('해당 수료증을 찾을 수 없습니다.');
+        }
+
+        // Certificate 컴포넌트와 동일한 구조로 정규화
+        const credentialSubject = certificate.message?.payload?.vc?.credentialSubject || 
+                               certificate.message?.verifiableCredential?.credentialSubject;
+        
+        // 디버깅을 위한 로그
+        console.log('Certificate 컴포넌트 - 원본 데이터:', certificate);
+        console.log('Certificate 컴포넌트 - credentialSubject:', credentialSubject);
+        
+        const normalizedData = {
+          vc: {
+            credentialSubject: {
+              id: credentialSubject.id,
+              certificateName: credentialSubject.certificateName,
+              issuer: credentialSubject.issuer,
+              issueDate: credentialSubject.issueDate || 
+                       certificate.message?.payload?.issuseDate || 
+                       certificate.message?.payload?.issuanceDate ||
+                       certificate.message?.verifiableCredential?.issuanceDate ||
+                       new Date().toISOString().split('T')[0], // 기본값으로 현재 날짜
+              status: credentialSubject.status === 'approved' ? '유효' : '폐기',
+              ImagePath: credentialSubject.ImagePath,
+              userName: credentialSubject.userName,
+              userId: credentialSubject.userId,
+              description: credentialSubject.description,
+              userDid: credentialSubject.userDid,
+              issuerId: credentialSubject.issuerId,
+              DOB: credentialSubject.DOB,
+              requestDate: credentialSubject.requestDate,
+              request: credentialSubject.request, // request 필드 추가
+            }
+          }
+        };
+        
+        console.log('Certificate 컴포넌트 - 정규화된 데이터:', normalizedData);
+        return normalizedData;
+      } else {
+        throw new Error('수료증 데이터 형식이 올바르지 않습니다.');
+      }
+    },
+    enabled: !!certificateId && !!user && isLoggedIn && !propCertInfo, // propCertInfo가 없을 때만 API 호출
+    staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
+    cacheTime: 10 * 60 * 1000, // 10분간 메모리에 유지
+  });
+
+  // 데이터가 로드되면 certInfo에 저장
+  useEffect(() => {
+    if (certificateData) {
+      setCertInfo(certificateData);
+    }
+  }, [certificateData, setCertInfo]);
+
+  // 에러 처리
+  useEffect(() => {
+    if (queryError) {
+      console.error('수료증 로드 실패:', queryError);
+      if (onError) {
+        onError(queryError.message || '수료증을 불러오는데 실패했습니다.');
+      }
+    }
+  }, [queryError, onError]);
+
+  // 에러 상태 계산
+  const error = queryError?.message || null;
+
+  // credentialSubject에서 데이터 추출 (propCertInfo 우선, certificateData, certInfo 순)
+  const credentialSubject = propCertInfo?.vc?.credentialSubject || 
+                           certificateData?.vc?.credentialSubject || 
+                           certInfo?.vc?.credentialSubject || {};
+  
+  // 디버깅을 위한 로그
+  console.log('Certificate 렌더링 - propCertInfo:', propCertInfo);
+  console.log('Certificate 렌더링 - certificateData:', certificateData);
+  console.log('Certificate 렌더링 - certInfo:', certInfo);
+  console.log('Certificate 렌더링 - credentialSubject:', credentialSubject);
   
   // 발급일은 다른 위치에서 가져오기
   const issueDate = credentialSubject.issueDate || 
+    propCertInfo?.payload?.issuseDate || 
+    propCertInfo?.payload?.issuanceDate ||
+    propCertInfo?.verifiableCredential?.issuanceDate ||
+    certificateData?.payload?.issuseDate || 
+    certificateData?.payload?.issuanceDate ||
+    certificateData?.verifiableCredential?.issuanceDate ||
     certInfo?.payload?.issuseDate || 
     certInfo?.payload?.issuanceDate ||
     certInfo?.verifiableCredential?.issuanceDate;
-  
-  const date = Number(Date.now().toString().slice(-6));
 
   // 표시할 필드들 정의 (순서대로)
   const certificateFields = [
@@ -49,42 +169,45 @@ const Certificate = () => {
     }
   ];
 
-  // PDF 다운로드 핸들러 함수
-  const handleDownloadPdf = async () => {
-    if (!certificateRef.current) return;
 
-    const imgData = await toPng(certificateRef.current, { cacheBust: true });
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div className="font-noto-serif min-h-screen p-4 px-6 sm:p-8 sm:px-12">
+        <div className="max-w-4xl mx-auto mt-20 sm:mt-15">
+          <div className="bg-white rounded-lg p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">수료증을 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-
-    // Get image properties
-    const imgProps = pdf.getImageProperties(imgData);
-    let imgWidth = pdfWidth;
-    let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-    // If image is taller than page, fit by height instead
-    if (imgHeight > pdfHeight) {
-      imgHeight = pdfHeight;
-      imgWidth = (imgProps.width * imgHeight) / imgProps.height;
-    }
-
-    // Center the image
-    const x = (pdfWidth - imgWidth) / 2;
-    const y = (pdfHeight - imgHeight) / 2;
-
-    pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
-    pdf.save("certificate.pdf");
-  };
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="font-noto-serif min-h-screen p-4 px-6 sm:p-8 sm:px-12">
+        <div className="max-w-4xl mx-auto mt-20 sm:mt-15">
+          <div className="bg-white rounded-lg p-8 text-center">
+            <div className="text-red-500 text-6xl mb-4"></div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">수료증을 불러올 수 없습니다</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="font-noto-serif min-h-screen p-4 px-6 sm:p-8 sm:px-12">
       <div className="max-w-4xl mx-auto mt-20 sm:mt-15">
-        <div className="absolute top-4 right-4 sm:top-10 sm:right-10 cursor-pointer p-2 rounded-md hover:bg-black/5 active:scale-[0.98] transition" onClick={handleDownloadPdf}>
-          <Image src="/download.png" alt="download" width={30} height={50}></Image>
-        </div>
-        
         <div ref={certificateRef} className="bg-white rounded-lg p-4 px-6 sm:p-9 sm:px-16 backdrop-blur-sm shadow-blue-500/20 min-h-[480px] sm:min-h-[550px] overflow-hidden">
           {/* Certificate Header */}
           <h1 className="text-2xl sm:text-4xl font-semibold mb-6 sm:mb-8 w-fit mx-auto">수 료 증</h1>
@@ -93,7 +216,7 @@ const Certificate = () => {
             <h2 className="text-lg sm:text-2xl font-semibold">
               경일 게임IT 아카데미
             </h2>
-            <Image src="/jungbu.png" alt="jungbu" width={60} height={60} className="sm:w-[80px] sm:h-[80px]" />
+            <Image src="/images/jungbu.png" alt="jungbu" width={60} height={60} className="sm:w-[80px] sm:h-[80px]" />
             <div className="text-sm sm:text-base w-auto sm:w-[211px] flex justify-end">제: 2025-{date} 호</div>
           </div>
           
@@ -138,7 +261,7 @@ const Certificate = () => {
           </div>
           
           <div className="mt-8 h-15 flex justify-center md:justify-end items-center">
-            <Image src="/stamp.png" alt="certificate" width={70} height={0} className="sm:w-[80px]" />
+            <Image src="/images/stamp.png" alt="certificate" width={70} height={0} className="sm:w-[80px]" />
           </div>
         </div>
       </div>
