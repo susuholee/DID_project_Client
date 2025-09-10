@@ -64,7 +64,7 @@ function CertificateDetailContent() {
       }
 
       // API에서 수료증 목록 가져와서 해당 ID 찾기
-      const response = await api.get(`/user/vc/${userId}`);
+      const response = await api.get(`user/vc/${userId}`);
       
       if (Array.isArray(response.data)) {
         const foundCertificate = response.data.find(item => {
@@ -180,10 +180,10 @@ function CertificateDetailContent() {
 
   // 액션 핸들러들
   const handleShare = async () => {
-    const publicKey = certificate.publicKey || '0x1234567890abcdef';
-    const certificateName = certificate.title;
+    const userId = certificate.userId || certificate.id;
+    const certificateName = certificate.certificateName || certificate.title;
 
-    const url = `${window.location.origin}/did/${publicKey}/${certificateName}`;
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/${userId}/${certificateName}`;
 
     setShareUrl(url);
     setShareModalOpen(true);
@@ -320,35 +320,35 @@ function CertificateDetailContent() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-8 py-6 text-white">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 sm:px-8 py-4 sm:py-6 text-white">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 break-words">
                     {certificate.title}
                   </h1>
-                  <p className="text-cyan-100 text-lg">
+                  <p className="text-cyan-100 text-sm sm:text-lg">
                     {certificate.issuer}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium border ${getStatusBadge(certificate.status)} bg-white`}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  <span className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium border ${getStatusBadge(certificate.status)} bg-white w-fit`}>
                     {certificate.status}
                   </span>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     {certificate.status === '유효' && (
                       <>
                         <button
                           onClick={handleShare}
-                          className="px-4 py-2 bg-white text-cyan-600 rounded-lg hover:bg-cyan-50 transition-colors font-medium border border-white/50 shadow-sm"
+                          className="px-3 sm:px-4 py-2 bg-white text-cyan-600 rounded-lg hover:bg-cyan-50 transition-colors font-medium border border-white/50 shadow-sm text-sm sm:text-base"
                         >
                           공유하기
                         </button>
 
                         <button
                           onClick={openRevokeModal}
-                          className="px-4 py-2 bg-white/90 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium border border-white/50 shadow-sm"
+                          className="px-3 sm:px-4 py-2 bg-white/90 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium border border-white/50 shadow-sm text-sm sm:text-base"
                         >
                           폐기 요청
                         </button>
@@ -356,7 +356,7 @@ function CertificateDetailContent() {
                     )}
 
                     {certificate.status === '폐기' && (
-                      <div className="px-4 py-2 bg-gray-200 text-black rounded-lg">
+                      <div className="px-3 sm:px-4 py-2 bg-gray-200 text-black rounded-lg text-sm sm:text-base w-fit">
                         폐기된 수료증
                       </div>
                     )}
@@ -365,9 +365,9 @@ function CertificateDetailContent() {
               </div>
             </div>
 
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {/* 전체 수료증 표시 */}
-              <div className="mb-8">
+              <div className="mb-4 sm:mb-8">
                 <Certificate 
                   certInfo={{
                     vc: {
@@ -400,17 +400,17 @@ function CertificateDetailContent() {
 
       {/* 공유 링크 모달 */}
       {shareModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-4">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+          <div className="w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 sm:px-6 py-3 sm:py-4">
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                 공유 링크
               </h3>
             </div>
 
-            <div className="p-6">
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-800 mb-3">
+            <div className="p-4 sm:p-6">
+              <div className="mb-4 sm:mb-6">
+                <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2 sm:mb-3">
                   생성된 공유 링크
                 </label>
                 <div className="relative">
@@ -418,13 +418,16 @@ function CertificateDetailContent() {
                     type="text"
                     value={shareUrl}
                     readOnly
-                    className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 pr-12 bg-gray-50/50 text-sm font-mono text-gray-700 focus:outline-none"
+                    className="w-full border-2 border-gray-200 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 bg-gray-50/50 text-xs sm:text-sm font-mono text-gray-700 focus:outline-none"
                   />
                   <button
                     onClick={copyToClipboard}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                    className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 p-1 sm:p-2 text-gray-500 hover:text-gray-700 transition-colors"
                     title="복사"
                   >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
@@ -432,16 +435,16 @@ function CertificateDetailContent() {
                 </p>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                 <button
                   onClick={closeShareModal}
-                  className="px-6 py-3 border-2 border-gray-200 rounded-2xl text-gray-700 hover:bg-gray-50 transition-all duration-300 font-medium"
+                  className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-200 rounded-xl sm:rounded-2xl text-gray-700 hover:bg-gray-50 transition-all duration-300 font-medium text-sm sm:text-base"
                 >
                   닫기
                 </button>
                 <button
                   onClick={copyToClipboard}
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 font-medium shadow-lg transform hover:-translate-y-0.5"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl sm:rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 font-medium shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
                 >
                   복사하기
                 </button>
@@ -453,44 +456,44 @@ function CertificateDetailContent() {
 
       {/* 폐기 요청 모달 */}
       {revokeModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-4">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 sm:px-6 py-3 sm:py-4">
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                 폐기 요청
               </h3>
             </div>
 
-            <div className="p-6">
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-800 mb-3">
+            <div className="p-4 sm:p-6">
+              <div className="mb-4 sm:mb-6">
+                <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2 sm:mb-3">
                   폐기 사유를 입력해주세요
                 </label>
                 <textarea
                   value={revokeReason}
                   onChange={(e) => setRevokeReason(e.target.value)}
-                  rows={4}
+                  rows={3}
                   placeholder="예) 오타가 있어요 / 정보 변경 필요 / 분실"
-                  className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all duration-300 bg-gray-50/50"
+                  className="w-full border-2 border-gray-200 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all duration-300 bg-gray-50/50 text-sm"
                 />
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                 <button
                   onClick={closeRevokeModal}
                   disabled={revokeMutation.isPending}
-                  className="px-6 py-3 border-2 border-gray-200 rounded-2xl text-gray-700 hover:bg-gray-50 transition-all duration-300 disabled:opacity-50 font-medium"
+                  className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-200 rounded-xl sm:rounded-2xl text-gray-700 hover:bg-gray-50 transition-all duration-300 disabled:opacity-50 font-medium text-sm sm:text-base"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleRevoke}
                   disabled={!revokeReason.trim() || revokeMutation.isPending}
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg transform hover:-translate-y-0.5"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl sm:rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
                 >
                   {revokeMutation.isPending ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       요청 중...
                     </span>
                   ) : (

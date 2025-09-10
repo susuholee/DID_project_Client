@@ -164,7 +164,7 @@ export default function LoginForm() {
 
           {/* 카카오 로그인 버튼 */}
           <div className="space-y-2">
-            <button onClick={handleKakaoLogin} className="block w-full cursor-pointer">
+            <button onClick={() => handleKakaoLogin()} className="block w-full cursor-pointer">
               <img
                 src="/images/kakao_login.png"
                 alt="카카오 로그인"

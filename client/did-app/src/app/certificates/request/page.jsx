@@ -1,39 +1,44 @@
-// src/app/certificates/requests/page.jsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import useUserStore from '@/Store/userStore';
+
+// API 함수
+const fetchVCRequestLogs = async () => {
+  try {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs`, {
+    });
+    
+    console.log('VC Request Logs 응답:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('VC Request Logs 조회 실패:', error);
+    throw new Error(`요청 현황 조회 실패: ${error.message}`);
+  }
+};
 
 export default function CertificateRequestsPage() {
   const router = useRouter();
+  const { user, isLoggedIn } = useUserStore();
 
-  // 헤더용 사용자
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (cu) setUser(cu);
-  }, []);
-  const displayName = useMemo(
-    () => (user?.isKakaoUser ? user?.nickname : user?.name) || '사용자',
-    [user]
-  );
-
-  // 알림 (헤더에 주입) - 로컬스토리지 연동
-  const [notifications, setNotifications] = useState([]);
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('notifications') || '[]');
-    if (Array.isArray(saved) && saved.length) setNotifications(saved);
-  }, []);
-  useEffect(() => {
-    if (notifications.length > 0) {
-      localStorage.setItem('notifications', JSON.stringify(notifications));
-    }
-  }, [notifications]);
-  const pushNotif = (title, message) =>
-    setNotifications((prev) => [
-      { id: Date.now(), title, message, ts: Date.now(), read: false },
-      ...prev,
-    ]);
+  // TanStack Query로 요청 현황 데이터 조회
+  const { 
+    data: requestLogs, 
+    isLoading, 
+    isError,
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['vcRequestLogs'],
+    queryFn: fetchVCRequestLogs,
+    enabled: !!isLoggedIn && !!user,
+    staleTime: 30 * 1000, // 30초간 캐시 유지 (실시간성 중요)
+    refetchOnWindowFocus: true,
+    retry: 2,
+  });
 
   // 탭 상태
   const [activeTab, setActiveTab] = useState('all'); // all | issue | revoke
@@ -43,12 +48,11 @@ export default function CertificateRequestsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [issuerFilter, setIssuerFilter] = useState('all');
   
-  const itemsPerPage = 5; // 5개로 고정
+  const itemsPerPage = 5;
 
   // 취소 모달 상태
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -59,141 +63,50 @@ export default function CertificateRequestsPage() {
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
 
-  // 요청 데이터 - 로컬스토리지 연동
-  const [issueRequests, setIssueRequests] = useState([]);
-  const [revokeRequests, setRevokeRequests] = useState([]);
+  const displayName = user?.nickName || user?.name || user?.userName || '사용자';
 
-  // 더미 데이터 초기화 함수 (한 번만 실행)
-  const initializeDummyData = () => {
-    const savedCertificateRequests = JSON.parse(localStorage.getItem('certificate_requests') || '[]');
-    const savedRevokeRequests = JSON.parse(localStorage.getItem('revokeRequests') || '[]');
+  // 로그인 체크
+  useEffect(() => {
+    if (!isLoggedIn || !user) {
+      router.push('/');
+      return;
+    }
+  }, [isLoggedIn, user, router]);
+
+  // 서버 데이터 처리 및 분류
+  const processedRequests = useMemo(() => {
+    if (!requestLogs || !Array.isArray(requestLogs)) return [];
     
-    // 더미 데이터가 이미 있는지 확인
-    const hasIssueData = savedCertificateRequests.length > 0;
-    const hasRevokeData = savedRevokeRequests.length > 0;
-    
-    // 더미 데이터가 없는 경우에만 추가
-    if (!hasIssueData) {
-      const dummyIssueRequests = [
-        {
-          id: Date.now() - 1000,
-          certificateName: '블록체인 기초 과정 수료증',
-          issuer: '경일IT게임아카데미',
-          reason: '취업 준비용',
-          requestedAt: '2025-08-18T10:30:00.000Z',
-          status: 'approved',
-          adminNote: '수료 조건을 모두 만족하여 승인되었습니다.'
-        },
-        {
-          id: Date.now() - 2000,
-          certificateName: 'React 프론트엔드 개발 과정 수료증',
-          issuer: '크로스허브',
-          reason: '포트폴리오 제출용',
-          requestedAt: '2025-08-17T14:20:00.000Z',
-          status: 'pending'
-        },
-        {
-          id: Date.now() - 3000,
-          certificateName: 'AI/ML 기초 과정 수료증',
-          issuer: '테크아카데미',
-          reason: '자기계발용',
-          requestedAt: '2025-08-16T09:15:00.000Z',
-          status: 'rejected',
-          adminNote: '과제 제출이 미완료되어 거절되었습니다.'
-        }
-      ];
-      localStorage.setItem('certificate_requests', JSON.stringify(dummyIssueRequests));
-      setIssueRequests(dummyIssueRequests);
-    } else {
-      setIssueRequests(savedCertificateRequests);
-    }
+    return requestLogs.map(log => ({
+      id: log.id,
+      certificateName: log.certificateName || '수료증',
+      issuer: log.issuer || '발급기관',
+      reason: log.description || log.reason || '사유 없음',
+      requestedAt: log.createdAt || log.requestedAt || new Date().toISOString(),
+      status: log.status || 'pending', // pending, approved, rejected
+      adminNote: log.adminNote || log.note,
+      requestType: log.request === 'issue' ? 'issue' : 'revoke', // issue 또는 revoke
+      userId: log.userId,
+      userName: log.userName,
+    }));
+  }, [requestLogs]);
 
-    if (!hasRevokeData) {
-      const dummyRevokeRequests = [
-        {
-          id: Date.now() - 5000,
-          certificateName: 'DeFi 기초 과정 수료증',
-          issuer: '경일IT게임아카데미',
-          reason: '개인정보 오타 수정 필요',
-          requestedAt: '2025-08-16T09:15:00.000Z',
-          status: 'approved',
-          adminNote: '폐기 처리 완료되었습니다.'
-        },
-        {
-          id: Date.now() - 6000,
-          certificateName: 'Node.js 백엔드 개발 과정 수료증',
-          issuer: '크로스허브',
-          reason: '실수로 신청함',
-          requestedAt: '2025-08-15T16:45:00.000Z',
-          status: 'rejected',
-          adminNote: '폐기 사유가 부적절하여 거절되었습니다.'
-        }
-      ];
-      localStorage.setItem('revokeRequests', JSON.stringify(dummyRevokeRequests));
-      setRevokeRequests(dummyRevokeRequests);
-    } else {
-      setRevokeRequests(savedRevokeRequests);
-    }
-  };
-
-  // 데이터 로드 함수 (새로고침용)
-  const loadData = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const savedCertificateRequests = JSON.parse(localStorage.getItem('certificate_requests') || '[]');
-      const savedRevokeRequests = JSON.parse(localStorage.getItem('revokeRequests') || '[]');
-      
-      setIssueRequests(savedCertificateRequests);
-      setRevokeRequests(savedRevokeRequests);
-      
-      setIsLoading(false);
-    }, 800);
-  };
-
-  // 초기 로드 (더미 데이터 초기화)
-  useEffect(() => {
-    initializeDummyData();
-    setIsInitialLoad(false);
-  }, []);
-
-  // 페이지에 포커스될 때마다 데이터 새로고침
-  useEffect(() => {
-    const handleFocus = () => {
-      loadData();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
-
-  // 요청 데이터 변경 시 로컬스토리지 저장
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  useEffect(() => {
-    if (!isInitialLoad) {
-      localStorage.setItem('certificate_requests', JSON.stringify(issueRequests));
-    }
-  }, [issueRequests, isInitialLoad]);
-
-  useEffect(() => {
-    if (!isInitialLoad) {
-      localStorage.setItem('revokeRequests', JSON.stringify(revokeRequests));
-    }
-  }, [revokeRequests, isInitialLoad]);
+  // 현재 사용자의 요청만 필터링
+  const userRequests = useMemo(() => {
+    if (!user?.userId) return [];
+    return processedRequests.filter(req => req.userId === user.userId);
+  }, [processedRequests, user?.userId]);
 
   // 현재 탭에 따른 데이터
   const currentRequests = useMemo(() => {
     if (activeTab === 'all') {
-      // 전체: 발급과 폐기 요청을 합치고 타입 정보 추가
-      const allIssueRequests = issueRequests.map(req => ({ ...req, requestType: 'issue' }));
-      const allRevokeRequests = revokeRequests.map(req => ({ ...req, requestType: 'revoke' }));
-      return [...allIssueRequests, ...allRevokeRequests];
+      return userRequests;
     } else if (activeTab === 'issue') {
-      return issueRequests.map(req => ({ ...req, requestType: 'issue' }));
+      return userRequests.filter(req => req.requestType === 'issue');
     } else {
-      return revokeRequests.map(req => ({ ...req, requestType: 'revoke' }));
+      return userRequests.filter(req => req.requestType === 'revoke');
     }
-  }, [activeTab, issueRequests, revokeRequests]);
+  }, [activeTab, userRequests]);
 
   // 발급기관 목록 (필터용)
   const issuers = [...new Set(currentRequests.map(req => req.issuer))];
@@ -237,18 +150,17 @@ export default function CertificateRequestsPage() {
 
   // 통계 계산
   const stats = useMemo(() => {
-    const allRequests = [...issueRequests, ...revokeRequests];
-    const total = allRequests.length;
-    const pending = allRequests.filter(req => req.status === 'pending').length;
-    const approved = allRequests.filter(req => req.status === 'approved').length;
-    const rejected = allRequests.filter(req => req.status === 'rejected').length;
+    const total = userRequests.length;
+    const pending = userRequests.filter(req => req.status === 'pending').length;
+    const approved = userRequests.filter(req => req.status === 'approved').length;
+    const rejected = userRequests.filter(req => req.status === 'rejected').length;
     
     // 탭별 카운트
-    const issueCount = issueRequests.length;
-    const revokeCount = revokeRequests.length;
+    const issueCount = userRequests.filter(req => req.requestType === 'issue').length;
+    const revokeCount = userRequests.filter(req => req.requestType === 'revoke').length;
     
     return { total, pending, approved, rejected, issueCount, revokeCount };
-  }, [issueRequests, revokeRequests]);
+  }, [userRequests]);
 
   // 상태별 스타일
   const getStatusBadge = (status) => {
@@ -320,8 +232,8 @@ export default function CertificateRequestsPage() {
     setWarningMessage('');
   };
 
-  // 요청 취소 확정
-  const confirmCancelRequest = () => {
+  // 요청 취소 확정 (실제 API 호출 필요)
+  const confirmCancelRequest = async () => {
     if (!requestToCancel) return;
     
     if (!cancelReason.trim()) {
@@ -329,18 +241,23 @@ export default function CertificateRequestsPage() {
       return;
     }
 
-    // 1. 사용자 요청 목록에서 제거
-    if (requestToCancel.requestType === 'issue') {
-      setIssueRequests(prev => prev.filter(req => req.id !== requestToCancel.id));
-    } else {
-      setRevokeRequests(prev => prev.filter(req => req.id !== requestToCancel.id));
+    try {
+      // TODO: 실제 취소 API 호출
+      // await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs/${requestToCancel.id}`, {
+      //   data: { reason: cancelReason },
+      //   withCredentials: true
+      // });
+
+      // 데이터 새로고침
+      refetch();
+      closeCancelModal();
+      
+      // 임시 알림 (추후 전역 알림 시스템으로 대체)
+      alert(`${requestToCancel.certificateName} 요청이 성공적으로 취소되었습니다.`);
+    } catch (error) {
+      console.error('요청 취소 실패:', error);
+      showWarning('요청 취소 중 오류가 발생했습니다.');
     }
-
-    // 2. 사용자에게 알림
-    pushNotif('요청 취소', `${requestToCancel.certificateName} 요청이 성공적으로 취소되었습니다.`);
-
-    // 3. 모달 닫기
-    closeCancelModal();
   };
 
   // 스켈레톤 로더
@@ -360,6 +277,47 @@ export default function CertificateRequestsPage() {
       <div className="h-16 bg-gray-200 rounded-lg"></div>
     </div>
   );
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+        <div className="flex-1 flex flex-col lg:ml-64">
+          <div className="flex-1 flex items-center justify-center py-8 px-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">요청 현황을 불러오는 중...</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // 에러 상태
+  if (isError) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+        <div className="flex-1 flex flex-col lg:ml-64">
+          <div className="flex-1 flex items-center justify-center py-8 px-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center max-w-md">
+              <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <div className="w-8 h-8 bg-red-500 rounded"></div>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">데이터 로드 실패</h2>
+              <p className="text-gray-600 mb-4">{error?.message || '요청 현황을 불러오는 중 오류가 발생했습니다.'}</p>
+              <button
+                onClick={() => refetch()}
+                className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+              >
+                다시 시도
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -470,7 +428,7 @@ export default function CertificateRequestsPage() {
                         {sortOrder === 'asc' ? '오래된순' : '최신순'}
                       </button>
                       <button
-                        onClick={loadData}
+                        onClick={() => refetch()}
                         className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                       >
                         새로고침
@@ -542,13 +500,7 @@ export default function CertificateRequestsPage() {
               </div>
 
               {/* 요청 목록 */}
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <RequestSkeleton key={i} />
-                  ))}
-                </div>
-              ) : paginatedRequests.length === 0 ? (
+              {paginatedRequests.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     요청 내역이 없습니다
@@ -559,14 +511,6 @@ export default function CertificateRequestsPage() {
                       : `아직 ${activeTab === 'all' ? '' : activeTab === 'issue' ? '발급' : '폐기'} 요청이 없어요.`
                     }
                   </p>
-                  {!searchTerm && statusFilter === 'all' && (
-                    <button 
-                      onClick={() => router.push('/certificates/issue')}
-                      className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg"
-                    >
-                      수료증 발급 요청하기
-                    </button>
-                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -700,7 +644,7 @@ export default function CertificateRequestsPage() {
       {showCancelModal && (
         <>
           <div 
-            className="fixed bg-black bg-opacity-20 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm z-40"
             onClick={closeCancelModal}
           />
           
@@ -719,7 +663,7 @@ export default function CertificateRequestsPage() {
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
                   placeholder="예) 오타가 있어요 / 정보 변경 필요 / 분실"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
                   rows={4}
                 />
                 
@@ -747,7 +691,7 @@ export default function CertificateRequestsPage() {
       {showWarningModal && (
         <>
           <div 
-            className="fixed  bg-black bg-opacity-20 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm z-50"
             onClick={closeWarningModal}
           />
           

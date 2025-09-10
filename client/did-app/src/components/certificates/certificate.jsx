@@ -130,7 +130,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
   console.log('Certificate 렌더링 - credentialSubject:', credentialSubject);
   
   // 발급일은 다른 위치에서 가져오기
-  const issueDate = credentialSubject.issueDate || 
+  const rawIssueDate = credentialSubject.issueDate || 
     propCertInfo?.payload?.issuseDate || 
     propCertInfo?.payload?.issuanceDate ||
     propCertInfo?.verifiableCredential?.issuanceDate ||
@@ -141,11 +141,32 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
     certInfo?.payload?.issuanceDate ||
     certInfo?.verifiableCredential?.issuanceDate;
 
+  // 날짜 포맷팅 함수
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // 유효하지 않은 날짜면 원본 반환
+      
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch (error) {
+      console.warn('날짜 포맷팅 오류:', error);
+      return dateString;
+    }
+  };
+
+  const issueDate = formatDate(rawIssueDate);
+
   // 표시할 필드들 정의 (순서대로)
   const certificateFields = [
     {
       key: 'userId',
-      label: '사용자 DID',
+      label: '사용자',
       value: credentialSubject.userId,
       className: 'font-mono break-all'
     },
@@ -157,7 +178,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
     },
     {
       key: 'issuerId',
-      label: '발급자 DID',
+      label: '발급자',
       value: credentialSubject.issuerId,
       className: 'font-mono break-all'
     },
@@ -232,7 +253,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
               <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 break-words">
                 이름 : {credentialSubject.userName || '홍길동'}
               </h3>
-              <h4 className="text-base sm:text-xl">{credentialSubject.DOB}</h4>
+              <h4 className="text-base sm:text">생년월일 : {credentialSubject.DOB}</h4>
             </div>
             
             <div className="lg:col-span-2 space-y-3 sm:space-y-4">

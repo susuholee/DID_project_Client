@@ -34,7 +34,7 @@ export default function MyCertificatesPage() {
         return response.data.map(item => {
           // 각 VC에서 credentialSubject 정보 추출
           const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
-                                   item.message?.verifiableCredential?.credentialSubject;
+                                item.message?.verifiableCredential?.credentialSubject;
           
           if (!credentialSubject) {
             console.warn('credentialSubject를 찾을 수 없음:', item);
@@ -167,8 +167,6 @@ export default function MyCertificatesPage() {
 
   // 상세 페이지로 이동
   const handleCertificateClick = (cert) => {
-    // 수료증 데이터를 세션스토리지에 저장
-    sessionStorage.setItem('selectedCertificate', JSON.stringify(cert));
     
     // 상세 페이지로 이동
      router.push(`/certificates/detail?id=${cert.id}`);

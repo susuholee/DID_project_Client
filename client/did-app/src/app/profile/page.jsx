@@ -159,25 +159,13 @@ export default function ProfilePage() {
                     계정 정보
                   </h3>
                   <div className="space-y-4">
-                     <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                       <span className="text-gray-600 font-medium">사용자 ID</span>
-                                              <span className="text-gray-800 font-mono text-sm">
-                         {user?.id || 'N/A'}
-                       </span>
-                     </div>
-                     <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                       <span className="text-gray-600 font-medium">마지막 로그인</span>
-                                              <span className="text-gray-800 font-semibold">
-                         {formatDate(user?.lastLoginAt) || 'N/A'}
-                       </span>
-                     </div>
                      {(user?.didAddress || user?.walletAddress) && (
                        <div className="mt-4 pt-4 border-t border-gray-200">
                          <h4 className="text-sm font-semibold text-gray-800 mb-3">DID 정보</h4>
                          <div className="space-y-3">
                            {user?.didAddress && (
                              <div className="flex flex-col space-y-1">
-                               <span className="text-gray-600 font-medium text-xs">DID 주소</span>
+                               <span className="text-gray-600 font-medium text-xs">DID 계정 주소</span>
                                <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
                                  <span className="text-gray-800 font-mono text-xs break-all">
                                    {user.didAddress}
