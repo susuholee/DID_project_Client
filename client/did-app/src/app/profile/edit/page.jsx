@@ -180,26 +180,48 @@ export default function ProfilePage() {
   const closeWithdrawModal = () => {
     setShowWithdrawModal(false);
   };
-
-  const handleWithdraw = async () => {
-    if (!user) return;
-    setIsWithdrawing(true);
-    try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.userId}`, {
-        withCredentials: true
-      });
-
-      setShowWithdrawModal(false);
-      openModal("회원탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
-      router.push("/");
-    } catch (error) {
-      console.error("회원탈퇴 실패:", error);
-      openModal("탈퇴 처리 중 오류가 발생했습니다.");
-    } finally {
-      setIsWithdrawing(false);
-    }
-  };
-
+// 통일된 회원탈퇴 함수 - userId로 처리
+const handleWithdraw = async () => {
+  if (!user) return;
+  setIsWithdrawing(true);
+  
+  try {
+    console.log('=== 회원탈퇴 시작 ===');
+    console.log('사용자 ID:', user.userId);
+    console.log('요청 URL:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.userId}`);
+    
+    const response = await axios.delete(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.userId}`,
+      { 
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('탈퇴 성공:', response.data);
+    
+    setShowWithdrawModal(false);
+    openModal("회원탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
+    
+   
+    // 사용자 상태 초기화 (Zustand)
+    updateUser(null);
+    router.push("/");
+    
+  } catch (error) {
+    console.error("=== 회원탈퇴 실패 ===");
+    console.error("HTTP Status:", error.response?.status);
+    console.error("에러 데이터:", error.response?.data);
+    console.error("에러 메시지:", error.message);
+    
+    openModal("탈퇴 처리 중 오류가 발생했습니다.");
+    
+  } finally {
+    setIsWithdrawing(false);
+  }
+};
   const handleModalClose = () => {
     closeModal();
     if (message === "프로필이 수정되었습니다.") {
@@ -223,7 +245,7 @@ export default function ProfilePage() {
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <div className="text-center bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-500 text-2xl">⚠️</span>
+            <span className="text-red-500 text-2xl"></span>
           </div>
           <p className="text-red-600 font-medium mb-4">사용자 정보를 불러올 수 없습니다.</p>
           <button 

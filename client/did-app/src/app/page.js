@@ -3,51 +3,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import useUserStore from "@/Store/userStore";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import axios from "axios";
 
 export default function MainPage() {
   const sectionsRef = useRef([]);
+  const router = useRouter();
   const { user, isLoggedIn, setUser, setIsLoggedIn } = useUserStore();
   const [currentPath, setCurrentPath] = useState(''); // 추가
   // console.log("현재 상태:", isLoggedIn, user);  
-  const router = useRouter();  
   // console.log("현재 사용자:", user);
   // console.log("로그인 상태:", isLoggedIn);
-
-//  // 경로 체크 및 카카오 로그인 처리
-// useEffect(() => {
-//   const currentPath = window.location.pathname;
   
-//   // 메인 페이지(/)에서만 리다이렉트 처리
-//   if (currentPath === '/' && isLoggedIn && user?.provider === 'kakao') {
-//     if (user.name && user.address && user.birth) {
-//       // DID 정보가 완료된 사용자는 dashboard로
-//       console.log("DID 정보 완료된 사용자 - dashboard로 이동");
-//       router.push("/dashboard");
-//     } else {
-//       // DID 정보가 없는 사용자는 signup/did로
-//       console.log("DID 정보 미완료 사용자 - /signup/did로 이동");
-//       router.push("/signup/did");
-//     }
-//   }
-  // 카카오 로그인 사용자가 DID 정보가 없을 경우 /signup/did로, 정보가 있으면 /dashboard로 이동시킵니다.
-  // 백엔드에서 /signup/did로 리다이렉트 해주지만, 사용자가 직접 메인 페이지로 올 경우를 대비합니다.
-  useEffect(() => {
-    if (isLoggedIn && user?.provider === 'kakao' && window.location.pathname === '/') {
-      const hasDIDInfo = user.name && user.address && user.birth;
-      if (hasDIDInfo) {
-        console.log("DID 정보가 있는 카카오 사용자, 대시보드로 이동합니다.");
-        router.push("/dashboard");
-      } else {
-        console.log("DID 정보가 없는 카카오 사용자, 정보 입력 페이지로 이동합니다.");
-        router.push("/signup/did");
-      }
-    }
-  }, [isLoggedIn, user, router]);
 
-// }, []);
-// }, [isLoggedIn, user, router]);
+
   // 섹션 스크롤 애니메이션
   useEffect(() => {
     const handleScroll = () => {
@@ -145,15 +114,15 @@ export default function MainPage() {
               <div className="flex-1 flex justify-center">
                 <div className="relative w-full max-w-md lg:max-w-lg">
                   <div className="transform hover:scale-105 transition-transform duration-300">
-                    <img 
-                      src="/images/preview_vc.jpg" 
-                      alt="Sealium 수료증 샘플" 
+                    <img
+                      src="/images/preview_vc.jpg"
+                      alt="Sealium 수료증 샘플"
                       className="w-full h-auto rounded-lg shadow-2xl border border-gray-200"
                     />
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex-1 text-center lg:text-left">
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 lg:mb-6 text-cyan-500">
                   수료증 발급 · 관리 자동화

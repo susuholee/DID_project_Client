@@ -21,15 +21,23 @@ function CertificateDetailContent() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
 
-  const pushNotif = (title, message) => {
-    if (user?.id || user?.userId) {
-      addNotification(user.id || user.userId, {
-        id: Date.now(),
-        title,
-        message,
-        ts: Date.now(),
-        read: false,
-      });
+const pushNotif = (title, message) => {
+    try {
+      if (user?.id || user?.userId) {
+        // userId 없이 notification 객체만 전달
+        addNotification({
+          id: Date.now(),
+          title,
+          message,
+          ts: Date.now(),
+          read: false,
+          userId: user.id || user.userId, // 필요시 notification 안에 userId 포함
+        });
+      }
+    } catch (error) {
+      console.error('알림 추가 중 오류:', error);
+      // 사용자에게는 브라우저 기본 알림으로 대체
+      alert(`${title}: ${message}`);
     }
   };
 
@@ -256,7 +264,7 @@ function CertificateDetailContent() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-            <span className="text-2xl text-red-500">⚠️</span>
+            <span className="text-2xl text-red-500"></span>
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">오류 발생</h2>
           <p className="text-gray-600 mb-4">{error.message || '수료증을 불러오는데 실패했습니다.'}</p>

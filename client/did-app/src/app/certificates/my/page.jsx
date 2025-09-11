@@ -54,10 +54,10 @@ export default function MyCertificatesPage() {
             issuer: credentialSubject.issuer,
             // 발급일은 여러 위치에서 확인
             issueDate: credentialSubject.issueDate || 
-                      item.message?.payload?.issuseDate || 
-                      item.message?.payload?.issuanceDate ||
-                      item.message?.verifiableCredential?.issuanceDate,
-            status: credentialSubject.status === 'approved' ? '유효' : '폐기',
+            item.message?.payload?.issuseDate || 
+            item.message?.payload?.issuanceDate ||
+            item.message?.verifiableCredential?.issuanceDate,
+            status: credentialSubject.status === 'approved' ? '유효' :  '폐기' ,
             imagePath: credentialSubject.ImagePath,
             userName: credentialSubject.userName,
             userId: credentialSubject.userId,
@@ -83,6 +83,7 @@ export default function MyCertificatesPage() {
     enabled: !!isLoggedIn && !!user?.userId,
     staleTime: 5 * 60 * 1000, // 5분간 fresh
     cacheTime: 10 * 60 * 1000, // 10분간 캐시 유지
+    refetchOnMount: false, // 마운트 시 자동 refetch 안함
     retry: 2,
     onError: (error) => {
       console.error('수료증 조회 실패:', error);
@@ -235,12 +236,6 @@ export default function MyCertificatesPage() {
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/request`,
         formData,
-        { 
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
       );
       
       // 성공 시 데이터 다시 가져오기
@@ -304,7 +299,7 @@ export default function MyCertificatesPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-              <span className="text-2xl text-red-500">⚠️</span>
+              <span className="text-2xl text-red-500"></span>
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">오류 발생</h2>
             <p className="text-gray-600 mb-4">{error.message || '수료증 조회 중 오류가 발생했습니다.'}</p>
@@ -410,9 +405,6 @@ export default function MyCertificatesPage() {
           {/* 목록(카드 형태) */}
           {pageData.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-2xl text-gray-400">📄</span>
-              </div>
               <p className="text-gray-600">조건에 맞는 수료증이 없습니다.</p>
             </div>
           ) : (

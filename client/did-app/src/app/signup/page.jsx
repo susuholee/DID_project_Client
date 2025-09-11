@@ -38,8 +38,6 @@ export default function SignupPage() {
     mutationFn: ({ userData, imageFile }) => createUser(userData, imageFile),
     onSuccess: async (data) => {
       showErrorModal("회원가입이 완료되었습니다!");
-      
-
       router.push('/'); // 메인 페이지로 이동
     },
     onError: (error) => {
@@ -139,14 +137,36 @@ const getInputStatus = (value, isValid, hasError = false) => {
   );
 
   const step1Valid = useMemo(() => {
-    const userNameRegex = /^[가-힣]{2,10}$/;
+    const userNameRegex = /^[가-힣a-zA-Z\s]{2,20}$/;
     const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
     const userIdRegex = /^[a-zA-Z0-9]+$/;
     
-    return userName.trim().length >= 2 && 
-           userName.trim().length <= 10 &&
-           userName === userName.trim() &&
-           userNameRegex.test(userName.trim()) &&
+    // 이름 유효성 검사 함수
+    const isValidUserName = (name) => {
+      const trimmedName = name.trim();
+      
+      // 기본 길이 체크
+      if (trimmedName.length < 2 || trimmedName.length > 20) return false;
+      
+      // 앞뒤 공백 체크
+      if (name !== trimmedName) return false;
+      
+      // 기본 정규식 체크 (한글, 영어, 공백만 허용)
+      if (!userNameRegex.test(trimmedName)) return false;
+      
+      // 연속된 공백 방지
+      if (trimmedName.includes('  ')) return false;
+      
+      // 공백으로만 구성 방지
+      if (trimmedName.replace(/\s/g, '').length === 0) return false;
+      
+      // 숫자나 특수문자 방지
+      if (/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(trimmedName)) return false;
+      
+      return true;
+    };
+    
+    return isValidUserName(userName) &&
            nickName.trim().length >= 2 && 
            nickName.trim().length <= 12 &&
            nickName === nickName.trim() &&
@@ -158,8 +178,8 @@ const getInputStatus = (value, isValid, hasError = false) => {
            userId === userId.trim() &&
            userIdRegex.test(userId.trim()) &&
            !/(.)\1{2,}/.test(userId.trim()) &&
-           userIdCheckStatus === 'available'; // 중복체크 통과 조건 추가
-  }, [nickName, userId, userIdCheckStatus]);
+           userIdCheckStatus === 'available';
+  }, [userName, nickName, userId, userIdCheckStatus]);
 
   const step2Valid = useMemo(() => pwdOk, [pwdOk]);
 
@@ -192,24 +212,36 @@ const getInputStatus = (value, isValid, hasError = false) => {
     if (currentStep === 1) {
       if (!step1Valid) {
         if (!userName.trim()) {
-          showErrorModal("실명을 입력해주세요.");
+          showErrorModal("이름을 입력해주세요.");
           return;
         }
         if (userName !== userName.trim()) {
-          showErrorModal("실명의 앞뒤 공백을 제거해주세요.");
+          showErrorModal("이름의 앞뒤 공백을 제거해주세요.");
           return;
         }
         if (userName.trim().length < 2) {
-          showErrorModal("실명은 2자 이상 입력해주세요.");
+          showErrorModal("이름은 2자 이상 입력해주세요.");
           return;
         }
-        if (userName.trim().length > 10) {
-          showErrorModal("실명은 10자 이하로 입력해주세요.");
+        if (userName.trim().length > 20) {
+          showErrorModal("이름은 20자 이하로 입력해주세요.");
           return;
         }
-        const userNameRegex = /^[가-힣]{2,10}$/;
+        if (userName.includes('  ')) {
+          showErrorModal("이름에 연속된 공백은 사용할 수 없습니다.");
+          return;
+        }
+        if (userName.replace(/\s/g, '').length === 0) {
+          showErrorModal("이름을 올바르게 입력해주세요.");
+          return;
+        }
+        if (/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(userName)) {
+          showErrorModal("이름에는 숫자나 특수문자를 사용할 수 없습니다.");
+          return;
+        }
+        const userNameRegex = /^[가-힣a-zA-Z\s]{2,20}$/;
         if (!userNameRegex.test(userName.trim())) {
-          showErrorModal("실명은 한글만 사용 가능합니다.");
+          showErrorModal("이름은 한글 또는 영어만 사용 가능합니다.");
           return;
         }
         
@@ -322,7 +354,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
         return;
       }
     }
-  }, [currentStep, step1Valid, step2Valid, step3Valid, step4Valid, nickName, userId, password, confirm, birthDate, address, selectedImageFile, userIdCheckStatus, showErrorModal]);
+  }, [currentStep, step1Valid, step2Valid, step3Valid, step4Valid, userName, nickName, userId, password, confirm, birthDate, address, selectedImageFile, userIdCheckStatus, showErrorModal]);
 
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -548,22 +580,36 @@ const getInputStatus = (value, isValid, hasError = false) => {
             <div className="space-y-4">
               <div className="text-center mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">기본 정보</h2>
-                <p className="text-xs sm:text-sm text-gray-600">실명, 닉네임, 아이디를 입력해주세요</p>
+                <p className="text-xs sm:text-sm text-gray-600">이름, 닉네임, 아이디를 입력해주세요</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" htmlFor="userName">실명</label>
+                <label className="block text-sm font-medium mb-2" htmlFor="userName">이름</label>
                 <Input
                   id="userName"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  placeholder="한글 2-10자 (예: 홍길동)"
+                  placeholder="한글 또는 영어 2-20자 (예: 홍길동, John Smith)"
                   className={`h-12 text-base ${getInputStatus(
                     userName,
-                    userName.trim().length >= 2 && userName.trim().length <= 10 && /^[가-힣]{2,10}$/.test(userName.trim()),
-                    userName && (userName !== userName.trim() || userName.trim().length < 2 || userName.trim().length > 10 || !/^[가-힣]{2,10}$/.test(userName.trim()))
+                    userName.trim().length >= 2 && 
+                    userName.trim().length <= 20 && 
+                    /^[가-힣a-zA-Z\s]{2,20}$/.test(userName.trim()) &&
+                    !userName.includes('  ') &&
+                    userName === userName.trim() &&
+                    userName.replace(/\s/g, '').length > 0 &&
+                    !/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(userName),
+                    userName && (
+                      userName !== userName.trim() || 
+                      userName.trim().length < 2 || 
+                      userName.trim().length > 20 || 
+                      !/^[가-힣a-zA-Z\s]{2,20}$/.test(userName.trim()) ||
+                      userName.includes('  ') ||
+                      userName.replace(/\s/g, '').length === 0 ||
+                      /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(userName)
+                    )
                   )}`}
-                  aria-label="실명 입력"
+                  aria-label="이름 입력"
                 />
                 {userName && userName !== userName.trim() && (
                   <p className="text-xs text-red-600 mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
@@ -571,14 +617,20 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 {userName.trim() && userName.trim().length > 0 && userName.trim().length < 2 && (
                   <p className="text-xs text-red-600 mt-1" role="alert">2자 이상 입력해주세요</p>
                 )}
-                {userName.trim() && userName.trim().length > 10 && (
-                  <p className="text-xs text-red-600 mt-1" role="alert">10자 이하로 입력해주세요</p>
+                {userName.trim() && userName.trim().length > 20 && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">20자 이하로 입력해주세요</p>
                 )}
-                {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 10 && !/^[가-힣]{2,10}$/.test(userName.trim()) && (
-                  <p className="text-xs text-red-600 mt-1" role="alert">한글만 사용 가능합니다</p>
+                {userName && userName.includes('  ') && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">연속된 공백은 사용할 수 없습니다</p>
                 )}
-                {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 10 && /^[가-힣]{2,10}$/.test(userName.trim()) && (
-                  <p className="text-xs text-green-600 mt-1">올바른 실명입니다</p>
+                {userName && userName.replace(/\s/g, '').length === 0 && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">이름을 올바르게 입력해주세요</p>
+                )}
+                {userName && /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(userName) && (
+                  <p className="text-xs text-red-600 mt-1" role="alert">숫자나 특수문자는 사용할 수 없습니다</p>
+                )}
+                {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 20 && /^[가-힣a-zA-Z\s]{2,20}$/.test(userName.trim()) && !userName.includes('  ') && userName === userName.trim() && userName.replace(/\s/g, '').length > 0 && !/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(userName) && (
+                  <p className="text-xs text-green-600 mt-1">올바른 이름입니다</p>
                 )}
               </div>
 
@@ -846,6 +898,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-medium mb-2">입력하신 정보</h3>
                 <div className="space-y-1 text-sm text-gray-600">
+                  <p><span className="font-medium">이름:</span> {userName}</p>
                   <p><span className="font-medium">닉네임:</span> {nickName}</p>
                   <p><span className="font-medium">아이디:</span> {userId}</p>
                   <p><span className="font-medium">생년월일:</span> {birthDate}</p>

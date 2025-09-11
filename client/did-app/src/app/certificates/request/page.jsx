@@ -10,10 +10,19 @@ import useUserStore from '@/Store/userStore';
 const fetchVCRequestLogs = async () => {
   try {
     const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs`, {
+      withCredentials: true
     });
     
-    console.log('VC Request Logs 응답:', response.data);
-    return response.data;
+    console.log('VC Request Logs 전체 응답:', response.data);
+    
+    // API 응답 구조: { state: 200, message: "...", data: [...] }
+    if (response.data.state === 200 && response.data.data) {
+      console.log('실제 데이터:', response.data.data);
+      return response.data.data; // data 배열을 반환
+    } else {
+      console.error('예상과 다른 응답 구조:', response.data);
+      return [];
+    }
   } catch (error) {
     console.error('VC Request Logs 조회 실패:', error);
     throw new Error(`요청 현황 조회 실패: ${error.message}`);
@@ -35,7 +44,7 @@ export default function CertificateRequestsPage() {
     queryKey: ['vcRequestLogs'],
     queryFn: fetchVCRequestLogs,
     enabled: !!isLoggedIn && !!user,
-    staleTime: 30 * 1000, // 30초간 캐시 유지 (실시간성 중요)
+    staleTime: 30 * 1000, // 30초간 캐시 유지
     refetchOnWindowFocus: true,
     retry: 2,
   });
@@ -50,7 +59,6 @@ export default function CertificateRequestsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [issuerFilter, setIssuerFilter] = useState('all');
   
   const itemsPerPage = 5;
 
@@ -63,8 +71,6 @@ export default function CertificateRequestsPage() {
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
 
-  const displayName = user?.nickName || user?.name || user?.userName || '사용자';
-
   // 로그인 체크
   useEffect(() => {
     if (!isLoggedIn || !user) {
@@ -73,29 +79,50 @@ export default function CertificateRequestsPage() {
     }
   }, [isLoggedIn, user, router]);
 
-  // 서버 데이터 처리 및 분류
-  const processedRequests = useMemo(() => {
-    if (!requestLogs || !Array.isArray(requestLogs)) return [];
+  // 현재 사용자의 요청만 필터링 (실제 API 응답 구조에 맞춤)
+  const userRequests = useMemo(() => {
+    console.log('=== 디버깅 정보 ===');
+    console.log('requestLogs:', requestLogs);
+    console.log('user:', user);
+    console.log('user.userId:', user?.userId);
     
-    return requestLogs.map(log => ({
+    if (!requestLogs || !Array.isArray(requestLogs)) {
+      console.log('requestLogs가 없거나 배열이 아님');
+      return [];
+    }
+    
+    if (!user?.userId) {
+      console.log('user.userId가 없음');
+      return [];
+    }
+    
+    console.log('전체 로그 개수:', requestLogs.length);
+    
+    const filtered = requestLogs.filter(log => {
+      console.log(`로그 ${log.id}: userId=${log.userId}, 현재 user.userId=${user.userId}, 일치=${log.userId === user.userId}`);
+      return log.userId === user.userId;
+    });
+    
+    console.log('필터링된 로그 개수:', filtered.length);
+    console.log('필터링된 로그:', filtered);
+    
+    const mapped = filtered.map(log => ({
       id: log.id,
       certificateName: log.certificateName || '수료증',
-      issuer: log.issuer || '발급기관',
-      reason: log.description || log.reason || '사유 없음',
-      requestedAt: log.createdAt || log.requestedAt || new Date().toISOString(),
+      description: log.description || '사유 없음',
+      requestedAt: log.createdAt || new Date().toISOString(),
       status: log.status || 'pending', // pending, approved, rejected
-      adminNote: log.adminNote || log.note,
-      requestType: log.request === 'issue' ? 'issue' : 'revoke', // issue 또는 revoke
+      requestType: log.request, // issue 또는 revoke
       userId: log.userId,
       userName: log.userName,
+      DOB: log.DOB,
+      ImagePath: log.ImagePath,
+      updatedAt: log.updatedAt
     }));
-  }, [requestLogs]);
-
-  // 현재 사용자의 요청만 필터링
-  const userRequests = useMemo(() => {
-    if (!user?.userId) return [];
-    return processedRequests.filter(req => req.userId === user.userId);
-  }, [processedRequests, user?.userId]);
+    
+    console.log('최종 매핑된 데이터:', mapped);
+    return mapped;
+  }, [requestLogs, user?.userId]);
 
   // 현재 탭에 따른 데이터
   const currentRequests = useMemo(() => {
@@ -108,16 +135,12 @@ export default function CertificateRequestsPage() {
     }
   }, [activeTab, userRequests]);
 
-  // 발급기관 목록 (필터용)
-  const issuers = [...new Set(currentRequests.map(req => req.issuer))];
-
   // 필터링 및 정렬
   const filteredAndSortedRequests = useMemo(() => {
     let filtered = currentRequests.filter(req => {
       const matchesSearch = req.certificateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           req.issuer.toLowerCase().includes(searchTerm.toLowerCase());
+                           req.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
-      const matchesIssuer = issuerFilter === 'all' || req.issuer === issuerFilter;
       
       // 날짜 필터링
       if (dateRange.start || dateRange.end) {
@@ -126,7 +149,7 @@ export default function CertificateRequestsPage() {
         if (dateRange.end && reqDate > new Date(dateRange.end)) return false;
       }
       
-      return matchesSearch && matchesStatus && matchesIssuer;
+      return matchesSearch && matchesStatus;
     });
 
     return filtered.sort((a, b) => {
@@ -139,7 +162,7 @@ export default function CertificateRequestsPage() {
         return aValue < bValue ? 1 : -1;
       }
     });
-  }, [currentRequests, searchTerm, statusFilter, issuerFilter, dateRange, sortOrder]);
+  }, [currentRequests, searchTerm, statusFilter, dateRange, sortOrder]);
 
   // 페이지네이션을 위한 데이터 처리
   const totalPages = Math.ceil(filteredAndSortedRequests.length / itemsPerPage);
@@ -243,40 +266,18 @@ export default function CertificateRequestsPage() {
 
     try {
       // TODO: 실제 취소 API 호출
-      // await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs/${requestToCancel.id}`, {
-      //   data: { reason: cancelReason },
-      //   withCredentials: true
-      // });
-
+      console.log('요청 취소:', requestToCancel.id, cancelReason);
+      
       // 데이터 새로고침
       refetch();
       closeCancelModal();
       
-      // 임시 알림 (추후 전역 알림 시스템으로 대체)
       alert(`${requestToCancel.certificateName} 요청이 성공적으로 취소되었습니다.`);
     } catch (error) {
       console.error('요청 취소 실패:', error);
       showWarning('요청 취소 중 오류가 발생했습니다.');
     }
   };
-
-  // 스켈레톤 로더
-  const RequestSkeleton = () => (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <div className="h-6 bg-gray-200 rounded-lg w-3/4 mb-2"></div>
-          <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-        </div>
-        <div className="h-10 bg-gray-200 rounded-lg w-24"></div>
-      </div>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="h-4 bg-gray-200 rounded w-full"></div>
-        <div className="h-4 bg-gray-200 rounded w-full"></div>
-      </div>
-      <div className="h-16 bg-gray-200 rounded-lg"></div>
-    </div>
-  );
 
   // 로딩 상태
   if (isLoading) {
@@ -406,7 +407,7 @@ export default function CertificateRequestsPage() {
                     <div className="flex-1">
                       <input
                         type="text"
-                        placeholder="수료증명 또는 발급기관 검색..."
+                        placeholder="수료증명 또는 설명 검색..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
@@ -439,20 +440,7 @@ export default function CertificateRequestsPage() {
                   {/* 확장 필터 */}
                   {showFilters && (
                     <div className="border-t border-gray-200 pt-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">발급기관</label>
-                          <select
-                            value={issuerFilter}
-                            onChange={(e) => setIssuerFilter(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          >
-                            <option value="all">전체 기관</option>
-                            {issuers.map(issuer => (
-                              <option key={issuer} value={issuer}>{issuer}</option>
-                            ))}
-                          </select>
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">시작일</label>
                           <input
@@ -537,26 +525,42 @@ export default function CertificateRequestsPage() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-3">
                             <div>
-                              <span className="text-gray-500">발급기관:</span>
-                              <span className="ml-2 text-gray-900 font-medium">{request.issuer}</span>
-                            </div>
-                            <div>
                               <span className="text-gray-500">요청일:</span>
                               <span className="ml-2 text-gray-900 font-medium">
-                                {new Date(request.requestedAt).toLocaleDateString('ko-KR')}
+                                {new Date(request.requestedAt).toLocaleDateString('ko-KR', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">수정일:</span>
+                              <span className="ml-2 text-gray-900 font-medium">
+                                {new Date(request.updatedAt).toLocaleDateString('ko-KR', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
                               </span>
                             </div>
                           </div>
 
                           <div className="mb-3">
-                            <span className="text-gray-500 text-sm">요청 사유:</span>
-                            <p className="mt-1 text-gray-900 text-sm">{request.reason}</p>
+                            <span className="text-gray-500 text-sm">설명:</span>
+                            <p className="mt-1 text-gray-900 text-sm">{request.description}</p>
                           </div>
 
-                          {request.adminNote && (
-                            <div className="bg-gray-50 rounded-lg p-3">
-                              <span className="text-gray-500 text-sm">관리자 메모:</span>
-                              <p className="mt-1 text-gray-900 text-sm">{request.adminNote}</p>
+                          {request.ImagePath && (
+                            <div className="mb-3">
+                              <span className="text-gray-500 text-sm">첨부 이미지:</span>
+                              <div className="mt-2">
+                                <img
+                                  src={request.ImagePath}
+                                  alt="수료증 이미지"
+                                  className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+                                />
+                              </div>
                             </div>
                           )}
                         </div>

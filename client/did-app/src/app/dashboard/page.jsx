@@ -526,12 +526,6 @@ function DashboardContent() {
                     <p className="text-gray-600 mb-8 max-w-md mx-auto">
                       블록체인 기반의 안전하고 신뢰할 수 있는 수료증을 발급받아보세요.
                     </p>
-                    <Link
-                      href="/certificates/issue"
-                      className="inline-flex items-center px-6 py-3 bg-cyan-500 text-white font-medium rounded-lg hover:bg-cyan-600 transition-colors"
-                    >
-                      발급 요청하기
-                    </Link>
                   </div>
                 )}
               </div>
@@ -587,55 +581,72 @@ function DashboardContent() {
                 </div>
               </div>
 
-              {/* 수료증 유형별 통계 (파이 차트) */}
-              {pieData.length > 0 && (
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">수료증 유형별 통계</h3>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={80}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
-                                  {data.name}: {data.value}개
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {pieData.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded" style={{backgroundColor: item.color}}></div>
-                          <span className="text-gray-700">{item.name}</span>
+              {/* 수료증 유형별 통계 (파이 차트) - 항상 표시 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">수료증 유형별 통계</h3>
+                
+                {pieData.length > 0 ? (
+                  <>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={80}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {pieData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                                    {data.name}: {data.value}개
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {pieData.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded" style={{backgroundColor: item.color}}></div>
+                            <span className="text-gray-700">{item.name}</span>
+                          </div>
+                          <span className="font-medium text-gray-900">{item.value}개</span>
                         </div>
-                        <span className="font-medium text-gray-900">{item.value}개</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="mx-auto mb-4 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-base font-medium text-gray-900 mb-2">
+                      발급된 수료증이 없습니다
+                    </h4>
+                    <p className="text-sm text-gray-500">
+                      수료증을 발급받으면 여기에 유형별 통계가 표시됩니다.
+                    </p>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* 월별 발급 추이 (라인 차트) - 데이터가 있을 때만 표시 */}
               {stats.totalIssued > 0 && (

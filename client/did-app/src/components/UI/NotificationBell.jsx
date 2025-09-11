@@ -8,9 +8,11 @@ export default function NotificationBell() {
   const popRef = useRef(null);
   const [open, setOpen] = useState(false);
 
-  const { notifications = [], setNotifications } = useUserStore();
-
-  const unread = notifications.filter((n) => !n.read).length;
+  const { notifications, setNotifications } = useUserStore();
+  
+  // 안전한 배열 처리 - persist 복원 과정에서 null이 될 수 있음
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const unread = safeNotifications.filter((n) => n && !n.read).length;
 
   useEffect(() => {
     const onDown = (e) => {
@@ -24,13 +26,19 @@ export default function NotificationBell() {
   }, [open]);
 
   const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      return safePrev.map((n) => ({ ...n, read: true }));
+    });
   };
+
   const clearAll = () => setNotifications([]);
+
   const toggleOneRead = (id) =>
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+    setNotifications((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      return safePrev.map((n) => (n.id === id ? { ...n, read: true } : n));
+    });
 
   return (
     <div className="relative">
@@ -56,7 +64,7 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 lg:px-3 lg:py-2 border-b">
             <span className="text-base lg:text-sm font-semibold">알림</span>
             <div className="flex items-center gap-3 lg:gap-2">
-              {notifications.length > 0 && (
+              {safeNotifications.length > 0 && (
                 <button
                   onClick={markAllRead}
                   className="text-sm lg:text-xs text-gray-600 hover:text-gray-900 active:text-gray-700 px-2 py-1 rounded transition-colors"
@@ -64,7 +72,7 @@ export default function NotificationBell() {
                   모두 읽음
                 </button>
               )}
-              {notifications.length > 0 && (
+              {safeNotifications.length > 0 && (
                 <button
                   onClick={clearAll}
                   className="text-sm lg:text-xs text-red-500 hover:text-red-600 active:text-red-700 px-2 py-1 rounded transition-colors"
@@ -75,11 +83,11 @@ export default function NotificationBell() {
             </div>
           </div>
 
-          {notifications.length === 0 ? (
+          {safeNotifications.length === 0 ? (
             <div className="p-6 lg:p-4 text-base lg:text-sm text-gray-500 text-center">새 알림이 없습니다.</div>
           ) : (
             <ul className="max-h-[50vh] lg:max-h-[60vh] overflow-auto divide-y">
-              {notifications.map((n) => (
+              {safeNotifications.map((n) => (
                 <li
                   key={n.id}
                   className={`p-4 lg:p-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors ${

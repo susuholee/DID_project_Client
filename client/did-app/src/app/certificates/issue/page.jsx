@@ -133,29 +133,26 @@ export default function IssueCertificatePage() {
   const certificateMutation = useMutation({
     mutationFn: requestCertificate,
     onSuccess: (data) => {
-      console.log("서버 응답:", data);
-      
-      // 알림 추가
-      const newNotification = {
-        id: Date.now(),
-        title: "수료증 발급 요청",
-        message: `${formData.certificateName} 발급 요청이 제출되었습니다.`,
-        ts: Date.now(),
-        read: false,
-      };
-      addNotification(user.id, newNotification);
+    console.log("서버 응답:", data);
+  
+    // 알림 추가
+    addNotification(user.userId || user.id, {
+      id: Date.now(),
+      title: '발급 요청 완료',
+      message: `${formData.certificateName} 발급 요청이 성공적으로 전송되었습니다.`,
+      ts: Date.now(),
+      read: false,
+    });
 
+    // 성공 모달 표시
+    setModalMessage("수료증 발급 요청이 성공적으로 제출되었습니다!");
+    setModalType("success");
+    setShowModal(true);
 
-      setModalMessage("수료증 발급 요청이 성공적으로 제출되었습니다!");
-      setModalType("success");
-      setShowModal(true);
-      
-      // 성공 시 잠시 후 페이지 이동
-      setTimeout(() => {
-        setShowModal(false);
-        router.push("/certificates/request");
-      }, 2000);
-    },
+    // 성공 시 잠시 후 페이지 이동
+    setShowModal(false);
+    router.push("/certificates/request");
+},
     onError: (error) => {
       console.error("발급 요청 실패:", error);
       

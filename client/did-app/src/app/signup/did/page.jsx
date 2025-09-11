@@ -1,266 +1,293 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/UI/Input";
 import Button from "@/components/UI/Button";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import useUserStore from "@/Store/userStore";
+import useModal from "@/hooks/useModal";
 import axios from "axios";
 
-export default function DIDSignupPage() {
-  const router = useRouter();
-  const { user, setUser } = useUserStore();
+const DIDSignupPage = () => {
   const [name, setName] = useState("");
   const [birth, setBirth] = useState("");
   const [address, setAddress] = useState("");
   const [detail, setDetail] = useState("");
   const detailRef = useRef(null);
-  const [loading, setLoading] = useState(true);
-  const [kakaoLoading, setKakaoLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const router = useRouter();
+  const { openModal, closeModal } = useModal();
+  const { setUser } = useUserStore();
 
-  // 카카오 추가 정보 가져오기
-  const getKakaoAdditionalInfo = async () => {
-    if (!user || user.provider !== 'kakao') return;
-    
-    setKakaoLoading(true);
-    try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/additional-info`, {
-        withCredentials: true
-      });
-      
-      if (res.data.name) setName(res.data.name);
-      if (res.data.birth) setBirth(res.data.birth);
-      if (res.data.address) setAddress(res.data.address);
-      
-    } catch (error) {
-      console.error('카카오 추가 정보 가져오기 실패:', error);
-      alert('카카오에서 추가 정보를 가져올 수 없습니다.');
-    } finally {
-      setKakaoLoading(false);
-    }
-  };
-
-  // 다음 주소검색 API 스크립트 로드
+  // 다음 주소 스크립트 로드
   useEffect(() => {
     const script = document.createElement('script');
-    script.src = "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
     script.async = true;
     document.head.appendChild(script);
 
     return () => {
-      const existingScript = document.querySelector('script[src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"]');
-      if (existingScript) {
-        document.head.removeChild(existingScript);
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
       }
     };
   }, []);
 
+  // 카카오 사용자 정보 가져오기
+  const { data: kakaoUserInfo, isLoading, error, isSuccess } = useQuery({
+    queryKey: ['kakaoUserInfo'],
+    queryFn: async () => {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`,
+        { withCredentials: true }
+      );
+      return response.data;
+    },
+    retry: 1,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // 이미 DID 계정이 있는지 확인
   useEffect(() => {
-    let mounted = true;
-
-    const checkUserAuth = async () => {
-      console.log("checkUserAuth 실행, user:", user);
+    const checkExistingUser = async () => {
+      if (!kakaoUserInfo?.id) return;
       
-      if (!user) {
-        try {
-          console.log("사용자 정보 API 호출 시작");
-          
-          const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/oauth`, { 
-            withCredentials: true,
-            timeout: 10000
-          });
-          
-          console.log("API 응답:", res.data);
-          
-          if (!mounted) return;
-          
-          const userData = {
-            id: res.data.id,
-            nickname: res.data.properties.nickname,
-            profile: res.data.properties.profile_image,
-            thumbnailImage: res.data.properties.thumbnail_image,
-            provider: 'kakao'
-          };
-          
-          setUser(userData);
-          setLoading(false);
-          
-          if (userData.name) setName(userData.name);
-          if (userData.address) setAddress(userData.address);
-          if (userData.birth) setBirth(userData.birth);
-          
-        } catch (error) {
-          console.error('사용자 정보 가져오기 실패:', error);
-          
-          if (!mounted) return;
-          
-          setLoading(false);
-          setError('사용자 정보를 가져올 수 없습니다.');
-          
-          setTimeout(() => {
-            if (mounted) {
-              router.replace('/login?error=auth_required');
-            }
-          }, 3000);
-        }
-      } else {
-        console.log("기존 user 존재:", user);
-        setLoading(false);
+      try {
+        console.log('기존 사용자 확인 중... userId:', kakaoUserInfo.id);
         
-        if (user.name) setName(user.name);
-        if (user.address) setAddress(user.address);
-        if (user.birth) setBirth(user.birth);
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${kakaoUserInfo.id}`,
+          { withCredentials: true }
+        );
+        
+        if (response.data.state === 200 && response.data.data && response.data.data.length > 0) {
+          // 이미 DID 계정이 존재함
+          const existingUser = response.data.data[0];
+          console.log('기존 DID 계정 발견:', existingUser);
+          
+          // DID 정보가 있는지 확인
+          if (existingUser.walletAddress && existingUser.didAddress) {
+            // 완전한 사용자 정보를 Zustand에 저장
+            const completeUserInfo = {
+              id: existingUser.id,
+              userName: existingUser.userName,
+              userId: existingUser.userId,
+              nickName: existingUser.nickName,
+              password: existingUser.password,
+              birthDate: existingUser.birthDate,
+              address: existingUser.address,
+              imgPath: existingUser.imgPath,
+              
+              // DID 정보
+              walletAddress: existingUser.walletAddress,
+              didAddress: existingUser.didAddress,
+              
+              // 시스템 정보
+              createdAt: existingUser.createdAt,
+              updatedAt: existingUser.updatedAt,
+              
+              // 카카오 계정 타입
+              type: 'kakao',
+              isLoggedIn: true
+            };
+            
+            console.log('기존 사용자 정보 저장 후 대시보드로 이동');
+            setUser(completeUserInfo);
+            router.push('/dashboard');
+            return;
+          } else {
+            console.log('사용자는 존재하지만 DID 정보가 없음 - DID 생성 필요');
+          }
+        }
+      } catch (error) {
+        // 404 또는 사용자 없음 - 신규 사용자이므로 DID 생성 페이지 계속 표시
+        console.log('신규 사용자 - DID 생성 필요:', error.response?.status);
       }
     };
+    
+    // 카카오 사용자 정보 로딩이 완료된 후에만 확인
+    if (isSuccess && kakaoUserInfo) {
+      checkExistingUser();
+    }
+  }, [isSuccess, kakaoUserInfo, router, setUser]);
 
-    checkUserAuth();
+  // DID 생성 요청
+  const didCreateMutation = useMutation({
+    mutationFn: async (userData) => {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/register`,
+        userData,
+        { withCredentials: true }
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      console.log('=== DID 생성 API 응답 ===');
+      console.log('전체 응답:', JSON.stringify(data, null, 2));
+      
+      let userData = null;
+      
+      // API 응답 구조 파싱
+      if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+        userData = data.data[0];
+        console.log('사용자 데이터 추출 (배열):', userData);
+      } else if (data.data && !Array.isArray(data.data)) {
+        userData = data.data;
+        console.log('사용자 데이터 추출 (객체):', userData);
+      } else {
+        userData = data;
+        console.log('사용자 데이터 추출 (직접):', userData);
+      }
+      
+      if (!userData) {
+        console.error('사용자 데이터를 찾을 수 없음');
+        return;
+      }
+      
+      // DID 정보 확실히 저장하기 위한 객체 생성
+      const finalUserData = {};
+      
+      // 1. API 응답의 모든 필드를 먼저 복사
+      Object.keys(userData).forEach(key => {
+        finalUserData[key] = userData[key];
+      });
+      
+      // 2. 카카오 정보로 보완 (API에 없는 경우만)
+      if (!finalUserData.userId && kakaoUserInfo?.id) {
+        finalUserData.userId = kakaoUserInfo.id.toString();
+      }
+      if (!finalUserData.nickName && kakaoUserInfo?.properties?.nickname) {
+        finalUserData.nickName = kakaoUserInfo.properties.nickname;
+      }
+      if (!finalUserData.imgPath && kakaoUserInfo?.properties?.profile_image) {
+        finalUserData.imgPath = kakaoUserInfo.properties.profile_image;
+      }
+      
+      // 3. 입력값으로 보완 (API에 없는 경우만)
+      if (!finalUserData.userName) {
+        finalUserData.userName = name.trim();
+      }
+      if (!finalUserData.birthDate) {
+        finalUserData.birthDate = birth;
+      }
+      if (!finalUserData.address) {
+        finalUserData.address = `${address.trim()} ${detail.trim()}`.trim();
+      }
+      
+      // 4. 필수 시스템 정보
+      finalUserData.type = 'kakao';
+      finalUserData.isLoggedIn = true;
+      
+      // DID 정보 검증
+      console.log('=== DID 정보 최종 확인 ===');
+      console.log('walletAddress:', finalUserData.walletAddress);
+      console.log('didAddress:', finalUserData.didAddress);
+      
+      if (!finalUserData.walletAddress || !finalUserData.didAddress) {
+        console.error('DID 정보가 누락됨!');
+        console.error('API 응답 재확인:', userData);
+        alert('DID 정보 생성에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
+      
+      console.log('=== 최종 저장될 사용자 정보 ===');
+      console.log(JSON.stringify(finalUserData, null, 2));
+      
+      // Zustand에 저장
+      setUser(finalUserData);
+      
+      alert('성공적으로 가입되었습니다!');
+      router.push('/dashboard');
+    },
+    onError: (error) => {
+      console.error('DID 생성 실패:', error);
+      openModal({
+        title: "가입 실패",
+        content: error.response?.data?.message || "가입 중 오류가 발생했습니다.",
+        onConfirm: () => {
+          closeModal();
+        }
+      });
+    }
+  });
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-400 mx-auto mb-4"></div>
+          <p className="text-gray-600">카카오 사용자 정보를 불러오는 중...</p>
+        </div>
+      </main>
+    );
+  }
 
-  // 다음 주소검색 팝업 열기
+  if (error) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8 text-center">
+          <p className="text-red-500 mb-4">사용자 정보를 불러오는데 실패했습니다.</p>
+          <Button onClick={() => window.location.reload()}>다시 시도</Button>
+        </div>
+      </main>
+    );
+  }
+
   const openAddressSearch = () => {
     if (!window.daum || !window.daum.Postcode) {
-      alert('주소검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+      openModal({
+        title: "주소 검색 오류",
+        content: "주소검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
+        onConfirm: () => {
+          closeModal();
+        }
+      });
       return;
     }
 
     new window.daum.Postcode({
-      oncomplete: function(data) {
-        let addr = '';
-        let extraAddr = '';
-
-        if (data.userSelectedType === 'R') {
-          addr = data.roadAddress;
-        } else {
-          addr = data.jibunAddress;
-        }
-
-        if(data.userSelectedType === 'R'){
-          if(data.bname !== '' && /[동|로|가]$/g.test(data.bname)){
-            extraAddr += data.bname;
-          }
-          if(data.buildingName !== '' && data.apartment === 'Y'){
-            extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
-          }
-          if(extraAddr !== ''){
-            extraAddr = ' (' + extraAddr + ')';
-          }
-        }
-
-        setAddress(addr + extraAddr);
-        
-        if (detailRef.current) {
-          detailRef.current.focus();
-        }
-      }
+      oncomplete: function (data) {
+        let addr = data.userSelectedType === "R" ? data.roadAddress : data.jibunAddress;
+        setAddress(addr);
+        if (detailRef.current) detailRef.current.focus();
+      },
     }).open();
   };
 
-
-  const onSubmit = async (e) => {
+  const onSubmit = (e) => {
     e.preventDefault();
-    if (!user) return;
-
-    const updatedUser = {
-      ...user,
-      name,
-      birth,
-      address: `${address} ${detail}`.trim(),
+    
+    const userData = {
+      userName: name.trim(),
+      birthDate: birth,
+      address: `${address.trim()} ${detail.trim()}`.trim(),
+      kakaoId: kakaoUserInfo?.id,
+      nickname: kakaoUserInfo?.properties?.nickname
     };
 
-    setUser(updatedUser);
-
-    try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/register`,
-        {
-          name,
-          birth,
-          address: `${address} ${detail}`.trim(),
-        },
-        { withCredentials: true }
-      );
-
-      router.push("/dashboard");
-    } catch (error) {
-      console.error('DID 정보 저장 실패:', error);
-      alert('정보 저장에 실패했습니다. 다시 시도해주세요.');
-    }
+    console.log('DID 생성 요청 데이터:', userData);
+    didCreateMutation.mutate(userData);
   };
-
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">로그인 정보를 확인 중...</p>
-          {error && (
-            <p className="text-red-500 mt-2 text-sm">{error}</p>
-          )}
-        </div>
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="text-center">
-          <p className="text-red-500">사용자 정보를 찾을 수 없습니다.</p>
-          <p className="text-gray-500 mt-2">잠시 후 로그인 페이지로 이동합니다...</p>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8">
         <h1 className="text-2xl font-bold mb-2">DID 정보 입력</h1>
-
-        <div className="mb-5 flex items-center gap-3">
-          {user.profile ? (
-            <img
-              src={user.profile}
-              alt="프로필"
-              className="w-12 h-12 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-sm text-gray-500">
-              {(user.nickname ?? user.name ?? "유")[0]}
-            </div>
-          )}
-          <div>
-            <p className="text-xs text-gray-500">연동된 소셜 정보</p>
-            <p className="text-sm font-medium text-gray-900">
-              {user.nickname ?? user.name ?? "사용자"}
-            </p>
-          </div>
-        </div>
-
-        {user.provider === 'kakao' && (
-          <div className="mb-4">
-            <Button
-              type="button"
-              onClick={getKakaoAdditionalInfo}
-              disabled={kakaoLoading}
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-black py-2 text-sm disabled:opacity-50"
-            >
-              {kakaoLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                  정보 가져오는 중...
-                </span>
-              ) : (
-                '카카오에서 정보 자동 입력'
+        
+        {kakaoUserInfo && (
+          <div className="mb-4 p-4 bg-gray-100 rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              {kakaoUserInfo.properties?.profile_image && (
+                <img 
+                  src={kakaoUserInfo.properties.profile_image}
+                  alt="카카오 프로필"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
+                />
               )}
-            </Button>
-            <p className="text-xs text-gray-500 mt-1 text-center">
-              카카오에 등록된 추가 정보를 가져올 수 있어요
-            </p>
+              <div>
+                <p className="font-semibold text-lg">{kakaoUserInfo.properties?.nickname || '사용자'}</p>
+                <p className="text-sm text-gray-600">카카오 로그인</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -279,7 +306,9 @@ export default function DIDSignupPage() {
           />
           <div className="flex gap-2">
             <Input value={address} placeholder="주소" readOnly required />
-            <Button type="button" onClick={openAddressSearch}>주소 검색</Button>
+            <Button type="button" onClick={openAddressSearch}>
+              주소 검색
+            </Button>
           </div>
           <Input
             ref={detailRef}
@@ -291,12 +320,14 @@ export default function DIDSignupPage() {
           <Button
             type="submit"
             className="w-full bg-rose-400 text-black py-3 rounded cursor-pointer"
-            disabled={!name || !birth || !address}
+            disabled={!name || !birth || !address || didCreateMutation.isPending}
           >
-            DID 생성
+            {didCreateMutation.isPending ? "DID 생성 중..." : "DID 생성"}
           </Button>
         </form>
       </div>
     </main>
   );
-}
+};
+
+export default DIDSignupPage;

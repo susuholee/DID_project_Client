@@ -31,6 +31,7 @@ export default function LoginForm() {
     e.preventDefault();
     setLoading(true);
 
+    // 입력값 검증
     if (!userId.trim()) {
       showErrorModal("아이디를 입력해주세요.");
       setLoading(false);
@@ -43,6 +44,7 @@ export default function LoginForm() {
     }
 
     try {
+      // 로그인 요청
       const loginUser = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/login`,
         {
@@ -52,14 +54,13 @@ export default function LoginForm() {
         { withCredentials: true }
       );
 
-      
-      const { state, message } = loginUser.data;
+      const { state } = loginUser.data;
       console.log("로그인 응답:", loginUser.data);
       
       // 로그인 성공 처리
       if (state === 200) {
-        // 로그인 성공 후 사용자 정보 조회
         try {
+          // 로그인 성공 후 사용자 정보 조회
           const userResponse = await axios.get(
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`,
             { withCredentials: true }
@@ -67,56 +68,64 @@ export default function LoginForm() {
           
           if (userResponse.data.state === 200) {
             const userData = Array.isArray(userResponse.data.data) 
-            ? userResponse.data.data[0] 
-            : userResponse.data.data;
+              ? userResponse.data.data[0] 
+              : userResponse.data.data;
             
             setUser(userData, "local");
             console.log("사용자 정보 저장 완료:", userData);
             
-            // 전역 상태 확인
+            // 대시보드로 이동
             setTimeout(() => {
-               const currentState = useUserStore.getState();
-               console.log("현재 전역 상태:", currentState);
-               router.push("/dashboard");
-              }, 100);
-            } else {
-              showErrorModal("사용자 정보를 가져올 수 없습니다.");
-            }
-          } catch (error) {
-            console.error("인증 상태 확인 실패:", error);
-            showErrorModal("인증 상태 확인 중 오류가 발생했습니다.");
+              const currentState = useUserStore.getState();
+              console.log("현재 전역 상태:", currentState);
+              router.push("/dashboard");
+            }, 100);
+          } else {
+            showErrorModal("사용자 정보를 불러오는데 실패했습니다.");
           }
-        } else {
-          console.log("로그인 실패:", message);
-          showErrorModal(message || "로그인에 실패했습니다.");
+        } catch (error) {
+          console.error("사용자 정보 조회 실패:", error);
+          showErrorModal("사용자 정보 조회 중 오류가 발생했습니다.");
         }
-      } catch (error) {
-        console.error("로그인 실패:", error);
-        
-        if (error.response) {
-          const msg =
-          error.response.data?.message || "아이디 또는 비밀번호가 올바르지 않습니다.";
-          showErrorModal(msg);
-        } else {
-          showErrorModal("서버와 연결할 수 없습니다.");
-        }
-      } finally {
-        setLoading(false);
+      } else {
+        // 로그인 실패 - 프론트엔드 메시지 사용
+        showErrorModal("아이디 또는 비밀번호가 올바르지 않습니다.");
       }
-    };
+    } catch (error) {
+      console.error("로그인 실패:", error);
+      
+      // 에러 상황별 프론트엔드 메시지 처리
+      if (error.response) {
+        if (error.response.status === 401) {
+          showErrorModal("아이디 또는 비밀번호가 올바르지 않습니다.");
+        } else if (error.response.status === 404) {
+          showErrorModal("존재하지 않는 사용자입니다.");
+        } else if (error.response.status >= 500) {
+          showErrorModal("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        } else {
+          showErrorModal("로그인에 실패했습니다. 다시 시도해주세요.");
+        }
+      } else if (error.request) {
+        showErrorModal("서버와 연결할 수 없습니다. 네트워크 연결을 확인해주세요.");
+      } else {
+        showErrorModal("예상치 못한 오류가 발생했습니다.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
     
-   
-   
-    // 카카오 로그인 버튼 클릭 시
-    const handleKakaoLogin = () => {
-      window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/auth`;
-    };
+  // 카카오 로그인 버튼 클릭 시
+  const handleKakaoLogin = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/auth`;
+  };
     
-    return (
-      <>
+  return (
+    <>
       <main className="flex min-h-screen items-center justify-center">
         <div className="w-full max-w-md rounded-2xl bg-gray-200 shadow-lg p-8">
           <h1 className="text-black text-3xl font-extrabold mb-8">로그인</h1>
+          
           {/* 일반 로그인 (아이디 / 비밀번호) */}
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div>
@@ -128,7 +137,7 @@ export default function LoginForm() {
                 required
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                placeholder="아이디를 입력해주세요.."
+                placeholder="아이디를 입력해주세요"
                 disabled={loading}
               />
             </div>
@@ -164,7 +173,7 @@ export default function LoginForm() {
 
           {/* 카카오 로그인 버튼 */}
           <div className="space-y-2">
-            <button onClick={() => handleKakaoLogin()} className="block w-full cursor-pointer">
+            <button onClick={handleKakaoLogin} className="block w-full cursor-pointer">
               <img
                 src="/images/kakao_login.png"
                 alt="카카오 로그인"
