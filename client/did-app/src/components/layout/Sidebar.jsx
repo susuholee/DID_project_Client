@@ -1,13 +1,15 @@
 'use client';
-
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import useUserStore from '@/Store/userStore';
 
+
 export default function UserSidebar() {
   const pathname = usePathname();
-  const { user, logout } = useUserStore();
+  const router = useRouter();
+  const { user, logout} = useUserStore();
+  console.log("뭐가 들어있지?",user?.type);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -61,12 +63,16 @@ const isActive = (href) => {
 };
 
 
-  // 로그아웃 처리 (헤더에서 가져옴)
-    const handleLogout = () => {
-    logout();
-    window.location.href = '/';
-  };
 
+ const handleLogout = async () => {
+  console.log("로그아웃 시작, 타입:", user?.type);
+
+  if (user?.type === "kakao") {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/logout`;
+  } else {
+    await logout(); // userStore의 logout 실행
+  }
+};
   const userMenus = [
     {
       title: '대시보드',

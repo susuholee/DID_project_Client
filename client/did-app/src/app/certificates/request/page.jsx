@@ -71,13 +71,6 @@ export default function CertificateRequestsPage() {
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
 
-  // 로그인 체크
-  useEffect(() => {
-    if (!isLoggedIn || !user) {
-      router.push('/');
-      return;
-    }
-  }, [isLoggedIn, user, router]);
 
   // 현재 사용자의 요청만 필터링 (실제 API 응답 구조에 맞춤)
   const userRequests = useMemo(() => {
@@ -255,29 +248,7 @@ export default function CertificateRequestsPage() {
     setWarningMessage('');
   };
 
-  // 요청 취소 확정 (실제 API 호출 필요)
-  const confirmCancelRequest = async () => {
-    if (!requestToCancel) return;
-    
-    if (!cancelReason.trim()) {
-      showWarning('취소 사유를 입력해주세요.');
-      return;
-    }
-
-    try {
-      // TODO: 실제 취소 API 호출
-      console.log('요청 취소:', requestToCancel.id, cancelReason);
-      
-      // 데이터 새로고침
-      refetch();
-      closeCancelModal();
-      
-      alert(`${requestToCancel.certificateName} 요청이 성공적으로 취소되었습니다.`);
-    } catch (error) {
-      console.error('요청 취소 실패:', error);
-      showWarning('요청 취소 중 오류가 발생했습니다.');
-    }
-  };
+  
 
   // 로딩 상태
   if (isLoading) {
@@ -562,17 +533,6 @@ export default function CertificateRequestsPage() {
                                 />
                               </div>
                             </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-2 ml-6">
-                          {request.status === 'pending' && (
-                            <button 
-                              onClick={() => openCancelModal(request)}
-                              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                            >
-                              요청 취소
-                            </button>
                           )}
                         </div>
                       </div>

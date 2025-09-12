@@ -14,15 +14,8 @@ export default function ProfilePage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    
-    // 로그인 체크
-    if (!isLoggedIn || !user) {
-      router.push('/');
-      return;
-    }
-  }, [mounted, isLoggedIn, user, router]);
+  
+
 
   // 안전한 날짜 포맷팅 함수
   const formatDate = (dateString) => {

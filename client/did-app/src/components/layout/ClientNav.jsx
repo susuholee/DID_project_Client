@@ -5,52 +5,15 @@ import NotificationBell from "../UI/NotificationBell";
 import useUserStore from "@/Store/userStore";
 
 export default function ClientNav() {
-  const [mounted, setMounted] = useState(false);
   
   // zustand store에서 사용자 정보와 알림 가져오기
   const user = useUserStore((state) => state.user);
-  const notifications = useUserStore((state) => state.notifications);
-  const setNotifications = useUserStore((state) => state.setNotifications);
   const isLoggedIn = useUserStore((state) => state.isLoggedIn);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    
-    // 로그인하지 않은 경우 테스트용 알림 데이터 설정
-    if (!isLoggedIn || !user) {
-      const now = Date.now();
-      const testNotifications = [
-        {
-          id: 1,
-          title: "새 보고서 등록됨",
-          message: "2025년 8월 보고서가 업로드되었습니다.",
-          ts: now - 1000 * 60 * 5,
-          read: false,
-        },
-        {
-          id: 2,
-          title: "비밀번호 변경 완료",
-          message: "계정 보안 강화를 위해 비밀번호를 변경했습니다.",
-          ts: now - 1000 * 60 * 60 * 3,
-          read: true,
-        },
-      ];
-      setNotifications(user?.id || user?.userId, testNotifications);
-    }
-  }, [mounted, isLoggedIn, user, setNotifications]);
+ 
 
   return (
     <div className="fixed top-4 right-6 flex items-center gap-4 z-50">
-      {/* 알림벨 */}
-      <NotificationBell
-        notifications={notifications}
-        setNotifications={setNotifications}
-      />
-
       {/* 사용자 프로필 */}
       {user && isLoggedIn && (
         <Link href="/profile" className="flex items-center space-x-3 hover:bg-gray-100 rounded-lg px-3 py-2 transition-colors">

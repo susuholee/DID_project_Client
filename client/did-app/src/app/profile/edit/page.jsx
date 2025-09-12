@@ -10,11 +10,15 @@ import useUserStore from "@/Store/userStore";
 export default function ProfilePage() {
   const router = useRouter();
   const { isOpen, message, openModal, closeModal } = useModal();
-  const { user, updateUser, isLoggedIn } = useUserStore();
+  const { user, setUser, isLoggedIn } = useUserStore();
   const [isLoading, setIsLoading] = useState(false);
 
   // 수정 가능한 필드들만
-  const [profilePreview, setProfilePreview] = useState("/images/default-avatar.png");
+  const [profilePreview, setProfilePreview] = useState(null);
+  const [profileFile, setProfileFile] = useState(null); // 새로 추가: 실제 파일 객체
+  
+  // 로컬 편집 상태 (실제 사용자 상태와 분리)
+  const [localNickName, setLocalNickName] = useState("");
   const [address, setAddress] = useState("");
   const [addressDetail, setAddressDetail] = useState("");
   const detailRef = useRef(null);
@@ -26,9 +30,19 @@ export default function ProfilePage() {
   // 에러 메시지
   const [nameError, setNameError] = useState("");
 
-  // 사용자 이름 가져오기 (카카오: name, 일반: userName)
+  // 사용자 이름 가져오기 - 닉네임 우선, 없으면 다른 필드에서 가져오기
   const getUserName = (userObj) => {
-    return userObj?.isKakaoUser ? userObj.name : userObj.userName;
+    if (!userObj) return "";
+    
+    // nickName이 있으면 우선 사용
+    if (userObj.nickName) return userObj.nickName;
+    
+    // 없으면 카카오/일반 사용자에 따라 다른 필드 사용
+    if (userObj.isKakaoUser) {
+      return userObj.name || "";
+    } else {
+      return userObj.userName || "";
+    }
   };
 
   // 닉네임 유효성 검사
@@ -65,32 +79,57 @@ export default function ProfilePage() {
       document.body.appendChild(s);
     }
 
-    if (!isLoggedIn || !user) {
-      router.push("/");
-      return;
-    }
 
+    console.log('사용자 정보 전체 확인:', user);
+    console.log('닉네임 관련 필드들:', {
+      nickName: user.nickName,
+      name: user.name,
+      userName: user.userName
+    });
+
+    // 로컬 상태 초기화
+    setLocalNickName(user.nickName || "");
     setAddress(user.address || "");
     setAddressDetail(user.addressDetail || "");
-    setProfilePreview(user.profile || user.imgPath || "/images/default-avatar.png");
+    
+    // 프로필 이미지 설정 - 사용자 이미지가 있을 때만 설정
+    if (user.imgPath || user.profile) {
+      const profileImageUrl = user.imgPath || user.profile;
+      setProfilePreview(profileImageUrl);
+      console.log('설정된 프로필 이미지:', profileImageUrl);
+    } else {
+      setProfilePreview(null);
+      console.log('프로필 이미지 없음');
+    }
   }, [user, isLoggedIn, router]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    if (name === 'name' || name === 'userName') {
+    console.log('입력 필드 변경:', { name, value });
+    
+    if (name === 'nickName') {
       const error = validateName(value);
       setNameError(error);
+      setLocalNickName(value);
     }
     
-    updateUser({
-      [name]: value,
-    });
+    // 전체 사용자 상태는 업데이트하지 않고 로컬 상태만 관리
+    console.log('로컬 닉네임 상태 업데이트:', value);
   };
 
   const handleProfileUpload = (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('📁 파일이 선택되지 않음');
+      return;
+    }
+
+    console.log('📁 선택된 파일:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
 
     if (!/^image\/(png|jpeg|jpg|webp)$/.test(file.type)) {
       openModal("JPG, PNG, WEBP 형식의 이미지를 선택해 주세요.");
@@ -104,8 +143,9 @@ export default function ProfilePage() {
 
     const reader = new FileReader();
     reader.onload = () => {
+      console.log('🖼️ 이미지 미리보기 생성 완료');
       setProfilePreview(reader.result);
-      updateUser({ profile: reader.result });
+      setProfileFile(file); // 실제 파일 객체 저장
     };
     reader.readAsDataURL(file);
   };
@@ -127,9 +167,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!user) return;
 
-    const currentName = getUserName(user);
-    
-    const nameValidationError = validateName(currentName || "");
+    const nameValidationError = validateName(localNickName || "");
     if (nameValidationError) {
       setNameError(nameValidationError);
       openModal(nameValidationError);
@@ -140,33 +178,86 @@ export default function ProfilePage() {
     try {
       setIsLoading(true);
       
-      const updateData = {
-        ...(user.isKakaoUser 
-          ? { name: (user.name || "").trim() }
-          : { userName: (user.userName || "").trim() }
-        ),
-        address,
-        addressDetail: addressDetail.trim(),
-        profile: profilePreview,
+      console.log('=== 프로필 수정 요청 시작 ===');
+      console.log('사용자 정보:', {
+        userId: user.userId,
+        localNickName: localNickName
+      });
+      
+      // FormData 생성 - 필요한 필드만 전송
+      const formData = new FormData();
+      
+      // 1. 닉네임 - 로컬 상태에서 가져오기
+      formData.append('nickName', localNickName.trim());
+      console.log('닉네임 추가:', localNickName.trim());
+      
+      // 2. 주소 (address + addressDetail 합쳐서)
+      const fullAddress = address ? `${address} ${addressDetail.trim()}`.trim() : '';
+      formData.append('address', fullAddress);
+      console.log('주소 정보 추가:', fullAddress);
+      
+      // 3. 프로필 이미지 처리 (imgPath)
+      if (profileFile) {
+        console.log('새 프로필 이미지 파일 추가:', {
+          fileName: profileFile.name,
+          fileSize: profileFile.size,
+          fileType: profileFile.type
+        });
+        formData.append('file', profileFile);
+      } else {
+        console.log('프로필 이미지 변경 없음');
+        // 기존 이미지 경로가 있는 경우
+        const currentImgPath = user.imgPath || user.profile;
+        if (currentImgPath) {
+          formData.append('imgPath', currentImgPath);
+          console.log('기존 imgPath 전송:', currentImgPath);
+        }
+      }
+      
+      // FormData 내용 디버깅
+      console.log('FormData 내용:');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+        } else {
+          console.log(`  ${key}: ${value}`);
+        }
+      }
+
+      const response = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.userId}`, 
+        formData, 
+        {
+          withCredentials: true,
+        }
+      );
+
+      console.log('프로필 수정 성공:', response.data);
+
+      // 로컬 상태 업데이트 - 서버로 보낸 데이터와 동일하게
+      const updatedUserData = {
+        ...user, // 모든 기존 사용자 정보 유지
+        nickName: localNickName.trim(),
+        address: fullAddress,
+        // imgPath 처리: 새 파일이 있으면 미리보기 URL, 없으면 기존 값 유지
+        ...(profileFile ? { 
+          profile: profilePreview,
+          imgPath: response.data?.imgPath || profilePreview 
+        } : { 
+          imgPath: response.data?.imgPath || user.imgPath || user.profile 
+        }),
       };
-
-      await axios.put(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.id}`, updateData, {
-        withCredentials: true
-      });
-
-      updateUser({
-        address,
-        addressDetail: addressDetail.trim(),
-        profile: profilePreview,
-        ...(user.isKakaoUser 
-          ? { name: (user.name || "").trim() }
-          : { userName: (user.userName || "").trim() }
-        ),
-      });
+      
+      console.log('🔄 로컬 사용자 상태 업데이트:', updatedUserData);
+      setUser(updatedUserData);
       
       openModal("프로필이 수정되었습니다.");
     } catch (error) {
-      console.error("프로필 수정 실패:", error);
+      console.error("❌ 프로필 수정 실패:", error);
+      if (error.response) {
+        console.error("응답 상태:", error.response.status);
+        console.error("응답 데이터:", error.response.data);
+      }
       openModal("프로필 수정 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
@@ -180,24 +271,32 @@ export default function ProfilePage() {
   const closeWithdrawModal = () => {
     setShowWithdrawModal(false);
   };
+
 // 통일된 회원탈퇴 함수 - userId로 처리
 const handleWithdraw = async () => {
-  if (!user) return;
+  // 사용자 정보 확인
+  if (!user) {
+    console.error('사용자 정보가 없습니다.');
+    openModal("로그인이 필요합니다.");
+    return;
+  }
+
+  if (!user.userId && !user.id) {
+    console.error('사용자 ID가 없습니다.');
+    openModal("사용자 정보를 확인할 수 없습니다.");
+    return;
+  }
+
   setIsWithdrawing(true);
   
   try {
+    const userId = user.userId || user.id;
     console.log('=== 회원탈퇴 시작 ===');
-    console.log('사용자 ID:', user.userId);
-    console.log('요청 URL:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.userId}`);
+    console.log('사용자 ID:', userId);
     
     const response = await axios.delete(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.userId}`,
-      { 
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`,
+      { withCredentials: true }
     );
     
     console.log('탈퇴 성공:', response.data);
@@ -205,23 +304,43 @@ const handleWithdraw = async () => {
     setShowWithdrawModal(false);
     openModal("회원탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
     
-   
-    // 사용자 상태 초기화 (Zustand)
-    updateUser(null);
-    router.push("/");
+    const { set } = useUserStore.getState();
+    set({ 
+      user: null, 
+      isLoggedIn: false, 
+      isInitialized: true,
+      loginType: null
+    });
+    
+    router.push('/')
+
     
   } catch (error) {
-    console.error("=== 회원탈퇴 실패 ===");
-    console.error("HTTP Status:", error.response?.status);
-    console.error("에러 데이터:", error.response?.data);
-    console.error("에러 메시지:", error.message);
+    console.error()
+    let errorMessage = "탈퇴 처리 중 오류가 발생했습니다.";
     
-    openModal("탈퇴 처리 중 오류가 발생했습니다.");
+    if (error.response) {
+      const status = error.response.status;
+      const data = error.response.data;
+      
+      if (status === 404) {
+        errorMessage = "사용자를 찾을 수 없습니다.";
+      } else if (status === 401) {
+        errorMessage = "인증이 필요합니다. 다시 로그인해주세요.";
+      } else if (data?.message) {
+        errorMessage = data.message;
+      }
+    } else if (error.request) {
+      errorMessage = "서버에 연결할 수 없습니다. 네트워크를 확인해주세요.";
+    }
+    
+    openModal(errorMessage);
     
   } finally {
     setIsWithdrawing(false);
   }
 };
+
   const handleModalClose = () => {
     closeModal();
     if (message === "프로필이 수정되었습니다.") {
@@ -240,25 +359,7 @@ const handleWithdraw = async () => {
     );
   }
 
-  if (!user) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="text-center bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-500 text-2xl"></span>
-          </div>
-          <p className="text-red-600 font-medium mb-4">사용자 정보를 불러올 수 없습니다.</p>
-          <button 
-            onClick={() => router.push("/")}
-            className="w-full px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-          >
-            홈으로 이동
-          </button>
-        </div>
-      </main>
-    );
-  }
-
+ 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:ml-64">
       <div className="max-w-md mx-auto">
@@ -280,11 +381,19 @@ const handleWithdraw = async () => {
             {/* 프로필 이미지 */}
             <div className="text-center mb-8">
               <div className="relative inline-block">
-                <img
-                  src={profilePreview}
-                  alt="프로필"
-                  className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-gray-100 shadow-md"
-                />
+                {profilePreview ? (
+                  <img
+                    src={profilePreview}
+                    alt="프로필"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-gray-100 shadow-md"
+                  />
+                ) : (
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-200 border-4 border-gray-100 shadow-md flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
                 <label className="absolute bottom-0 right-0 bg-cyan-500 hover:bg-cyan-600 text-white p-2 rounded-full shadow-lg cursor-pointer transition-colors">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -312,8 +421,8 @@ const handleWithdraw = async () => {
                 </label>
                 <input
                   type="text"
-                  name={user.isKakaoUser ? "name" : "userName"}
-                  value={getUserName(user) || ""}
+                  name="nickName"
+                  value={localNickName}
                   onChange={handleChange}
                   className={`w-full px-4 py-3 rounded-xl border-2 transition-colors ${
                     nameError 

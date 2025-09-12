@@ -19,67 +19,147 @@ export default function MyCertificatesPage() {
     refetch 
   } = useQuery({
     queryKey: ['certificates', user?.userId],
-    queryFn: async () => {
-      if (!user?.userId) {
-        throw new Error('사용자 정보가 없습니다.');
+   // queryFn 내부를 다음과 같이 수정해주세요
+queryFn: async () => {
+  if (!user?.userId) {
+    throw new Error('사용자 정보가 없습니다.');
+  }
+  
+  const response = await axios.get(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${user.userId}`,
+    { withCredentials: true }
+  );
+  
+  // 🔍 전체 API 응답 구조 먼저 로그
+  console.log('=== API 전체 응답 ===', response.data);
+  
+  // VC 형태의 복잡한 응답 구조에서 데이터 추출
+  if (Array.isArray(response.data)) {
+    console.log(`총 ${response.data.length}개의 아이템 발견`);
+    
+    return response.data.map((item, index) => {
+      console.log(`\n=== 아이템 ${index + 1} 전체 구조 ===`);
+      console.log('Raw item:', JSON.stringify(item, null, 2));
+      
+      // 각 VC에서 credentialSubject 정보 추출
+      const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
+                            item.message?.verifiableCredential?.credentialSubject ||
+                            item.credentialSubject ||  // 직접 접근 시도
+                            item;  // 전체가 credentialSubject인 경우
+      
+      console.log(`아이템 ${index + 1} credentialSubject:`, credentialSubject);
+      
+      if (!credentialSubject) {
+        console.warn(` 아이템 ${index + 1}: credentialSubject를 찾을 수 없음`);
+        return null;
+      }
+
+      //  모든 가능한 상태/타입 필드 확인
+      console.log(`\n=== 아이템 ${index + 1} 상태 관련 필드들 ===`);
+      console.log('credentialSubject.status:', credentialSubject.status);
+      console.log('credentialSubject.state:', credentialSubject.state);
+      console.log('credentialSubject.requestType:', credentialSubject.requestType);
+      console.log('credentialSubject.request:', credentialSubject.request);
+      console.log('item.status:', item.status);
+      console.log('item.state:', item.state);
+      console.log('item.requestType:', item.requestType);
+      console.log('item.request:', item.request);
+      
+      // message 레벨에서도 확인
+      if (item.message) {
+        console.log('item.message.status:', item.message.status);
+        console.log('item.message.requestType:', item.message.requestType);
+        if (item.message.payload) {
+          console.log('item.message.payload.status:', item.message.payload.status);
+          console.log('item.message.payload.requestType:', item.message.payload.requestType);
+        }
+      }
+
+      // 모든 가능한 위치에서 requestType과 status 찾기
+      const requestType = credentialSubject.requestType || 
+                         credentialSubject.request ||
+                         item.requestType ||
+                         item.request ||
+                         item.message?.requestType ||
+                         item.message?.payload?.requestType;
+                         
+      const statusValue = credentialSubject.status || 
+                         credentialSubject.state ||
+                         item.status ||
+                         item.state ||
+                         item.message?.status ||
+                         item.message?.payload?.status;
+
+      console.log(`\n=== 아이템 ${index + 1} 최종 추출된 값들 ===`);
+      console.log('추출된 requestType:', requestType);
+      console.log('추출된 status:', statusValue);
+
+      // 상태 결정 로직 - 더 포괄적으로
+      let certificateStatus = '알 수 없음'; // 기본값 변경
+      
+      // 1. requestType 확인 (최우선)
+      if (requestType === 'revoke' || requestType === 'cancel') {
+        certificateStatus = '폐기';
+        console.log(`아이템 ${index + 1}: requestType "${requestType}"으로 인해 폐기 처리`);
+      }
+      // 2. status 값 확인
+      else if (statusValue) {
+        if (statusValue === 'approved' || statusValue === 'active' || statusValue === 'valid') {
+          certificateStatus = '유효';
+          console.log(` ${index + 1}: status "${statusValue}"으로 인해 유효 처리`);
+        } else if (statusValue === 'revoked' || statusValue === 'cancelled' || statusValue === 'inactive') {
+          certificateStatus = '폐기';
+          console.log(`아이템 ${index + 1}: status "${statusValue}"으로 인해 폐기 처리`);
+        } else {
+          certificateStatus = statusValue; // 원본 값 그대로 사용
+          console.log(`아이템 ${index + 1}: 알 수 없는 status "${statusValue}" 그대로 사용`);
+        }
+      }
+      // 3. 기본값 처리
+      else {
+        certificateStatus = '유효'; // status가 없으면 유효로 간주
+        console.log(`아이템 ${index + 1}: status 정보가 없어 기본값 '유효'로 설정`);
       }
       
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${user.userId}`,
-        { withCredentials: true }
-      );
-      
-      // VC 형태의 복잡한 응답 구조에서 데이터 추출
-      if (Array.isArray(response.data)) {
-        return response.data.map(item => {
-          // 각 VC에서 credentialSubject 정보 추출
-          const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
-                                item.message?.verifiableCredential?.credentialSubject;
-          
-          if (!credentialSubject) {
-            console.warn('credentialSubject를 찾을 수 없음:', item);
-            return null;
-          }
+      console.log(`아이템 ${index + 1} 최종 상태: "${certificateStatus}"\n`);
 
-          // 디버깅을 위한 로그 추가
-          console.log('VC 데이터 확인:', {
-            credentialSubject,
-            item: item
-          });
-
-          // Certificate 컴포넌트와 동일한 구조로 정규화
-          return {
-            id: credentialSubject.id,
-            certificateName: credentialSubject.certificateName,
-            issuer: credentialSubject.issuer,
-            // 발급일은 여러 위치에서 확인
-            issueDate: credentialSubject.issueDate || 
-            item.message?.payload?.issuseDate || 
-            item.message?.payload?.issuanceDate ||
-            item.message?.verifiableCredential?.issuanceDate,
-            status: credentialSubject.status === 'approved' ? '유효' :  '폐기' ,
-            imagePath: credentialSubject.ImagePath,
-            userName: credentialSubject.userName,
-            userId: credentialSubject.userId,
-            description: credentialSubject.description,
-            userDid: credentialSubject.userDid,
-            issuerId: credentialSubject.issuerId,
-            DOB: credentialSubject.DOB,
-            requestDate: credentialSubject.requestDate,
-            request: credentialSubject.request,
-            // Certificate 컴포넌트에서 사용하는 전체 구조 보관
-            rawData: item,
-            // Certificate 스토어에서 기대하는 구조
-            vc: {
-              credentialSubject: credentialSubject
-            },
-            jwt: item.message?.jwt || item.message?.payload?.jwt
-          };
-        }).filter(Boolean); // null 값 제거
-      }
+      // Certificate 컴포넌트와 동일한 구조로 정규화
+      const processedItem = {
+        id: credentialSubject.id || `temp-id-${index}`,
+        certificateName: credentialSubject.certificateName || credentialSubject.title || '제목 없음',
+        issuer: credentialSubject.issuer || '발급기관 없음',
+        // 발급일은 여러 위치에서 확인
+        issueDate: credentialSubject.issueDate || 
+        item.message?.payload?.issuseDate || 
+        item.message?.payload?.issuanceDate ||
+        item.message?.verifiableCredential?.issuanceDate,
+        status: certificateStatus, // 최종 결정된 상태
+        imagePath: credentialSubject.ImagePath || credentialSubject.imagePath,
+        userName: credentialSubject.userName,
+        userId: credentialSubject.userId,
+        description: credentialSubject.description,
+        userDid: credentialSubject.userDid,
+        issuerId: credentialSubject.issuerId,
+        DOB: credentialSubject.DOB,
+        requestDate: credentialSubject.requestDate,
+        request: credentialSubject.request,
+        requestType: requestType, // 추출된 requestType
+        originalStatus: statusValue, // 원본 status 보관
+        // Certificate 컴포넌트에서 사용하는 전체 구조 보관
+        rawData: item,
+        // Certificate 스토어에서 기대하는 구조
+        vc: {
+          credentialSubject: credentialSubject
+        },
+        jwt: item.message?.jwt || item.message?.payload?.jwt
+      };
       
-      return [];
-    },
+      return processedItem;
+    }).filter(Boolean); // null 값 제거
+  }
+  
+  return [];
+},
     enabled: !!isLoggedIn && !!user?.userId,
     staleTime: 5 * 60 * 1000, // 5분간 fresh
     cacheTime: 10 * 60 * 1000, // 10분간 캐시 유지
@@ -113,15 +193,34 @@ export default function MyCertificatesPage() {
   // 필터링 + 정렬
   const filtered = useMemo(() => {
     const text = q.trim().toLowerCase();
+    
+    // 모든 수료증의 상태 현황 로깅
+    const statusCounts = allCerts.reduce((acc, cert) => {
+      acc[cert.status] = (acc[cert.status] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('전체 수료증 상태 현황:', statusCounts);
+    
     let arr = allCerts.filter((c) => {
       // 제목과 기관명 모두에서 검색
       const matchText = !text || 
         (c.certificateName || c.title || '').toLowerCase().includes(text) || 
         (c.issuer || '').toLowerCase().includes(text);
       
-      // 상태 필터링
-      const certStatus = c.status || c.state || '유효';
+      // 상태 필터링 - null/undefined 체크 강화
+      const certStatus = c.status || '알 수 없음';
       const matchStatus = status === 'all' ? true : certStatus === status;
+      
+      // 디버깅: 폐기 상태 수료증이 필터링되는지 확인
+      if (certStatus === '폐기') {
+        console.log('폐기 수료증 필터링 확인:', {
+          name: c.certificateName,
+          certStatus,
+          currentFilter: status,
+          willShow: matchText && matchStatus
+        });
+      }
+      
       return matchText && matchStatus;
     });
 
@@ -141,6 +240,7 @@ export default function MyCertificatesPage() {
       return 0;
     });
 
+    console.log(`필터링 결과: ${arr.length}개 (전체: ${allCerts.length}개)`);
     return arr;
   }, [allCerts, q, sort, status]);
 
@@ -157,7 +257,7 @@ export default function MyCertificatesPage() {
 
   const badgeOf = (s) => {
     if (s === '유효')   return 'bg-green-100 text-green-700';
-    if (s === '폐기')   return 'bg-gray-100 text-gray-600';
+    if (s === '폐기')   return 'bg-red-100 text-red-600'; // 폐기는 빨간색으로
     return 'bg-gray-100 text-gray-600';
   };
 
@@ -232,7 +332,7 @@ export default function MyCertificatesPage() {
         }
       }
       
-      // 실제 폐기 API 호출
+      // 폐기 API 요청
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/request`,
         formData,
@@ -268,13 +368,7 @@ export default function MyCertificatesPage() {
     }
   };
 
-  // 로그인 체크
-  useEffect(() => {
-    if (!isLoggedIn || !user) {
-      router.push('/');
-      return;
-    }
-  }, [isLoggedIn, user, router]);
+
 
   // 로딩 상태
   if (loading) {
@@ -360,6 +454,12 @@ export default function MyCertificatesPage() {
               { key: '폐기', label: '폐기' },
             ].map((opt) => {
               const active = status === opt.key;
+              
+              // 각 상태별 개수 계산
+              const count = opt.key === 'all' 
+                ? allCerts.length 
+                : allCerts.filter(c => c.status === opt.key).length;
+              
               return (
                 <button
                   key={opt.key}
@@ -370,7 +470,7 @@ export default function MyCertificatesPage() {
                       : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  {opt.label}
+                  {opt.label} ({count})
                 </button>
               );
             })}

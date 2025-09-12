@@ -1,64 +1,101 @@
+// store/userStore.js
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import api from "../lib/axios";
 
-const useUserStore = create(
-  persist(
-    (set, get) => ({
-      user: null, 
-      isLoggedIn: false, 
-      notifications: [], // 기본값 배열
-    
-      // 사용자 정보 저장
-      setUser: (userData) => {
-        set({ user: userData, isLoggedIn: true });
-      },
-    
-      // 로그아웃 시 상태 초기화
-      logout: () => {
-        set({ user: null, isLoggedIn: false, notifications: [] });
-      },
-    
-      // 수정된 addNotification - 안전한 배열 처리
-      addNotification: (userId, notification) => {
-        set((state) => {
-          // state.notifications가 배열인지 확인하고 안전하게 처리
-          const currentNotifications = Array.isArray(state.notifications) 
-            ? state.notifications 
-            : [];
-            
-          return {
-            notifications: [...currentNotifications, notification]
-          };
-        });
-      },
-    
-      // 새로운 배열이나 콜백 함수를 인자로 받아 알림을 업데이트합니다.
-      setNotifications: (newListOrUpdater) => {
-        if (typeof newListOrUpdater === 'function') {
-          set((state) => {
-            const currentNotifications = Array.isArray(state.notifications) 
-              ? state.notifications 
-              : [];
-            return { notifications: newListOrUpdater(currentNotifications) };
-          });
-        } else {
-          set({ notifications: Array.isArray(newListOrUpdater) ? newListOrUpdater : [] });
-        }
-      },
+
+const useUserStore = create((set, get) => ({
+  user: null,
+  isLoggedIn: false,
+  isInitialized: false,
+  loginType: null, // 'normal' | 'kakao'
+
+  setUser: (user, type = "normal") =>
+    set({
+      user,
+      isLoggedIn: !!user,
+      loginType: type,
     }),
-    {
-      name: "notification-storage",
-      partialize: (state) => ({
-        notifications: Array.isArray(state.notifications) ? state.notifications : [],
-      }),
-      // 복원 시 안전성 보장
-      onRehydrateStorage: () => (state) => {
-        if (state && !Array.isArray(state.notifications)) {
-          state.notifications = [];
-        }
-      },
+
+
+    
+initializeUser: async () => {
+  const { isInitialized } = get();
+  if (isInitialized) return;
+
+  try {
+    const res = await api.get("/user/oauth", { withCredentials: true });
+
+    let loginType = "normal";
+    let userId = null;
+    let userData = null;
+
+    // 1. 카카오 로그인
+    if (res.data?.id && res.data?.properties) {
+      loginType = "kakao";
+      userId = res.data.id;
+
+      // 카카오는 /user/{userId}로 DB 데이터 조회 필요
+      const userRes = await api.get(`/user/${userId}`, { withCredentials: true });
+      userData = Array.isArray(userRes.data.data)
+        ? userRes.data.data[0]
+        : userRes.data.data;
+    } 
+    // 2. 일반 로그인
+    else if (res.data?.state === 200 && res.data?.data) {
+      loginType = "normal";
+      userData = Array.isArray(res.data.data)
+        ? res.data.data[0]
+        : res.data.data;
     }
-  )
-);
+
+    // 3. 상태 저장
+    if (userData) {
+      set({
+        user: { ...userData, type: loginType },
+        isLoggedIn: true,
+        isInitialized: true,
+        loginType,
+      });
+    } else {
+      set({
+        user: null,
+        isLoggedIn: false,
+        isInitialized: true,
+        loginType: null,
+      });
+    }
+  } catch (err) {
+    console.log("사용자 인증 실패:", err);
+    set({
+      user: null,
+      isLoggedIn: false,
+      isInitialized: true,
+      loginType: null,
+    });
+  }
+},
+
+  logout: async () => {
+    const { loginType } = get();
+    try {
+      let response;
+      if (loginType === "kakao") {
+        await api.get("/kakao/logout", {withCredentials : true})
+      } else {
+        await api.get("/user/logout", { withCredentials: true });
+      }
+      console.log("로그아웃 응답", response)
+    } catch (err) {
+      console.log("서버 로그아웃 실패:", err);
+    }
+
+    set({
+      user: null,
+      isLoggedIn: false,
+      isInitialized: true,
+      loginType: null,
+    });
+  },
+}));
 
 export default useUserStore;

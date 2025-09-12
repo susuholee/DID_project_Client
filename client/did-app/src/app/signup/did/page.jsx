@@ -110,103 +110,96 @@ const DIDSignupPage = () => {
     }
   }, [isSuccess, kakaoUserInfo, router, setUser]);
 
-  // DID 생성 요청
+  // DID 생성 요청 - 서버에서 모든 DID 처리 완료
   const didCreateMutation = useMutation({
     mutationFn: async (userData) => {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/register`,
-        userData,
-        { withCredentials: true }
-      );
-      return response.data;
+      console.log('=== API 요청 시작 ===');
+      console.log('요청 URL:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/register`);
+      console.log('요청 데이터:', userData);
+      
+      try {
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/register`,
+          userData,
+          { withCredentials: true }
+        );
+        
+        console.log('=== API 응답 성공 ===');
+        console.log('응답 상태:', response.status);
+        console.log('응답 데이터:', response.data);
+        
+        return response.data;
+      } catch (error) {
+        console.log('=== API 요청 실패 ===');
+        console.log('에러:', error);
+        console.log('응답 상태:', error.response?.status);
+        console.log('응답 데이터:', error.response?.data);
+        throw error;
+      }
     },
     onSuccess: (data) => {
-      console.log('=== DID 생성 API 응답 ===');
-      console.log('전체 응답:', JSON.stringify(data, null, 2));
+      console.log('=== DID 생성 완료 (onSuccess 호출됨) ===');
+      console.log('서버 응답:', data);
       
-      let userData = null;
+      // 서버에서 DID 생성이 완료되었으므로, 입력한 정보로 사용자 정보 구성
+      const userInfo = {
+        userName: name.trim(),
+        birthDate: birth,
+        address: `${address.trim()} ${detail.trim()}`.trim(),
+        userId: kakaoUserInfo?.id?.toString(),
+        nickName: kakaoUserInfo?.properties?.nickname,
+        imgPath: kakaoUserInfo?.properties?.profile_image,
+        type: 'kakao',
+        isLoggedIn: true
+      };
       
-      // API 응답 구조 파싱
-      if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-        userData = data.data[0];
-        console.log('사용자 데이터 추출 (배열):', userData);
-      } else if (data.data && !Array.isArray(data.data)) {
-        userData = data.data;
-        console.log('사용자 데이터 추출 (객체):', userData);
-      } else {
-        userData = data;
-        console.log('사용자 데이터 추출 (직접):', userData);
-      }
-      
-      if (!userData) {
-        console.error('사용자 데이터를 찾을 수 없음');
-        return;
-      }
-      
-      // DID 정보 확실히 저장하기 위한 객체 생성
-      const finalUserData = {};
-      
-      // 1. API 응답의 모든 필드를 먼저 복사
-      Object.keys(userData).forEach(key => {
-        finalUserData[key] = userData[key];
-      });
-      
-      // 2. 카카오 정보로 보완 (API에 없는 경우만)
-      if (!finalUserData.userId && kakaoUserInfo?.id) {
-        finalUserData.userId = kakaoUserInfo.id.toString();
-      }
-      if (!finalUserData.nickName && kakaoUserInfo?.properties?.nickname) {
-        finalUserData.nickName = kakaoUserInfo.properties.nickname;
-      }
-      if (!finalUserData.imgPath && kakaoUserInfo?.properties?.profile_image) {
-        finalUserData.imgPath = kakaoUserInfo.properties.profile_image;
-      }
-      
-      // 3. 입력값으로 보완 (API에 없는 경우만)
-      if (!finalUserData.userName) {
-        finalUserData.userName = name.trim();
-      }
-      if (!finalUserData.birthDate) {
-        finalUserData.birthDate = birth;
-      }
-      if (!finalUserData.address) {
-        finalUserData.address = `${address.trim()} ${detail.trim()}`.trim();
-      }
-      
-      // 4. 필수 시스템 정보
-      finalUserData.type = 'kakao';
-      finalUserData.isLoggedIn = true;
-      
-      // DID 정보 검증
-      console.log('=== DID 정보 최종 확인 ===');
-      console.log('walletAddress:', finalUserData.walletAddress);
-      console.log('didAddress:', finalUserData.didAddress);
-      
-      if (!finalUserData.walletAddress || !finalUserData.didAddress) {
-        console.error('DID 정보가 누락됨!');
-        console.error('API 응답 재확인:', userData);
-        alert('DID 정보 생성에 실패했습니다. 다시 시도해주세요.');
-        return;
-      }
-      
-      console.log('=== 최종 저장될 사용자 정보 ===');
-      console.log(JSON.stringify(finalUserData, null, 2));
+      console.log('=== 사용자 정보 저장 ===');
+      console.log('userInfo:', userInfo);
       
       // Zustand에 저장
-      setUser(finalUserData);
+      setUser(userInfo);
       
-      alert('성공적으로 가입되었습니다!');
-      router.push('/dashboard');
+      console.log('=== 모달 열기 시도 ===');
+      console.log('openModal 함수:', openModal);
+      
+      // 성공 모달 표시 후 대시보드로 이동
+      try {
+        openModal({
+          title: "가입 완료",
+          content: "DID 계정이 성공적으로 생성되었습니다! 대시보드로 이동합니다.",
+          onConfirm: () => {
+            console.log('=== 모달 확인 버튼 클릭 ===');
+            closeModal();
+            router.push('/dashboard');
+          }
+        });
+        console.log('=== openModal 호출 완료 ===');
+      } catch (modalError) {
+        console.error('=== 모달 열기 에러 ===', modalError);
+        // 모달이 안되면 직접 이동
+        alert('DID 계정이 성공적으로 생성되었습니다!');
+        router.push('/dashboard');
+      }
     },
     onError: (error) => {
-      console.error('DID 생성 실패:', error);
-      openModal({
-        title: "가입 실패",
-        content: error.response?.data?.message || "가입 중 오류가 발생했습니다.",
-        onConfirm: () => {
-          closeModal();
-        }
-      });
+      console.log('=== DID 생성 실패 (onError 호출됨) ===');
+      console.error('에러 전체:', error);
+      console.error('에러 메시지:', error.message);
+      console.error('응답 상태:', error.response?.status);
+      console.error('응답 데이터:', error.response?.data);
+      
+      try {
+        openModal({
+          title: "가입 실패",
+          content: error.response?.data?.message || error.message || "가입 중 오류가 발생했습니다.",
+          onConfirm: () => {
+            closeModal();
+          }
+        });
+      } catch (modalError) {
+        console.error('=== 에러 모달 열기 실패 ===', modalError);
+        alert(error.response?.data?.message || error.message || "가입 중 오류가 발생했습니다.");
+      }
     }
   });
 
@@ -256,6 +249,13 @@ const DIDSignupPage = () => {
   const onSubmit = (e) => {
     e.preventDefault();
     
+    console.log('=== 폼 제출 시작 ===');
+    console.log('name:', name);
+    console.log('birth:', birth);
+    console.log('address:', address);
+    console.log('detail:', detail);
+    console.log('kakaoUserInfo:', kakaoUserInfo);
+    
     const userData = {
       userName: name.trim(),
       birthDate: birth,
@@ -265,6 +265,8 @@ const DIDSignupPage = () => {
     };
 
     console.log('DID 생성 요청 데이터:', userData);
+    console.log('=== Mutation 실행 ===');
+    
     didCreateMutation.mutate(userData);
   };
 

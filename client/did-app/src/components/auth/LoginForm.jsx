@@ -71,15 +71,13 @@ export default function LoginForm() {
               ? userResponse.data.data[0] 
               : userResponse.data.data;
             
-            setUser(userData, "local");
-            console.log("사용자 정보 저장 완료:", userData);
+              setUser(userData, "normal");
+              console.log("사용자 정보 저장 완료:", userData);
             
-            // 대시보드로 이동
-            setTimeout(() => {
               const currentState = useUserStore.getState();
               console.log("현재 전역 상태:", currentState);
               router.push("/dashboard");
-            }, 100);
+        
           } else {
             showErrorModal("사용자 정보를 불러오는데 실패했습니다.");
           }
