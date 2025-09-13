@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from "axios";
 import Modal from "@/components/UI/Modal";
 import useUserStore from "@/Store/userStore";
@@ -33,39 +33,71 @@ const REQUEST_REASONS = [
   { value: "기타", label: "기타" }
 ];
 
-// 사용자의 수료증 요청 및 발급 내역을 가져오는 API 함수
+// 사용자의 모든 수료증 요청 내역을 가져오는 API 함수 (중복 방지용)
 const fetchUserCertificates = async (userId) => {
-  console.log('🔍 수료증 데이터 요청 시작 - userId:', userId);
+  console.log('🔍 VC 요청 로그 데이터 요청 시작 - userId:', userId);
   
   try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${userId}`, {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs`, {
       withCredentials: true,
     });
     
-    console.log('✅ API 응답 성공:');
-    console.log('📄 응답 상태:', response.status);
-    console.log('📄 응답 헤더:', response.headers);
-    console.log('📄 응답 데이터:', response.data);
-    console.log('📄 응답 데이터 타입:', typeof response.data);
-    console.log('📄 응답 데이터가 배열인가?:', Array.isArray(response.data));
+    console.log('✅ API 응답 성공:', response.data);
     
-    if (Array.isArray(response.data)) {
-      console.log('📄 배열 길이:', response.data.length);
-      response.data.forEach((item, index) => {
-        console.log(`📄 항목 ${index + 1}:`, item);
-        if (item?.message?.payload?.vc?.credentialSubject) {
-          const subject = item.message.payload.vc.credentialSubject;
-          console.log(`📄 항목 ${index + 1} - 수료증명:`, subject.certificateName);
-          console.log(`📄 항목 ${index + 1} - 상태:`, subject.status);
-        }
-      });
+    // API 응답 구조: { state: 200, message: "...", data: [...] }
+    if (response.data.state === 200 && response.data.data) {
+      const allRequests = response.data.data;
+      console.log('📄 전체 요청 로그 개수:', allRequests.length);
+      
+      // 현재 사용자의 모든 발급 요청 (pending, approved 모두 포함)
+      const userAllIssueRequests = allRequests
+        .filter(log => {
+          const isCurrentUser = log.userId === userId;
+          const isIssueRequest = log.request === 'issue';
+          // rejected는 제외, pending과 approved만 포함
+          const isValidStatus = log.status === 'pending' || log.status === 'approved';
+          
+          console.log(`\n=== 요청 ${log.id} 상세 분석 ===`);
+          console.log(`수료증명: ${log.certificateName}`);
+          console.log(`log.userId: "${log.userId}" (타입: ${typeof log.userId})`);
+          console.log(`현재 userId: "${userId}" (타입: ${typeof userId})`);
+          console.log(`userId 일치: ${isCurrentUser}`);
+          console.log(`log.request: "${log.request}"`);
+          console.log(`request === 'issue': ${isIssueRequest}`);
+          console.log(`log.status: "${log.status}"`);
+          console.log(`유효한 상태 (pending/approved): ${isValidStatus}`);
+          console.log(`최종 필터링: ${isCurrentUser && isIssueRequest && isValidStatus}`);
+          console.log('================================\n');
+          
+          return isCurrentUser && isIssueRequest && isValidStatus;
+        })
+        .map(log => ({
+          certificateName: log.certificateName,
+          status: log.status,
+          request: log.request,
+          requestedAt: log.createdAt,
+          id: log.id
+        }));
+        
+      console.log('📄 처리된 유효한 요청 (pending + approved):', userAllIssueRequests);
+      
+      // pending 상태만 별도로 분리 (UI 표시용)
+      const pendingRequests = userAllIssueRequests.filter(req => req.status === 'pending');
+      console.log('⏳ pending 상태 요청:', pendingRequests);
+      
+      return {
+        allRequests: userAllIssueRequests,
+        pendingRequests: pendingRequests
+      };
+    } else {
+      console.error('예상과 다른 응답 구조:', response.data);
+      return {
+        allRequests: [],
+        pendingRequests: []
+      };
     }
-    
-    return response.data;
   } catch (error) {
     console.error('❌ API 요청 실패:', error);
-    console.error('❌ 에러 상세:', error.response?.data);
-    console.error('❌ 에러 상태코드:', error.response?.status);
     throw error;
   }
 };
@@ -74,7 +106,7 @@ const fetchUserCertificates = async (userId) => {
 const requestCertificate = async (requestData) => {
   const formDataToSend = new FormData();
   
-  // 필수 필드들 추가
+  // 필수 필드들 추가 - userId 사용
   formDataToSend.append('userName', requestData.userName.trim());
   formDataToSend.append('userId', requestData.userId.toString());
   formDataToSend.append('certificateName', requestData.certificateName.trim());
@@ -98,44 +130,78 @@ const requestCertificate = async (requestData) => {
 export default function IssueCertificatePage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
+  const queryClient = useQueryClient();
 
-  // zustand store 연결 (알림 기능 제거)
+  // zustand store 연결 (addNotification 제거)
   const { user } = useUserStore();
 
-  // 사용자의 기존 수료증 내역 조회
-  const { data: userCertificates, isLoading: certificatesLoading, error: certificatesError } = useQuery({
-    queryKey: ['userCertificates', user?.id],
-    queryFn: () => fetchUserCertificates(user?.id || user?.userId),
-    enabled: !!(user?.id || user?.userId),
-    staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
+  // 사용자의 기존 수료증 내역 조회 - 모든 상태 포함
+  const { data: certificateData = { allRequests: [], pendingRequests: [] }, isLoading: certificatesLoading, error: certificatesError } = useQuery({
+    queryKey: ['userCertificates', user?.userId],
+    queryFn: () => fetchUserCertificates(user?.userId),
+    enabled: !!(user?.userId),
+    staleTime: 2 * 60 * 1000, // 2분간 fresh (캐시 우선 사용)
+    gcTime: 10 * 60 * 1000, // 10분간 캐시 유지
+    refetchOnMount: 'always', // 마운트 시 항상 refetch (최신 데이터 보장)
+    refetchOnWindowFocus: true, // 윈도우 포커스 시 refetch
+    retry: (failureCount, error) => {
+      // 401/403 에러는 재시도하지 않음
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    onError: (error) => {
+      console.error('수료증 내역 조회 실패:', error);
+      if (error?.response?.status === 401) {
+        console.log('인증 오류 - 로그인 필요');
+      }
+    },
+    // 백그라운드에서 자동 refetch 설정
+    refetchInterval: 3 * 60 * 1000, // 3분마다 백그라운드 업데이트
+    refetchIntervalInBackground: true // 백그라운드에서도 업데이트
   });
 
-  // 중복 수료증 체크 함수
-  const getRequestedCertificateNames = useMemo(() => {
-    if (!userCertificates || !Array.isArray(userCertificates)) return new Set();
+  // 모든 발급 요청된 수료증 이름들 (pending + approved)
+  const getAllRequestedCertificateNames = useMemo(() => {
+    if (!certificateData.allRequests || !Array.isArray(certificateData.allRequests)) return new Set();
     
-    return new Set(
-      userCertificates
-        .filter(cert => 
-          cert.status === 'pending' || 
-          cert.status === 'approved' || 
-          cert.status === 'issued'
-        )
-        .map(cert => cert.certificateName)
-    );
-  }, [userCertificates]);
+    console.log('🔍 모든 수료증 데이터 (pending + approved):', certificateData.allRequests);
+    
+    const allCerts = certificateData.allRequests.map(cert => cert.certificateName);
+    
+    console.log('🚫 발급 불가능한 수료증 목록 (이미 요청했거나 발급받음):', allCerts);
+    return new Set(allCerts);
+  }, [certificateData.allRequests]);
 
-  // 사용 가능한 수료증 옵션 (중복 제외)
+  // pending 상태의 수료증 이름들 (UI 표시용)
+  const getPendingCertificateNames = useMemo(() => {
+    if (!certificateData.pendingRequests || !Array.isArray(certificateData.pendingRequests)) return new Set();
+    
+    console.log('🔍 pending 수료증 데이터:', certificateData.pendingRequests);
+    
+    const pendingCerts = certificateData.pendingRequests.map(cert => cert.certificateName);
+    
+    console.log('⏳ 승인 대기 중인 수료증 목록:', pendingCerts);
+    return new Set(pendingCerts);
+  }, [certificateData.pendingRequests]);
+
+  // 사용 가능한 수료증 옵션 (모든 요청 이력 제외)
   const availableCertificateOptions = useMemo(() => {
     return CERTIFICATE_OPTIONS.filter(option => 
-      !getRequestedCertificateNames.has(option.value)
+      !getAllRequestedCertificateNames.has(option.value)
     );
-  }, [getRequestedCertificateNames]);
+  }, [getAllRequestedCertificateNames]);
+
+  // 모달 상태
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState("success");
 
   // useMutation 설정 (알림 기능 제거)
   const certificateMutation = useMutation({
     mutationFn: requestCertificate,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log("서버 응답:", data);
 
       // 성공 모달 표시
@@ -143,7 +209,17 @@ export default function IssueCertificatePage() {
       setModalType("success");
       setShowModal(true);
 
-      // 성공 시 잠시 후 페이지 이동
+      // 관련 캐시 무효화하여 최신 데이터 반영
+      await queryClient.invalidateQueries({
+        queryKey: ['userCertificates', user?.userId]
+      });
+      
+      // 수료증 목록 캐시도 무효화 (다른 페이지에서도 최신 데이터 반영)
+      await queryClient.invalidateQueries({
+        queryKey: ['certificates', user?.userId]
+      });
+
+      // 성공 시 잠시 후 페이지 이동 (setTimeout 추가)
       setTimeout(() => {
         setShowModal(false);
         router.push("/certificates/request");
@@ -153,15 +229,20 @@ export default function IssueCertificatePage() {
       console.error("발급 요청 실패:", error);
       
       // 간단한 에러 처리
+      let errorMessage = "요청 처리 중 오류가 발생했습니다.";
+      
       if (error.response) {
-        const serverMessage = error.response.data?.message || error.response.data?.error || "서버 오류가 발생했습니다.";
-        setModalMessage(`발급 요청 실패: ${serverMessage}`);
+        const serverMessage = error.response.data?.message || error.response.data?.error;
+        if (serverMessage) {
+          errorMessage = `발급 요청 실패: ${serverMessage}`;
+        } else {
+          errorMessage = "서버 오류가 발생했습니다.";
+        }
       } else if (error.request) {
-        setModalMessage("서버에 연결할 수 없습니다. 네트워크를 확인해주세요.");
-      } else {
-        setModalMessage("요청 처리 중 오류가 발생했습니다.");
+        errorMessage = "서버에 연결할 수 없습니다. 네트워크를 확인해주세요.";
       }
       
+      setModalMessage(errorMessage);
       setModalType("error");
       setShowModal(true);
     }
@@ -177,11 +258,6 @@ export default function IssueCertificatePage() {
 
   // 이미지 미리보기 URL
   const [imagePreview, setImagePreview] = useState(null);
-
-  // 모달 상태
-  const [showModal, setShowModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
-  const [modalType, setModalType] = useState("success");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -232,7 +308,13 @@ export default function IssueCertificatePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    console.log("🚀 handleSubmit 시작");
+    console.log("🔍 사용자 정보:", user);
+    console.log("🔍 폼 데이터:", formData);
+    console.log("🔍 이미지 파일:", imageFile);
+
     if (!user) {
+      console.log("❌ 사용자 정보 없음");
       setModalMessage("로그인이 필요합니다.");
       setModalType("error");
       setShowModal(true);
@@ -241,29 +323,51 @@ export default function IssueCertificatePage() {
 
     // 필수 필드 검증 (프로필 이미지 추가)
     if (!formData.certificateName.trim() || !formData.reason.trim() || !imageFile) {
+      console.log("❌ 필수 필드 누락:", {
+        certificateName: formData.certificateName.trim(),
+        reason: formData.reason.trim(),
+        imageFile: !!imageFile
+      });
       setModalMessage("모든 필수 정보를 입력해주세요. (수료증 이름, 발급 용도, 프로필 이미지)");
       setModalType("error");
       setShowModal(true);
       return;
     }
 
-    // 중복 수료증 검증
-    if (getRequestedCertificateNames.has(formData.certificateName.trim())) {
-      setModalMessage("이미 요청했거나 발급받은 수료증입니다. 하나의 수료증당 1개씩만 발급 가능합니다.");
+    // 강화된 중복 수료증 검증 (pending + approved 모두 확인)
+    if (getAllRequestedCertificateNames.has(formData.certificateName.trim())) {
+      console.log("❌ 중복 수료증:", formData.certificateName.trim());
+      console.log("❌ 이미 요청된 수료증 목록:", Array.from(getAllRequestedCertificateNames));
+      
+      // 더 구체적인 에러 메시지 제공
+      const issuedCert = certificateData.allRequests.find(cert => cert.certificateName === formData.certificateName.trim());
+      let errorMessage = "이미 발급 요청한 이력이 있는 수료증입니다.";
+      
+      if (issuedCert) {
+        if (issuedCert.status === 'approved') {
+          errorMessage = "이미 발급받은 수료증입니다. 각 수료증은 한 번만 발급받을 수 있습니다.";
+        } else if (issuedCert.status === 'pending') {
+          errorMessage = "현재 승인 대기 중인 수료증입니다. 승인 완료 후 다시 시도해주세요.";
+        }
+      }
+      
+      setModalMessage(errorMessage);
       setModalType("error");
       setShowModal(true);
       return;
     }
+
+    console.log("✅ 모든 검증 통과, API 요청 시작");
 
     // 로딩 모달 표시
     setModalMessage("수료증 발급 요청을 처리하고 있습니다...");
     setModalType("loading");
     setShowModal(true);
 
-    // 요청 데이터 준비 (전역 상태에서 사용자 정보 가져오기)
+    // 요청 데이터 준비 - userId 우선 사용
     const requestData = {
       userName: user.userName,
-      userId: user.userId || user.id,
+      userId: user.userId || user.id, // userId 우선, 없으면 id 사용
       certificateName: formData.certificateName.trim(),
       description: formData.reason,
       requestDate: new Date().toISOString().split('T')[0],
@@ -271,9 +375,22 @@ export default function IssueCertificatePage() {
       DOB: user.birthDate,
       imageFile: imageFile
     };
-  
-    // useMutation 실행
-    certificateMutation.mutate(requestData);
+
+    // 디버깅용 로그 추가
+    console.log("🔍 요청 데이터:", {
+      ...requestData,
+      imageFile: requestData.imageFile ? `파일명: ${requestData.imageFile.name}, 크기: ${requestData.imageFile.size}` : '파일 없음'
+    });
+
+    try {
+      console.log("📡 API 요청 전송 중...");
+      // useMutation 실행
+      await certificateMutation.mutateAsync(requestData);
+      console.log("✅ API 요청 성공");
+    } catch (error) {
+      console.error("❌ API 요청 실패:", error);
+      // 에러는 onError에서 처리됨
+    }
   };
 
   // 제출 가능 조건 (프로필 이미지 추가)
@@ -283,8 +400,11 @@ export default function IssueCertificatePage() {
         !certificateMutation.isPending &&
         availableCertificateOptions.length > 0;
 
-  // 로딩 중일 때 표시
-  if (certificatesLoading) {
+  // 캐시된 데이터가 있으면 로딩 표시 안함
+  const hasCache = queryClient.getQueryData(['userCertificates', user?.userId]);
+  
+  // 로딩 중일 때 표시 (캐시 데이터가 없을 때만)
+  if (certificatesLoading && !hasCache) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
         <div className="flex-1 flex flex-col lg:ml-64">
@@ -322,20 +442,71 @@ export default function IssueCertificatePage() {
               </div>
             )}
 
-            {/* 기존 요청 내역 표시 */}
-            {getRequestedCertificateNames.size > 0 && (
-              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-blue-800 mb-2">기존 요청/발급 내역 ({getRequestedCertificateNames.size}개)</h3>
-                <div className="flex flex-wrap gap-2">
-                  {Array.from(getRequestedCertificateNames).map((certName, index) => (
-                    <span key={`${certName}-${index}`} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {certName}
-                    </span>
-                  ))}
+            {/* 수료증 요청 내역 통합 표시 */}
+            {getAllRequestedCertificateNames.size > 0 && (
+              <div className="mb-6 bg-gradient-to-r from-cyan-50 to-cyan-100 border border-cyan-200 rounded-xl p-4 sm:p-6 shadow-sm">
+                <div className="flex items-center mb-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-semibold text-cyan-800">
+                    수료증 발급 내역 ({getAllRequestedCertificateNames.size}개)
+                  </h3>
                 </div>
-                <p className="text-xs text-blue-600 mt-2">
-                  ⚠️ 위 수료증들은 이미 요청되어 다시 신청할 수 없습니다.
-                </p>
+
+                {/* 승인 대기 중인 수료증 */}
+                {getPendingCertificateNames.size > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center mb-2">
+                      <div className="w-2 h-2 bg-cyan-300 rounded-full mr-2"></div>
+                      <h4 className="text-sm font-medium text-gray-700">승인 대기 중 ({getPendingCertificateNames.size}개)</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(getPendingCertificateNames).map((certName, index) => (
+                        <span key={`pending-${certName}-${index}`} className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-cyan-400 to-cyan-800 text-white shadow-sm">
+                          <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                          </svg>
+                          <span className="truncate max-w-[120px] sm:max-w-none">{certName}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 이미 발급받은 수료증 */}
+                {(getAllRequestedCertificateNames.size > getPendingCertificateNames.size) && (
+                  <div className="mb-4">
+                    <div className="flex items-center mb-2">
+                      <div className="w-2 h-2 bg-cyan-500 rounded-full mr-2"></div>
+                      <h4 className="text-sm font-medium text-gray-700">발급 완료 ({getAllRequestedCertificateNames.size - getPendingCertificateNames.size}개)</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {certificateData.allRequests
+                        .filter(cert => cert.status === 'approved')
+                        .map((cert, index) => (
+                          <span key={`approved-${cert.certificateName}-${index}`} className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-sm">
+                            <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            <span className="truncate max-w-[120px] sm:max-w-none">{cert.certificateName}</span>
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 안내 메시지 */}
+                <div className="bg-white/70 rounded-lg p-3 border border-cyan-200/50">
+                  <p className="text-xs sm:text-sm text-cyan-700 flex items-start">
+                    <svg className="w-4 h-4 mr-2 text-cyan-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>위 수료증들은 이미 요청했거나 발급받았으므로 중복 신청할 수 없습니다. 각 수료증은 한 번만 발급 가능합니다.</span>
+                  </p>
+                </div>
               </div>
             )}
       
@@ -400,7 +571,13 @@ export default function IssueCertificatePage() {
                     onChange={handleChange}
                     required
                     disabled={availableCertificateOptions.length === 0}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed bg-white appearance-none"
+                    style={{ 
+                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '1em'
+                    }}
                   >
                     <option value="">발급 용도를 선택해주세요</option>
                     {REQUEST_REASONS.map((reason) => (
@@ -548,25 +725,20 @@ export default function IssueCertificatePage() {
         </div>
 
         {/* 모달 */}
-        <Modal
-          isOpen={showModal}
-          onClose={() => !certificateMutation.isPending && setShowModal(false)}
-          title={
-            certificateMutation.isPending ? "발급 요청 처리 중" :
-            modalType === "success" ? "발급 요청 성공" : 
-            modalType === "error" ? "발급 요청 실패" : 
-            "처리 중"
-          }
-        >
-          <div className="p-6">
-            <div className={`text-center ${
-              certificateMutation.isPending ? "text-blue-600" :
-              modalType === "success" ? "text-green-600" : 
-              modalType === "error" ? "text-red-600" : 
-              "text-blue-600"
-            }`}>
+        {showModal && (
+          <Modal
+            isOpen={showModal}
+            onClose={() => !certificateMutation.isPending && setShowModal(false)}
+            title={
+              modalType === "loading" ? "발급 요청 처리 중" :
+              modalType === "success" ? "발급 요청 성공" : 
+              modalType === "error" ? "발급 요청 실패" : 
+              "처리 중"
+            }
+          >
+            <div className="text-center">
               <div className="mb-4">
-                {certificateMutation.isPending ? (
+                {modalType === "loading" ? (
                   <div className="w-12 h-12 mx-auto">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                   </div>
@@ -584,29 +756,22 @@ export default function IssueCertificatePage() {
                   </div>
                 )}
               </div>
-              <p className="text-lg font-medium whitespace-pre-line">
-                {certificateMutation.isPending 
-                  ? "수료증 발급 요청을 처리하고 있습니다...\n잠시만 기다려주세요." 
-                  : modalMessage || "처리 중입니다..."
-                }
+              
+              <p className="text-lg font-medium text-gray-900 mb-2">
+                {modalMessage || (
+                  modalType === "loading" ? "요청을 처리하고 있습니다..." :
+                  modalType === "success" ? "요청이 성공적으로 처리되었습니다!" : 
+                  modalType === "error" ? "요청 처리 중 오류가 발생했습니다." : 
+                  "처리 중입니다..."
+                )}
               </p>
+              
+              {modalType === "loading" && (
+                <p className="text-sm text-gray-600">잠시만 기다려주세요...</p>
+              )}
             </div>
-            {!certificateMutation.isPending && modalMessage && (
-              <div className="mt-6 flex justify-center">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                    modalType === "success" 
-                      ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700" 
-                      : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
-                  }`}
-                >
-                  확인
-                </button>
-              </div>
-            )}
-          </div>
-        </Modal>
+          </Modal>
+        )}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ export default function UserSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout} = useUserStore();
-  console.log("뭐가 들어있지?",user?.type);
+  // console.log("뭐가 들어있지?",user?.type);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -70,7 +70,7 @@ const isActive = (href) => {
   if (user?.type === "kakao") {
     window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/logout`;
   } else {
-    await logout(); // userStore의 logout 실행
+    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/logout`;
   }
 };
   const userMenus = [

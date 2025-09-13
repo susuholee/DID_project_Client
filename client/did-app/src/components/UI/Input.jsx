@@ -10,7 +10,7 @@ const Input = ({
   ...props
 }) => {
   const baseClasses =
-    "w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-gray-800 focus:bg-white focus:border-rose-500  outline-none disabled:opacity-50 disabled:pointer-events-none";
+    "w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-gray-800 focus:bg-white focus:border-cyan-500  outline-none disabled:opacity-50 disabled:pointer-events-none";
 
   return (
     <input

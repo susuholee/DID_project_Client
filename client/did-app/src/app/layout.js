@@ -15,7 +15,7 @@ export default function RootLayout({ children }) {
   
   
 const { isInitialized, isLoggedIn, user } = useAuth();
-console.log("무슨 상태야",isInitialized)
+// console.log("무슨 상태야",isInitialized)
 
 useEffect(() => {
   if (!isInitialized) {

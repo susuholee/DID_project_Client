@@ -69,7 +69,7 @@ export default function ProfilePage() {
     return "";
   };
 
-  useEffect(() => {
+useEffect(() => {
     const scriptId = "daum-postcode-script";
     if (!document.getElementById(scriptId)) {
       const s = document.createElement("script");
@@ -79,6 +79,11 @@ export default function ProfilePage() {
       document.body.appendChild(s);
     }
 
+    // user가 null이면 early return
+    if (!user) {
+      console.log('사용자 정보가 없습니다.');
+      return;
+    }
 
     console.log('사용자 정보 전체 확인:', user);
     console.log('닉네임 관련 필드들:', {
@@ -165,7 +170,17 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      openModal("사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.");
+      return;
+    }
+
+    // 사용자 ID 확인
+    const userId = user.userId || user.id;
+    if (!userId) {
+      openModal("사용자 ID를 찾을 수 없습니다. 다시 로그인해주세요.");
+      return;
+    }
 
     const nameValidationError = validateName(localNickName || "");
     if (nameValidationError) {
@@ -180,23 +195,30 @@ export default function ProfilePage() {
       
       console.log('=== 프로필 수정 요청 시작 ===');
       console.log('사용자 정보:', {
-        userId: user.userId,
-        localNickName: localNickName
+        userId: userId,
+        localNickName: localNickName,
+        address: address,
+        addressDetail: addressDetail
       });
       
       // FormData 생성 - 필요한 필드만 전송
       const formData = new FormData();
       
-      // 1. 닉네임 - 로컬 상태에서 가져오기
-      formData.append('nickName', localNickName.trim());
-      console.log('닉네임 추가:', localNickName.trim());
+      // 1. 닉네임 - 로컬 상태에서 가져오기 (필수)
+      const trimmedNickName = localNickName.trim();
+      if (trimmedNickName) {
+        formData.append('nickName', trimmedNickName);
+        console.log('닉네임 추가:', trimmedNickName);
+      }
       
       // 2. 주소 (address + addressDetail 합쳐서)
       const fullAddress = address ? `${address} ${addressDetail.trim()}`.trim() : '';
-      formData.append('address', fullAddress);
-      console.log('주소 정보 추가:', fullAddress);
+      if (fullAddress) {
+        formData.append('address', fullAddress);
+        console.log('주소 정보 추가:', fullAddress);
+      }
       
-      // 3. 프로필 이미지 처리 (imgPath)
+      // 3. 프로필 이미지 처리
       if (profileFile) {
         console.log('새 프로필 이미지 파일 추가:', {
           fileName: profileFile.name,
@@ -206,11 +228,11 @@ export default function ProfilePage() {
         formData.append('file', profileFile);
       } else {
         console.log('프로필 이미지 변경 없음');
-        // 기존 이미지 경로가 있는 경우
+        // 기존 이미지 경로가 있는 경우에만 전송
         const currentImgPath = user.imgPath || user.profile;
-        if (currentImgPath) {
-          formData.append('imgPath', currentImgPath);
-          console.log('기존 imgPath 전송:', currentImgPath);
+        if (currentImgPath && currentImgPath.trim()) {
+          formData.append('imgPath', currentImgPath.trim());
+          console.log('기존 imgPath 전송:', currentImgPath.trim());
         }
       }
       
@@ -224,41 +246,77 @@ export default function ProfilePage() {
         }
       }
 
+      console.log('API 요청 URL:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`);
+      console.log('요청 헤더 설정 중...');
+      
       const response = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${user.userId}`, 
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`, 
         formData, 
         {
           withCredentials: true,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         }
       );
 
       console.log('프로필 수정 성공:', response.data);
-
-      // 로컬 상태 업데이트 - 서버로 보낸 데이터와 동일하게
+      
+      // 서버 응답에서 업데이트된 정보 가져오기
+      const serverData = response.data?.data || response.data;
+      
       const updatedUserData = {
-        ...user, // 모든 기존 사용자 정보 유지
-        nickName: localNickName.trim(),
+        ...user,
+        nickName: trimmedNickName,
         address: fullAddress,
-        // imgPath 처리: 새 파일이 있으면 미리보기 URL, 없으면 기존 값 유지
         ...(profileFile ? { 
           profile: profilePreview,
-          imgPath: response.data?.imgPath || profilePreview 
+          imgPath: serverData?.imgPath || profilePreview 
         } : { 
-          imgPath: response.data?.imgPath || user.imgPath || user.profile 
+          imgPath: serverData?.imgPath || user.imgPath || user.profile 
         }),
       };
       
-      console.log('🔄 로컬 사용자 상태 업데이트:', updatedUserData);
+      console.log('로컬 사용자 상태 업데이트:', updatedUserData);
       setUser(updatedUserData);
       
       openModal("프로필이 수정되었습니다.");
     } catch (error) {
       console.error("❌ 프로필 수정 실패:", error);
+      
+      let errorMessage = "프로필 수정 중 오류가 발생했습니다.";
+      
       if (error.response) {
         console.error("응답 상태:", error.response.status);
         console.error("응답 데이터:", error.response.data);
+        
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        if (status === 400) {
+          errorMessage = data?.message || "잘못된 요청입니다. 입력 정보를 확인해주세요.";
+        } else if (status === 401) {
+          errorMessage = "인증이 필요합니다. 다시 로그인해주세요.";
+        } else if (status === 403) {
+          errorMessage = "권한이 없습니다.";
+        } else if (status === 404) {
+          errorMessage = "사용자를 찾을 수 없습니다.";
+        } else if (status === 413) {
+          errorMessage = "파일 크기가 너무 큽니다.";
+        } else if (status === 415) {
+          errorMessage = "지원하지 않는 파일 형식입니다.";
+        } else if (data?.message) {
+          errorMessage = data.message;
+        }
+      } else if (error.request) {
+        console.error("요청 실패:", error.request);
+        errorMessage = "서버에 연결할 수 없습니다. 네트워크를 확인해주세요.";
+      } else {
+        console.error("요청 설정 오류:", error.message);
+        errorMessage = "요청 처리 중 오류가 발생했습니다.";
       }
-      openModal("프로필 수정 중 오류가 발생했습니다.");
+      
+      openModal(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -272,7 +330,7 @@ export default function ProfilePage() {
     setShowWithdrawModal(false);
   };
 
-// 통일된 회원탈퇴 함수 - userId로 처리
+
 const handleWithdraw = async () => {
   // 사용자 정보 확인
   if (!user) {
@@ -301,37 +359,44 @@ const handleWithdraw = async () => {
     
     console.log('탈퇴 성공:', response.data);
     
+    // 탈퇴 모달 닫기
     setShowWithdrawModal(false);
+    
+    // 전역 상태 초기화
+    console.log('전역 상태 초기화 시작');
+    setUser(null);
+    
+    console.log('전역 상태 초기화 완료');
+    
+    // 성공 메시지 표시 (상태 초기화 후)
     openModal("회원탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.");
     
-    const { set } = useUserStore.getState();
-    set({ 
-      user: null, 
-      isLoggedIn: false, 
-      isInitialized: true,
-      loginType: null
-    });
-    
-    router.push('/')
-
-    
   } catch (error) {
-    console.error()
+    console.error('회원탈퇴 실패:', error);
     let errorMessage = "탈퇴 처리 중 오류가 발생했습니다.";
     
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data;
       
+      console.error('응답 상태:', status);
+      console.error('응답 데이터:', data);
+      
       if (status === 404) {
         errorMessage = "사용자를 찾을 수 없습니다.";
       } else if (status === 401) {
         errorMessage = "인증이 필요합니다. 다시 로그인해주세요.";
+      } else if (status === 403) {
+        errorMessage = "권한이 없습니다.";
       } else if (data?.message) {
         errorMessage = data.message;
       }
     } else if (error.request) {
+      console.error('요청 실패:', error.request);
       errorMessage = "서버에 연결할 수 없습니다. 네트워크를 확인해주세요.";
+    } else {
+      console.error('요청 설정 오류:', error.message);
+      errorMessage = "요청 처리 중 오류가 발생했습니다.";
     }
     
     openModal(errorMessage);
@@ -345,6 +410,9 @@ const handleWithdraw = async () => {
     closeModal();
     if (message === "프로필이 수정되었습니다.") {
       router.push("/profile");
+    } else if (message === "회원탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.") {
+      // 탈퇴 완료 메시지가 표시된 경우 메인 페이지로 이동
+      router.push("/");
     }
   };
 

@@ -40,27 +40,68 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
         throw new Error('사용자 ID를 찾을 수 없습니다.');
       }
 
-      // /user/vc/:userId 엔드포인트로 수료증 목록 가져오기
-      const response = await api.get(`/user/vc/${userId}`);
-      
-      if (Array.isArray(response.data)) {
-        const certificate = response.data.find(item => {
-          const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
-                                 item.message?.verifiableCredential?.credentialSubject;
-          return credentialSubject?.id === certificateId;
-        });
+      // 일반 수료증과 폐기된 수료증을 병렬로 가져오기
+      const [activeResponse, revokedResponse] = await Promise.allSettled([
+        // 일반 수료증
+        api.get(`/user/vc/${userId}`),
+        // 폐기된 수료증
+        api.get(`/admin/vcrequestlogs`)
+      ]);
 
-        if (!certificate) {
-          throw new Error('해당 수료증을 찾을 수 없습니다.');
+      let foundCertificate = null;
+      let certificateType = 'active';
+
+      // 일반 수료증에서 찾기
+      if (activeResponse.status === 'fulfilled') {
+        const response = activeResponse.value;
+        if (Array.isArray(response.data)) {
+          foundCertificate = response.data.find(item => {
+            const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
+                                   item.message?.verifiableCredential?.credentialSubject;
+            return credentialSubject?.id === certificateId;
+          });
+
+          if (foundCertificate) {
+            certificateType = 'active';
+          }
         }
+      }
 
-        // Certificate 컴포넌트와 동일한 구조로 정규화
-        const credentialSubject = certificate.message?.payload?.vc?.credentialSubject || 
-                               certificate.message?.verifiableCredential?.credentialSubject;
+      // 폐기된 수료증에서 찾기 (일반 수료증에서 못 찾은 경우)
+      if (!foundCertificate && revokedResponse.status === 'fulfilled') {
+        const response = revokedResponse.value;
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          const userRevokedCerts = response.data.data.filter(
+            item => item.userId === userId && 
+                   item.request === 'revoke' && 
+                   item.status === 'approved'
+          );
+
+          foundCertificate = userRevokedCerts.find(item => 
+            item.id == certificateId || 
+            `${item.certificateName}-${item.id}` === certificateId ||
+            `revoked-cert-${userRevokedCerts.indexOf(item)}` === certificateId
+          );
+
+          if (foundCertificate) {
+            certificateType = 'revoked';
+          }
+        }
+      }
+
+      if (!foundCertificate) {
+        throw new Error('해당 수료증을 찾을 수 없습니다.');
+      }
+
+      // 데이터 정규화
+      if (certificateType === 'active') {
+        // 일반 수료증 처리
+        const credentialSubject = foundCertificate.message?.payload?.vc?.credentialSubject || 
+                               foundCertificate.message?.verifiableCredential?.credentialSubject;
         
         // 디버깅을 위한 로그
-        console.log('Certificate 컴포넌트 - 원본 데이터:', certificate);
-        console.log('Certificate 컴포넌트 - credentialSubject:', credentialSubject);
+        console.log('Certificate 컴포넌트 - 일반 수료증 원본 데이터:', foundCertificate);
+        console.log('Certificate 컴포넌트 - 일반 수료증 credentialSubject:', credentialSubject);
         
         const normalizedData = {
           vc: {
@@ -69,9 +110,9 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
               certificateName: credentialSubject.certificateName,
               issuer: credentialSubject.issuer,
               issueDate: credentialSubject.issueDate || 
-                       certificate.message?.payload?.issuseDate || 
-                       certificate.message?.payload?.issuanceDate ||
-                       certificate.message?.verifiableCredential?.issuanceDate ||
+                       foundCertificate.message?.payload?.issuseDate || 
+                       foundCertificate.message?.payload?.issuanceDate ||
+                       foundCertificate.message?.verifiableCredential?.issuanceDate ||
                        new Date().toISOString().split('T')[0], // 기본값으로 현재 날짜
               status: credentialSubject.status === 'approved' ? '유효' : '폐기',
               ImagePath: credentialSubject.ImagePath,
@@ -82,15 +123,40 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
               issuerId: credentialSubject.issuerId,
               DOB: credentialSubject.DOB,
               requestDate: credentialSubject.requestDate,
-              request: credentialSubject.request, // request 필드 추가
+              request: credentialSubject.request,
             }
           }
         };
         
-        console.log('Certificate 컴포넌트 - 정규화된 데이터:', normalizedData);
+        console.log('Certificate 컴포넌트 - 일반 수료증 정규화된 데이터:', normalizedData);
         return normalizedData;
       } else {
-        throw new Error('수료증 데이터 형식이 올바르지 않습니다.');
+        // 폐기된 수료증 처리
+        console.log('Certificate 컴포넌트 - 폐기된 수료증 원본 데이터:', foundCertificate);
+        
+        const normalizedData = {
+          vc: {
+            credentialSubject: {
+              id: foundCertificate.id,
+              certificateName: foundCertificate.certificateName,
+              issuer: foundCertificate.issuer || '발급기관 정보 없음',
+              issueDate: foundCertificate.createdAt,
+              status: '폐기',
+              ImagePath: foundCertificate.ImagePath,
+              userName: foundCertificate.userName,
+              userId: foundCertificate.userId,
+              description: foundCertificate.description,
+              userDid: null,
+              issuerId: null,
+              DOB: foundCertificate.DOB,
+              requestDate: foundCertificate.createdAt,
+              request: foundCertificate.request,
+            }
+          }
+        };
+        
+        console.log('Certificate 컴포넌트 - 폐기된 수료증 정규화된 데이터:', normalizedData);
+        return normalizedData;
       }
     },
     enabled: !!certificateId && !!user && isLoggedIn && !propCertInfo, // propCertInfo가 없을 때만 API 호출
@@ -261,7 +327,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
                 {certificateFields.map((field, i) => (
                   <div key={field.key || i}>
                     <label className="text-sm sm:text-md font-bold">{field.label}</label>
-                    <p className={field.className}>{field.value || 'N/A'}</p>
+                    <p className={field.className}>{field.value || '발급자 없음'}</p>
                   </div>
                 ))}
               </div>

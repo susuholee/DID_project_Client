@@ -34,7 +34,6 @@ initializeUser: async () => {
       loginType = "kakao";
       userId = res.data.id;
 
-      // 카카오는 /user/{userId}로 DB 데이터 조회 필요
       const userRes = await api.get(`/user/${userId}`, { withCredentials: true });
       userData = Array.isArray(userRes.data.data)
         ? userRes.data.data[0]
@@ -78,13 +77,12 @@ initializeUser: async () => {
   logout: async () => {
     const { loginType } = get();
     try {
-      let response;
       if (loginType === "kakao") {
         await api.get("/kakao/logout", {withCredentials : true})
       } else {
         await api.get("/user/logout", { withCredentials: true });
       }
-      console.log("로그아웃 응답", response)
+      console.log("로그아웃 응답")
     } catch (err) {
       console.log("서버 로그아웃 실패:", err);
     }

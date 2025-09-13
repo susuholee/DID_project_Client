@@ -3,9 +3,9 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/UI/Input";
 import Button from "@/components/UI/Button";
+import Modal from "@/components/UI/Modal";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import useUserStore from "@/Store/userStore";
-import useModal from "@/hooks/useModal";
 import axios from "axios";
 
 const DIDSignupPage = () => {
@@ -15,8 +15,12 @@ const DIDSignupPage = () => {
   const [detail, setDetail] = useState("");
   const detailRef = useRef(null);
   const router = useRouter();
-  const { openModal, closeModal } = useModal();
   const { setUser } = useUserStore();
+  
+  // 모달 상태 관리
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState("success");
 
   // 다음 주소 스크립트 로드
   useEffect(() => {
@@ -159,27 +163,12 @@ const DIDSignupPage = () => {
       // Zustand에 저장
       setUser(userInfo);
       
-      console.log('=== 모달 열기 시도 ===');
-      console.log('openModal 함수:', openModal);
+      console.log('=== 모달 표시 ===');
       
-      // 성공 모달 표시 후 대시보드로 이동
-      try {
-        openModal({
-          title: "가입 완료",
-          content: "DID 계정이 성공적으로 생성되었습니다! 대시보드로 이동합니다.",
-          onConfirm: () => {
-            console.log('=== 모달 확인 버튼 클릭 ===');
-            closeModal();
-            router.push('/dashboard');
-          }
-        });
-        console.log('=== openModal 호출 완료 ===');
-      } catch (modalError) {
-        console.error('=== 모달 열기 에러 ===', modalError);
-        // 모달이 안되면 직접 이동
-        alert('DID 계정이 성공적으로 생성되었습니다!');
-        router.push('/dashboard');
-      }
+      // 성공 모달 표시
+      setModalMessage("DID 계정이 성공적으로 생성되었습니다! 대시보드로 이동합니다.");
+      setModalType("success");
+      setShowModal(true);
     },
     onError: (error) => {
       console.log('=== DID 생성 실패 (onError 호출됨) ===');
@@ -188,27 +177,19 @@ const DIDSignupPage = () => {
       console.error('응답 상태:', error.response?.status);
       console.error('응답 데이터:', error.response?.data);
       
-      try {
-        openModal({
-          title: "가입 실패",
-          content: error.response?.data?.message || error.message || "가입 중 오류가 발생했습니다.",
-          onConfirm: () => {
-            closeModal();
-          }
-        });
-      } catch (modalError) {
-        console.error('=== 에러 모달 열기 실패 ===', modalError);
-        alert(error.response?.data?.message || error.message || "가입 중 오류가 발생했습니다.");
-      }
+      // 에러 모달 표시
+      setModalMessage(error.response?.data?.message || error.message || "가입 중 오류가 발생했습니다.");
+      setModalType("error");
+      setShowModal(true);
     }
   });
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-400 mx-auto mb-4"></div>
-          <p className="text-gray-600">카카오 사용자 정보를 불러오는 중...</p>
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4 py-6">
+        <div className="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-cyan-500 mx-auto mb-3"></div>
+          <p className="text-gray-600 text-sm">카카오 사용자 정보를 불러오는 중...</p>
         </div>
       </main>
     );
@@ -216,10 +197,20 @@ const DIDSignupPage = () => {
 
   if (error) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8 text-center">
-          <p className="text-red-500 mb-4">사용자 정보를 불러오는데 실패했습니다.</p>
-          <Button onClick={() => window.location.reload()}>다시 시도</Button>
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4 py-6">
+        <div className="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6 text-center">
+          <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
+            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <p className="text-red-500 mb-3 text-sm">사용자 정보를 불러오는데 실패했습니다.</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm"
+          >
+            다시 시도
+          </Button>
         </div>
       </main>
     );
@@ -227,13 +218,9 @@ const DIDSignupPage = () => {
 
   const openAddressSearch = () => {
     if (!window.daum || !window.daum.Postcode) {
-      openModal({
-        title: "주소 검색 오류",
-        content: "주소검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
-        onConfirm: () => {
-          closeModal();
-        }
-      });
+      setModalMessage("주소검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      setModalType("error");
+      setShowModal(true);
       return;
     }
 
@@ -271,63 +258,152 @@ const DIDSignupPage = () => {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-8">
-        <h1 className="text-2xl font-bold mb-2">DID 정보 입력</h1>
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4 py-6">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        {/* 헤더 */}
+        <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-4 text-white">
+          <h1 className="text-lg sm:text-xl font-bold mb-1">DID 정보 입력</h1>
+          <p className="text-cyan-100 text-xs">DID 계정 생성을 위한 정보를 입력해주세요</p>
+        </div>
         
-        {kakaoUserInfo && (
-          <div className="mb-4 p-4 bg-gray-100 rounded-lg">
-            <div className="flex items-center gap-3 mb-3">
-              {kakaoUserInfo.properties?.profile_image && (
-                <img 
-                  src={kakaoUserInfo.properties.profile_image}
-                  alt="카카오 프로필"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
-                />
-              )}
-              <div>
-                <p className="font-semibold text-lg">{kakaoUserInfo.properties?.nickname || '사용자'}</p>
-                <p className="text-sm text-gray-600">카카오 로그인</p>
+        <div className="p-4 sm:p-6">
+          {kakaoUserInfo && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2">
+                {kakaoUserInfo.properties?.profile_image && (
+                  <img 
+                    src={kakaoUserInfo.properties.profile_image}
+                    alt="카카오 프로필"
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-300 shadow-sm"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                    {kakaoUserInfo.properties?.nickname || '사용자'}
+                  </p>
+                  <p className="text-xs text-gray-600">카카오 로그인</p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <form onSubmit={onSubmit} className="space-y-3" noValidate>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="이름(실명)"
-            required
-          />
-          <Input
-            type="date"
-            value={birth}
-            onChange={(e) => setBirth(e.target.value)}
-            required
-          />
-          <div className="flex gap-2">
-            <Input value={address} placeholder="주소" readOnly required />
-            <Button type="button" onClick={openAddressSearch}>
-              주소 검색
-            </Button>
-          </div>
-          <Input
-            ref={detailRef}
-            value={detail}
-            onChange={(e) => setDetail(e.target.value)}
-            placeholder="상세주소"
-          />
+          <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4" noValidate>
+            <div className="space-y-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">이름 (실명)</label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="실명을 입력해주세요"
+                required
+                className="w-full text-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">생년월일</label>
+              <Input
+                type="date"
+                value={birth}
+                onChange={(e) => setBirth(e.target.value)}
+                required
+                className="w-full text-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">주소</label>
+              <div className="flex gap-2">
+                <Input 
+                  value={address} 
+                  placeholder="주소를 검색해주세요" 
+                  readOnly 
+                  required 
+                  className="flex-1 text-sm"
+                />
+                <Button 
+                  type="button" 
+                  onClick={openAddressSearch}
+                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap text-xs"
+                >
+                  주소 검색
+                </Button>
+              </div>
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700">상세주소</label>
+              <Input
+                ref={detailRef}
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+                placeholder="상세주소를 입력해주세요 (선택사항)"
+                className="w-full text-sm"
+              />
+            </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-rose-400 text-black py-3 rounded cursor-pointer"
-            disabled={!name || !birth || !address || didCreateMutation.isPending}
-          >
-            {didCreateMutation.isPending ? "DID 생성 중..." : "DID 생성"}
-          </Button>
-        </form>
+            <div className="pt-1">
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2.5 sm:py-3 rounded-lg font-medium shadow-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+                disabled={!name || !birth || !address || didCreateMutation.isPending}
+              >
+                {didCreateMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    DID 생성 중...
+                  </span>
+                ) : (
+                  'DID 계정 생성하기'
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
+
+      {/* 모달 */}
+      {showModal && (
+        <Modal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            if (modalType === "success") {
+              router.push('/dashboard');
+            }
+          }}
+          title={
+            modalType === "success" ? "가입 완료" : 
+            modalType === "error" ? "가입 실패" : 
+            "알림"
+          }
+        >
+          <div className="text-center px-2">
+            <div className="mb-6">
+              {modalType === "success" ? (
+                <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : modalType === "error" ? (
+                <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-16 h-16 mx-auto rounded-full bg-cyan-100 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
+                </div>
+              )}
+            </div>
+            
+            <p className="text-base sm:text-lg font-medium text-gray-900 mb-2 leading-relaxed">
+              {modalMessage}
+            </p>
+          </div>
+        </Modal>
+      )}
     </main>
   );
 };

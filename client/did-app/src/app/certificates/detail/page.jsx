@@ -6,39 +6,49 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import useUserStore from '@/Store/userStore';
 import Certificate from '@/components/certificates/certificate';
+import Modal from '@/components/UI/Modal';
 import api from '@/lib/axios';
 import axios from 'axios';
+
+// VC 요청 로그를 가져오는 API 함수
+const fetchVCRequestLogs = async () => {
+  try {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs`, {
+      withCredentials: true
+    });
+    
+    if (response.data.state === 200 && response.data.data) {
+      return response.data.data;
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('VC Request Logs 조회 실패:', error);
+    return [];
+  }
+};
+
 // Suspense로 감쌀 컴포넌트 분리
 function CertificateDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const certificateId = searchParams.get('id');
-  const { user, isLoggedIn, addNotification } = useUserStore();
+  const { user, isLoggedIn } = useUserStore();
   const queryClient = useQueryClient();
 
   const [revokeModalOpen, setRevokeModalOpen] = useState(false);
   const [revokeReason, setRevokeReason] = useState('');
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  
+  // 메시지 모달 상태
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
-const pushNotif = (title, message) => {
-    try {
-      if (user?.id || user?.userId) {
-        // userId 없이 notification 객체만 전달
-        addNotification({
-          id: Date.now(),
-          title,
-          message,
-          ts: Date.now(),
-          read: false,
-          userId: user.id || user.userId, // 필요시 notification 안에 userId 포함
-        });
-      }
-    } catch (error) {
-      console.error('알림 추가 중 오류:', error);
-      // 사용자에게는 브라우저 기본 알림으로 대체
-      alert(`${title}: ${message}`);
-    }
+  // 모달로 메시지 보여주는 함수
+  const showMessage = (message) => {
+    setModalMessage(message);
+    setShowModal(true);
   };
 
   // TanStack Query로 수료증 데이터 가져오기
@@ -62,30 +72,68 @@ const pushNotif = (title, message) => {
         throw new Error('사용자 ID를 찾을 수 없습니다.');
       }
 
-      // sessionStorage에서 먼저 확인
-      const saved = sessionStorage.getItem('selectedCertificate');
-      if (saved) {
-        const cert = JSON.parse(saved);
-        if (cert.id == certificateId) {
-          return cert;
+      // 일반 수료증과 폐기된 수료증을 병렬로 가져오기
+      const [activeResponse, revokedResponse] = await Promise.allSettled([
+        // 일반 수료증
+        api.get(`user/vc/${userId}`),
+        // 폐기된 수료증
+        axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs`, {
+          withCredentials: true
+        })
+      ]);
+
+      let foundCertificate = null;
+      let certificateType = 'active';
+
+      // 일반 수료증에서 찾기
+      if (activeResponse.status === 'fulfilled') {
+        const response = activeResponse.value;
+        if (Array.isArray(response.data)) {
+          const validItems = response.data.filter(item => 
+            item.state === 200 && item.message && typeof item.message === 'object'
+          );
+
+          foundCertificate = validItems.find(item => {
+            const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
+                                   item.message?.verifiableCredential?.credentialSubject;
+            return credentialSubject?.id == certificateId;
+          });
+
+          if (foundCertificate) {
+            certificateType = 'active';
+          }
         }
       }
 
-      // API에서 수료증 목록 가져와서 해당 ID 찾기
-      const response = await api.get(`user/vc/${userId}`);
-      
-      if (Array.isArray(response.data)) {
-        const foundCertificate = response.data.find(item => {
-          const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
-                                 item.message?.verifiableCredential?.credentialSubject;
-          return credentialSubject?.id == certificateId;
-        });
+      // 폐기된 수료증에서 찾기 (일반 수료증에서 못 찾은 경우)
+      if (!foundCertificate && revokedResponse.status === 'fulfilled') {
+        const response = revokedResponse.value;
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          const userRevokedCerts = response.data.data.filter(
+            item => item.userId === userId && 
+                   item.request === 'revoke' && 
+                   item.status === 'approved'
+          );
 
-        if (!foundCertificate) {
-          throw new Error('해당 수료증을 찾을 수 없습니다.');
+          foundCertificate = userRevokedCerts.find(item => 
+            item.id == certificateId || 
+            `${item.certificateName}-${item.id}` === certificateId ||
+            `revoked-cert-${userRevokedCerts.indexOf(item)}` === certificateId
+          );
+
+          if (foundCertificate) {
+            certificateType = 'revoked';
+          }
         }
+      }
 
-        // Certificate 컴포넌트와 동일한 구조로 정규화
+      if (!foundCertificate) {
+        throw new Error('해당 수료증을 찾을 수 없습니다.');
+      }
+
+      // 데이터 정규화
+      if (certificateType === 'active') {
+        // 일반 수료증 처리
         const credentialSubject = foundCertificate.message?.payload?.vc?.credentialSubject || 
                                foundCertificate.message?.verifiableCredential?.credentialSubject;
         
@@ -95,7 +143,7 @@ const pushNotif = (title, message) => {
           certificateName: credentialSubject.certificateName,
           issuer: credentialSubject.issuer,
           issueDate: credentialSubject.issueDate || 
-                   foundCertificate.message?.payload?.issuseDate || 
+                    foundCertificate.message?.payload?.issuseDate || 
                    foundCertificate.message?.payload?.issuanceDate ||
                    foundCertificate.message?.verifiableCredential?.issuanceDate,
           status: credentialSubject.status === 'approved' ? '유효' : '폐기',
@@ -111,14 +159,52 @@ const pushNotif = (title, message) => {
           request: credentialSubject.request,
           publicKey: credentialSubject.userDid,
           rawData: foundCertificate,
+          certificateType: 'active'
         };
       } else {
-        throw new Error('수료증 데이터 형식이 올바르지 않습니다.');
+        // 폐기된 수료증 처리
+        return {
+          id: foundCertificate.id,
+          title: foundCertificate.certificateName,
+          certificateName: foundCertificate.certificateName,
+          issuer: foundCertificate.issuer || '발급기관 정보 없음',
+          issueDate: foundCertificate.createdAt,
+          status: '폐기',
+          imageUrl: foundCertificate.ImagePath,
+          imagePath: foundCertificate.ImagePath,
+          userName: foundCertificate.userName,
+          userId: foundCertificate.userId,
+          description: foundCertificate.description,
+          userDid: null,
+          issuerId: null,
+          DOB: foundCertificate.DOB,
+          requestDate: foundCertificate.createdAt,
+          request: foundCertificate.request,
+          publicKey: null,
+          rawData: foundCertificate,
+          certificateType: 'revoked'
+        };
       }
     },
     enabled: !!certificateId && !!user && isLoggedIn,
     staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
     cacheTime: 10 * 60 * 1000, // 10분간 메모리에 유지
+  });
+
+  // VC 요청 로그 가져오기
+  const { data: requestLogs = [] } = useQuery({
+    queryKey: ['vcRequestLogs'],
+    queryFn: fetchVCRequestLogs,
+    enabled: !!user && !!certificate,
+    staleTime: 30 * 1000, // 30초간 캐시 유지
+  });
+
+  // 현재 수료증에 대한 pending 폐기 요청이 있는지 확인
+  const hasPendingRevokeRequest = requestLogs.some(log => {
+    return log.userId === user?.userId &&
+           log.certificateName === certificate?.certificateName &&
+           log.request === 'revoke' &&
+           log.status === 'pending';
   });
 
   // 폐기 요청 mutation
@@ -152,19 +238,27 @@ const pushNotif = (title, message) => {
       });
       return response.data;
     },
-    onSuccess: (data) => {
-      pushNotif('폐기 요청 완료', `"${certificate?.title}" 폐기 요청이 관리자에게 전송되었습니다.`);
+    onSuccess: async (data) => {
+      // 성공 메시지 모달로 표시
+      showMessage('폐기 요청이 완료되었습니다!');
       
       // 관련 쿼리들 무효화하여 데이터 새로고침
-      queryClient.invalidateQueries(['certificates', user?.userId]);
-      queryClient.invalidateQueries(['certificate-detail', certificateId, user?.userId]);
+      await queryClient.invalidateQueries({
+        queryKey: ['certificates', user?.userId]
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['certificate-detail', certificateId, user?.userId]
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['vcRequestLogs']
+      });
       
       setRevokeModalOpen(false);
       setRevokeReason('');
     },
     onError: (error) => {
       console.error('폐기 요청 실패:', error);
-      pushNotif('폐기 요청 실패', '폐기 요청 중 오류가 발생했습니다.');
+      showMessage('폐기 요청 중 오류가 발생했습니다.');
     }
   });
 
@@ -175,8 +269,6 @@ const pushNotif = (title, message) => {
       return;
     }
   }, [isLoggedIn, user, router]);
-
-  const displayName = user?.isKakaoUser ? user?.nickname : user?.name || '사용자';
 
   const getStatusBadge = (status) => {
     if (status === '유효') return 'bg-cyan-100 text-cyan-700 border-cyan-300';
@@ -200,9 +292,9 @@ const pushNotif = (title, message) => {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      pushNotif('링크 복사 완료', '공유 링크가 클립보드에 복사되었습니다.');
+      showMessage('링크가 복사되었습니다!');
     } catch {
-      pushNotif('복사 실패', '브라우저 보안 정책으로 복사에 실패했습니다.');
+      showMessage('복사에 실패했습니다.');
     }
   };
 
@@ -216,9 +308,14 @@ const pushNotif = (title, message) => {
       return;
     }
 
+    if (hasPendingRevokeRequest) {
+      showMessage('이미 해당 수료증에 대한 폐기 요청이 진행 중입니다.');
+      return;
+    }
+
     const userId = user.userId || user.id;
     if (!userId) {
-      pushNotif('오류', '사용자 ID를 찾을 수 없습니다.');
+      showMessage('사용자 ID를 찾을 수 없습니다.');
       return;
     }
 
@@ -237,6 +334,10 @@ const pushNotif = (title, message) => {
   };
 
   const openRevokeModal = () => {
+    if (hasPendingRevokeRequest) {
+      showMessage('이미 해당 수료증에 대한 폐기 요청이 진행 중입니다.');
+      return;
+    }
     setRevokeReason('');
     setRevokeModalOpen(true);
   };
@@ -264,7 +365,7 @@ const pushNotif = (title, message) => {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-            <span className="text-2xl text-red-500"></span>
+            <span className="text-2xl text-red-500">⚠️</span>
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">오류 발생</h2>
           <p className="text-gray-600 mb-4">{error.message || '수료증을 불러오는데 실패했습니다.'}</p>
@@ -345,7 +446,7 @@ const pushNotif = (title, message) => {
                   </span>
 
                   <div className="flex flex-col sm:flex-row gap-2">
-                    {certificate.status === '유효' && (
+                    {certificate.status === '유효' && certificate.certificateType === 'active' && (
                       <>
                         <button
                           onClick={handleShare}
@@ -354,18 +455,24 @@ const pushNotif = (title, message) => {
                           공유하기
                         </button>
 
-                        <button
-                          onClick={openRevokeModal}
-                          className="px-3 sm:px-4 py-2 bg-white/90 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium border border-white/50 shadow-sm text-sm sm:text-base"
-                        >
-                          폐기 요청
-                        </button>
+                        {hasPendingRevokeRequest ? (
+                          <div className="px-3 sm:px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm sm:text-base w-fit border border-amber-200">
+                            폐기 요청 대기중
+                          </div>
+                        ) : (
+                          <button
+                            onClick={openRevokeModal}
+                            className="px-3 sm:px-4 py-2 bg-white/90 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium border border-white/50 shadow-sm text-sm sm:text-base"
+                          >
+                            폐기 요청
+                          </button>
+                        )}
                       </>
                     )}
 
                     {certificate.status === '폐기' && (
-                      <div className="px-3 sm:px-4 py-2 bg-gray-200 text-black rounded-lg text-sm sm:text-base w-fit">
-                        폐기된 수료증
+                      <div className="px-3 sm:px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm sm:text-base w-fit border border-gray-300">
+                        {certificate.certificateType === 'revoked' ? '폐기된 수료증' : '폐기된 수료증'}
                       </div>
                     )}
                   </div>
@@ -374,6 +481,36 @@ const pushNotif = (title, message) => {
             </div>
 
             <div className="p-4 sm:p-8">
+              {/* 폐기 요청 대기 중 알림 */}
+              {hasPendingRevokeRequest && certificate.status === '유효' && certificate.certificateType === 'active' && (
+                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-amber-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                      <h3 className="text-sm font-medium text-amber-800">폐기 요청 진행 중</h3>
+                      <p className="text-sm text-amber-700 mt-1">이 수료증에 대한 폐기 요청이 현재 승인 대기 중입니다.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 폐기된 수료증 알림 */}
+              {certificate.status === '폐기' && certificate.certificateType === 'revoked' && (
+                <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-800">폐기된 수료증</h3>
+                      <p className="text-sm text-gray-700 mt-1">이 수료증은 폐기 처리되었습니다. 공유 및 폐기 요청 기능을 사용할 수 없습니다.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 전체 수료증 표시 */}
               <div className="mb-4 sm:mb-8">
                 <Certificate 
@@ -405,6 +542,13 @@ const pushNotif = (title, message) => {
           </div>
         </div>
       </main>
+
+      {/* 메시지 모달 */}
+      <Modal
+        isOpen={showModal}
+        message={modalMessage}
+        onClose={() => setShowModal(false)}
+      />
 
       {/* 공유 링크 모달 */}
       {shareModalOpen && (
@@ -496,7 +640,7 @@ const pushNotif = (title, message) => {
                 </button>
                 <button
                   onClick={handleRevoke}
-                  disabled={!revokeReason.trim() || revokeMutation.isPending}
+                  disabled={!revokeReason.trim() || revokeMutation.isPending || hasPendingRevokeRequest}
                   className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl sm:rounded-2xl hover:from-cyan-600 hover:to-cyan-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg transform hover:-translate-y-0.5 text-sm sm:text-base"
                 >
                   {revokeMutation.isPending ? (
@@ -534,6 +678,6 @@ export default function CertificateDetailPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <CertificateDetailContent />
-    </Suspense>
+      </Suspense>
   );
 }
