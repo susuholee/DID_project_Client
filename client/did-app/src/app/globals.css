@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@font-face {
+    font-family: 'Paperozi';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-1Thin.woff2') format('woff2');
+    font-weight: 100;
+    font-display: swap;
+}
+
+
+
 /* 기본 색상 설정 */
 :root {
   --background: #F8FAFC;  /* 매우 밝은 회색빛 배경 */
@@ -22,9 +31,18 @@
 
 /* 전역 스타일 */
 body {
-  background: var(--background);
+  background: #e0f7fa;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Paperozi';
+  font-weight: 700;
+  color: black;
+  min-height: 100vh;
+}
+
+/* 모든 페이지 컨테이너에 동일한 배경 적용 */
+.page-container {
+  background: #e0f7fa;
+  min-height: 100vh;
 }
 
 
@@ -46,4 +64,86 @@ body {
 }
 .section-visible {
   animation: fadeUpScroll 0.8s ease-out forwards;
+}
+
+/* 커스텀 애니메이션 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+.animation-delay-600 {
+  animation-delay: 0.6s;
+}
+
+.animation-delay-800 {
+  animation-delay: 0.8s;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1.0s;
+}
+
+/* Sealium 로더 애니메이션 */
+@keyframes moveBall {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(100% - 2rem));
+  }
+}
+
+@keyframes scaleBall {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.animate-move-ball {
+  animation: moveBall 2s ease-in-out infinite;
+}
+
+.animate-scale-1 {
+  animation: scaleBall 1.5s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.animate-scale-2 {
+  animation: scaleBall 1.5s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+.animate-scale-3 {
+  animation: scaleBall 1.5s ease-in-out infinite;
+  animation-delay: 0.6s;
+}
+
+.animate-scale-4 {
+  animation: scaleBall 1.5s ease-in-out infinite;
+  animation-delay: 0.9s;
 }

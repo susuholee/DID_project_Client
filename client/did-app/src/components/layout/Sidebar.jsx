@@ -111,9 +111,9 @@ const isActive = (href) => {
           aria-label="메뉴 열기"
         >
           <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
-            <div className="w-5 h-0.5 bg-gray-500"></div>
-            <div className="w-5 h-0.5 bg-gray-500"></div>
-            <div className="w-5 h-0.5 bg-gray-500"></div>
+            <div className="w-5 h-0.5"></div>
+            <div className="w-5 h-0.5"></div>
+            <div className="w-5 h-0.5"></div>
           </div>
         </button>
       )}
@@ -158,8 +158,8 @@ const isActive = (href) => {
             aria-label="메뉴 닫기"
           >
             <div className="w-6 h-6 relative">
-              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 bg-gray-600 transform -translate-x-1/2 -translate-y-1/2 rotate-45"></div>
-              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 bg-gray-600 transform -translate-x-1/2 -translate-y-1/2 -rotate-45"></div>
+              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 transform -translate-x-1/2 -translate-y-1/2 rotate-45"></div>
+              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 transform -translate-x-1/2 -translate-y-1/2 -rotate-45"></div>
             </div>
           </button>
         </div>
@@ -168,7 +168,7 @@ const isActive = (href) => {
         <nav className="p-4 pb-20">
           {userMenus.map((section, sectionIndex) => (
             <div key={sectionIndex} className="mb-6">
-              <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3 px-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider mb-3 px-3">
                 {section.title}
               </h3>
               <ul className="space-y-2">
@@ -179,7 +179,7 @@ const isActive = (href) => {
                          flex items-center justify-between px-4 py-3 text-sm rounded-xl transition-all duration-200 shadow-sm
                          ${isActive(item.href) 
                            ? 'bg-cyan-500 text-white font-semibold shadow-md transform scale-105' 
-                           : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-md'
+                           : 'hover:bg-gray-100 hover:shadow-md'
                          }
                        `}>
                         <div className="flex items-center space-x-3">

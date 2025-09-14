@@ -350,10 +350,10 @@ function CertificateDetailContent() {
   // 로딩 상태
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">수료증을 불러오는 중...</p>
+          <p>수료증을 불러오는 중...</p>
         </div>
       </div>
     );
@@ -362,13 +362,13 @@ function CertificateDetailContent() {
   // 에러 상태
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-            <span className="text-2xl text-red-500">⚠️</span>
+            <div className="w-8 h-8 bg-red-500 rounded"></div>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">오류 발생</h2>
-          <p className="text-gray-600 mb-4">{error.message || '수료증을 불러오는데 실패했습니다.'}</p>
+          <h2 className="text-lg font-semibold mb-2">오류 발생</h2>
+          <p className="mb-4">{error.message || '수료증을 불러오는데 실패했습니다.'}</p>
           <button
             onClick={() => router.push('/certificates/my')}
             className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
@@ -383,13 +383,13 @@ function CertificateDetailContent() {
   // 수료증이 없는 경우
   if (!certificate) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-            <span className="text-2xl text-gray-400">📄</span>
+            <div className="w-8 h-8 bg-gray-400 rounded"></div>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">수료증을 찾을 수 없습니다</h2>
-          <p className="text-gray-600 mb-4">요청하신 수료증이 존재하지 않습니다.</p>
+          <h2 className="text-lg font-semibold mb-2">수료증을 찾을 수 없습니다</h2>
+          <p className="mb-4">요청하신 수료증이 존재하지 않습니다.</p>
           <button
             onClick={() => router.push('/certificates/my')}
             className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
@@ -403,27 +403,14 @@ function CertificateDetailContent() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <main className="min-h-screen ">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 hover:text-cyan-600 focus:z-10 focus:ring-2 focus:ring-cyan-200 transition-all duration-200 group"
+              className="inline-flex items-center px-4 py-2 text-sm font-medium bg-white rounded-lg border border-gray-200 hover:bg-gray-50 hover:text-cyan-600 focus:z-10 focus:ring-2 focus:ring-cyan-200 transition-all duration-200 group"
             >
-              <svg
-                className="w-5 h-5 mr-2 transform group-hover:-translate-x-1 transition-transform duration-200"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
+              <div className="w-5 h-5 mr-2 bg-gray-400 rounded"></div>
               목록으로 돌아가기
             </button>
           </div>
@@ -485,12 +472,10 @@ function CertificateDetailContent() {
               {hasPendingRevokeRequest && certificate.status === '유효' && certificate.certificateType === 'active' && (
                 <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <div className="flex items-center">
-                    <svg className="w-5 h-5 text-amber-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
+                    <div className="w-5 h-5 bg-amber-500 rounded mr-3"></div>
                     <div>
-                      <h3 className="text-sm font-medium text-amber-800">폐기 요청 진행 중</h3>
-                      <p className="text-sm text-amber-700 mt-1">이 수료증에 대한 폐기 요청이 현재 승인 대기 중입니다.</p>
+                      <h3 className="text-sm font-medium">폐기 요청 진행 중</h3>
+                      <p className="text-sm mt-1">이 수료증에 대한 폐기 요청이 현재 승인 대기 중입니다.</p>
                     </div>
                   </div>
                 </div>
@@ -500,12 +485,10 @@ function CertificateDetailContent() {
               {certificate.status === '폐기' && certificate.certificateType === 'revoked' && (
                 <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
+                    <div className="w-5 h-5 bg-gray-500 rounded mr-3"></div>
                     <div>
-                      <h3 className="text-sm font-medium text-gray-800">폐기된 수료증</h3>
-                      <p className="text-sm text-gray-700 mt-1">이 수료증은 폐기 처리되었습니다. 공유 및 폐기 요청 기능을 사용할 수 없습니다.</p>
+                      <h3 className="text-sm font-medium">폐기된 수료증</h3>
+                      <p className="text-sm mt-1">이 수료증은 폐기 처리되었습니다. 공유 및 폐기 요청 기능을 사용할 수 없습니다.</p>
                     </div>
                   </div>
                 </div>
@@ -562,7 +545,7 @@ function CertificateDetailContent() {
 
             <div className="p-4 sm:p-6">
               <div className="mb-4 sm:mb-6">
-                <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2 sm:mb-3">
+                <label className="block text-xs sm:text-sm font-semibold mb-2 sm:mb-3">
                   생성된 공유 링크
                 </label>
                 <div className="relative">
@@ -570,19 +553,17 @@ function CertificateDetailContent() {
                     type="text"
                     value={shareUrl}
                     readOnly
-                    className="w-full border-2 border-gray-200 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 bg-gray-50/50 text-xs sm:text-sm font-mono text-gray-700 focus:outline-none"
+                    className="w-full border-2 border-gray-200 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 bg-gray-50/50 text-xs sm:text-sm font-mono focus:outline-none"
                   />
                   <button
                     onClick={copyToClipboard}
-                    className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 p-1 sm:p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                    className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 p-1 sm:p-2 hover:text-gray-700 transition-colors"
                     title="복사"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    <div className="w-4 h-4 bg-gray-500 rounded"></div>
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs mt-2">
                   이 링크를 통해 다른 사람들이 수료증을 검증할 수 있습니다.
                 </p>
               </div>
@@ -590,7 +571,7 @@ function CertificateDetailContent() {
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                 <button
                   onClick={closeShareModal}
-                  className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-200 rounded-xl sm:rounded-2xl text-gray-700 hover:bg-gray-50 transition-all duration-300 font-medium text-sm sm:text-base"
+                  className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:bg-gray-50 transition-all duration-300 font-medium text-sm sm:text-base"
                 >
                   닫기
                 </button>
@@ -618,7 +599,7 @@ function CertificateDetailContent() {
 
             <div className="p-4 sm:p-6">
               <div className="mb-4 sm:mb-6">
-                <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2 sm:mb-3">
+                <label className="block text-xs sm:text-sm font-semibold mb-2 sm:mb-3">
                   폐기 사유를 입력해주세요
                 </label>
                 <textarea
@@ -634,7 +615,7 @@ function CertificateDetailContent() {
                 <button
                   onClick={closeRevokeModal}
                   disabled={revokeMutation.isPending}
-                  className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-200 rounded-xl sm:rounded-2xl text-gray-700 hover:bg-gray-50 transition-all duration-300 disabled:opacity-50 font-medium text-sm sm:text-base"
+                  className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:bg-gray-50 transition-all duration-300 disabled:opacity-50 font-medium text-sm sm:text-base"
                 >
                   취소
                 </button>
@@ -664,10 +645,10 @@ function CertificateDetailContent() {
 // Loading fallback 컴포넌트
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">페이지를 불러오는 중...</p>
+        <p>페이지를 불러오는 중...</p>
       </div>
     </div>
   );

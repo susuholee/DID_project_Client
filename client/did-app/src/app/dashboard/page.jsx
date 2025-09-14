@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useRef, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import useUserStore from "@/Store/userStore";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
@@ -127,18 +127,20 @@ const fetchUserVCs = async (userId) => {
 // Suspense로 감쌀 메인 대시보드 컴포넌트
 function DashboardContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   // 전역 상태에서 사용자 정보 가져오기
   const user = useUserStore((state) => state.user);
   console.log("유저 정보 데이터 :", user);
   const isLoggedIn = useUserStore((state) => state.isLoggedIn);
 
-  // TanStack Query로 수료증 데이터 조회
+  // TanStack Query로 수료증 데이터 조회 (모든 Hook을 조건부 return 이전에 호출)
   const { 
     data: vcData, 
     isLoading: vcLoading, 
     isError: vcError,
-    error 
+    error,
+    refetch: refetchVCs
   } = useQuery({
     queryKey: ['userVCs', user?.userId],
     queryFn: () => fetchUserVCs(user?.userId),
@@ -149,16 +151,35 @@ function DashboardContent() {
     retry: 2,
   });
 
-  console.log("대시보드 데이터:", { user, isLoggedIn, vcData });
 
+
+  // 인증 체크 - 로그인되지 않은 사용자는 메인 페이지로 리다이렉트
+  useEffect(() => {
+    if (!isLoggedIn || !user) {
+      const timer = setTimeout(() => {
+        router.push("/");
+      }, 1500); // 1.5초 후 리다이렉트
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, user, router]);
+
+  // 로그인되지 않은 사용자에게는 로딩 화면 표시
   if (!user || !isLoggedIn) {
-    return <p className="text-center mt-10">로그인이 필요합니다.</p>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto mb-4">
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // 로딩 상태
   if (vcLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 lg:ml-64 flex items-center justify-center">
+      <div className="min-h-screen  lg:ml-64 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
           <p className="text-gray-600">수료증 데이터를 불러오는 중...</p>
@@ -171,7 +192,7 @@ function DashboardContent() {
   if (vcError) {
     console.error("VC 데이터 조회 에러:", error);
     return (
-      <div className="min-h-screen bg-gray-50 lg:ml-64 flex items-center justify-center">
+      <div className="min-h-screen  lg:ml-64 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
             <div className="w-8 h-8 bg-red-500 rounded"></div>
@@ -190,9 +211,6 @@ function DashboardContent() {
   
   // "issue" 상태인 수료증만 필터링 (발급 완료된 것들)
   const issuedCerts = allVCs.filter(vc => vc.request === "issue");
-  
-  // 대기중인 수료증들 ("pending" 등 다른 상태)
-  const pendingCerts = allVCs.filter(vc => vc.request !== "issue");
 
   // 차트 데이터 생성 함수
   const generateChartData = () => {
@@ -283,8 +301,7 @@ function DashboardContent() {
     return {
       todayIssued,
       last30Days,
-      totalIssued: issuedCerts.length,
-      pendingCount: pendingCerts.length
+      totalIssued: issuedCerts.length
     };
   };
 
@@ -301,24 +318,41 @@ function DashboardContent() {
 
   return (
     <>
-      <main className="min-h-screen bg-gray-50 lg:ml-64">
+      <main className="min-h-screen  lg:ml-64">
         <div className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
           {/* 헤더 섹션 */}
           <div className="mb-6">
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-2xl lg:text-3xl font-bold mb-2">
                     안녕하세요, {displayName}님
                   </h1>
-                  <p className="text-gray-600 text-base lg:text-lg">
-                    수료증 관리 대시보드에 오신 것을 환영합니다.
+                  <p className="text-base lg:text-lg">
+                    나의 디지털 수료증을 확인해보세요.
                   </p>
                 </div>
                 <div className="flex items-center justify-between lg:justify-end lg:space-x-6">
                   <div className="text-center lg:text-right">
-                    <p className="text-sm text-gray-500 mb-1">총 발급된 수료증</p>
+                    <p className="text-sm mb-1">보유한 수료증</p>
                     <p className="text-2xl lg:text-3xl font-bold text-cyan-500">{stats.totalIssued}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => refetchVCs()}
+                      disabled={vcLoading}
+                      className="px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <svg 
+                        className={`w-4 h-4 ${vcLoading ? 'animate-spin' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {vcLoading ? '새로고침 중...' : '새로고침'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -335,8 +369,8 @@ function DashboardContent() {
                 <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500 mb-2">오늘 발급</p>
-                      <p className="text-3xl font-bold text-gray-900">{stats.todayIssued}</p>
+                      <p className="text-sm mb-2">오늘 획득</p>
+                      <p className="text-3xl font-bold">{stats.todayIssued}</p>
                     </div>
                     <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
                       <div className="w-6 h-6 bg-cyan-500 rounded"></div>
@@ -346,8 +380,8 @@ function DashboardContent() {
                 <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500 mb-2">30일간 발급</p>
-                      <p className="text-3xl font-bold text-gray-900">{stats.last30Days}</p>
+                      <p className="text-sm mb-2">30일간 획득</p>
+                      <p className="text-3xl font-bold">{stats.last30Days}</p>
                     </div>
                     <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
                       <div className="w-6 h-6 bg-cyan-500 rounded"></div>
@@ -357,7 +391,7 @@ function DashboardContent() {
                 <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500 mb-2">총 발급</p>
+                      <p className="text-sm mb-2">총 발급</p>
                       <p className="text-3xl font-bold text-cyan-500">{stats.totalIssued}</p>
                     </div>
                     <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
@@ -368,11 +402,13 @@ function DashboardContent() {
                 <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500 mb-2">승인 대기</p>
-                      <p className="text-3xl font-bold text-gray-900">{stats.pendingCount}</p>
+                      <p className="text-sm mb-2">이번 주 획득</p>
+                      <p className="text-3xl font-bold">{chartData.reduce((sum, day) => sum + day.issued, 0)}</p>
                     </div>
                     <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
-                      <div className="w-6 h-6 bg-cyan-500 rounded"></div>
+                      <svg className="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -382,21 +418,21 @@ function DashboardContent() {
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-1">수료증 발급 현황</h2>
-                    <p className="text-sm text-gray-500">요일별 발급된 수료증 수</p>
+                    <h2 className="text-xl font-bold mb-1">나의 수료증 현황</h2>
+                    <p className="text-sm">요일별 발급된 수료증 수</p>
                   </div>
                   <div className="hidden lg:flex items-center space-x-6">
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">오늘 발급</p>
+                      <p className="text-sm">오늘 획득</p>
                       <p className="text-lg font-bold text-cyan-500">{stats.todayIssued}개</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">30일간 총 발급</p>
+                      <p className="text-sm">30일간 총 획득</p>
                       <p className="text-lg font-bold text-cyan-500">{stats.last30Days}개</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">전체 발급</p>
-                      <p className="text-lg font-bold text-gray-900">{stats.totalIssued}개</p>
+                      <p className="text-sm">전체 보유</p>
+                      <p className="text-lg font-bold">{stats.totalIssued}개</p>
                     </div>
                   </div>
                 </div>
@@ -444,8 +480,8 @@ function DashboardContent() {
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-1">발급된 수료증</h2>
-                    <p className="text-sm text-gray-500">최근 발급된 수료증 목록입니다</p>
+                    <h2 className="text-xl font-bold mb-1">최근 발급한 수료증</h2>
+                    <p className="text-sm">최근에 발급받은 수료증 5개를 확인하세요</p>
                   </div>
                   <div className="flex gap-3">
                     <Link
@@ -480,10 +516,10 @@ function DashboardContent() {
                             </div>
                             
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-base font-semibold text-gray-900 mb-1 truncate">
+                              <h3 className="text-base font-semibold mb-1 truncate">
                                 {cert.certificateName || '수료증'}
                               </h3>
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-gray-500">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs">
                                 <span className="font-medium">{cert.issuer || '발급기관'}</span>
                                 <span className="hidden sm:inline">•</span>
                                 <span>{formatDate(cert.issueDate || cert.createdAt)}</span>
@@ -520,10 +556,10 @@ function DashboardContent() {
                     <div className="mx-auto mb-6 w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
                       <div className="w-8 h-8 bg-gray-400 rounded"></div>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                      최근 발급한 수료증이 없습니다
+                    <h3 className="text-xl font-semibold mb-4">
+                      아직 발급받은 수료증이 없습니다
                     </h3>
-                    <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                    <p className="mb-8 max-w-md mx-auto">
                       블록체인 기반의 안전하고 신뢰할 수 있는 수료증을 발급받아보세요.
                     </p>
                   </div>
@@ -551,17 +587,17 @@ function DashboardContent() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold">
                       {displayName || '사용자'}
                     </h3>
-                    <p className="text-sm text-gray-500">Sealium 사용자</p>
+                    <p className="text-sm">Sealium 사용자</p>
                   </div>
                 </div>
 
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-gray-700">지갑 정보</p>
-                    <span className="text-xs text-gray-500">Avalanche C-Chain</span>
+                    <p className="text-sm font-medium">지갑 정보</p>
+                    <span className="text-xs">Avalanche C-Chain</span>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center justify-between">
@@ -570,10 +606,10 @@ function DashboardContent() {
                           <div className="w-4 h-4 bg-cyan-300 rounded"></div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-mono text-gray-900 font-medium">
+                          <p className="text-sm font-mono font-medium">
                             {user.walletAddress?.slice(0, 7) || 'Loading'}...{user.walletAddress?.slice(-4) || '****'}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">지갑 주소</p>
+                          <p className="text-xs mt-1">지갑 주소</p>
                         </div>
                       </div>
                     </div>
@@ -583,7 +619,7 @@ function DashboardContent() {
 
               {/* 수료증 유형별 통계 (파이 차트) - 항상 표시 */}
               <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">수료증 유형별 통계</h3>
+                <h3 className="text-lg font-semibold mb-4">수료증 유형별 현황</h3>
                 
                 {pieData.length > 0 ? (
                   <>
@@ -624,9 +660,9 @@ function DashboardContent() {
                         <div key={index} className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded" style={{backgroundColor: item.color}}></div>
-                            <span className="text-gray-700">{item.name}</span>
+                            <span>{item.name}</span>
                           </div>
-                          <span className="font-medium text-gray-900">{item.value}개</span>
+                          <span className="font-medium">{item.value}개</span>
                         </div>
                       ))}
                     </div>
@@ -638,20 +674,21 @@ function DashboardContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <h4 className="text-base font-medium text-gray-900 mb-2">
-                      발급된 수료증이 없습니다
+                    <h4 className="text-base font-medium mb-2">
+                      아직 발급받은 수료증이 없습니다
                     </h4>
-                    <p className="text-sm text-gray-500">
-                      수료증을 발급받으면 여기에 유형별 통계가 표시됩니다.
+                    <p className="text-sm">
+                      수료증을 발급받으면 여기에 유형별 현황이 표시됩니다.
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* 월별 발급 추이 (라인 차트) - 데이터가 있을 때만 표시 */}
-              {stats.totalIssued > 0 && (
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">월별 발급 추이</h3>
+              {/* 월별 발급 추이 (라인 차트) - 항상 표시 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold mb-4">월별 발급 추이</h3>
+                
+                {stats.totalIssued > 0 ? (
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={lineData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
@@ -691,23 +728,23 @@ function DashboardContent() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                </div>
-              )}
-
-              {/* 데이터 새로고침 버튼 */}
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <button
-                  onClick={() => {
-                    window.location.reload();
-                  }}
-                  className="w-full px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  데이터 새로고침
-                </button>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  마지막 업데이트: {new Date().toLocaleTimeString('ko-KR')}
-                </p>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="mx-auto mb-4 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-base font-medium mb-2">
+                      월별 발급 데이터가 없습니다
+                    </h4>
+                    <p className="text-sm">
+                      수료증을 발급받으면 여기에 월별 발급 추이가 표시됩니다.
+                    </p>
+                  </div>
+                )}
               </div>
+
             </aside>
           </div>
         </div>

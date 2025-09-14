@@ -351,12 +351,12 @@ export default function MyCertificatesPage() {
   const hasCache = queryClient.getQueryData(['certificates', user?.userId]);
   if (loading && !hasCache) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
+      <main className="min-h-screen  lg:ml-64">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">수료증을 불러오는 중...</p>
+              <p>수료증을 불러오는 중...</p>
             </div>
           </div>
         </div>
@@ -367,16 +367,16 @@ export default function MyCertificatesPage() {
   // 에러 상태 (인증 에러는 별도 처리)
   if (error && error?.response?.status === 401) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
+      <main className="min-h-screen  lg:ml-64">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center">
-              <span className="text-2xl">🔒</span>
+              <div className="w-8 h-8 bg-yellow-500 rounded"></div>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">로그인이 필요합니다</h2>
-            <p className="text-gray-600 mb-4">수료증을 확인하려면 로그인해주세요.</p>
+            <h2 className="text-lg font-semibold mb-2">로그인이 필요합니다</h2>
+            <p className="mb-4">수료증을 확인하려면 로그인해주세요.</p>
             <button
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/')}
               className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
             >
               로그인하기
@@ -390,14 +390,14 @@ export default function MyCertificatesPage() {
   // 기타 에러 상태
   if (error && error?.response?.status !== 401) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
+      <main className="min-h-screen  lg:ml-64">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-              <span className="text-2xl text-red-500">⚠️</span>
+              <div className="w-8 h-8 bg-red-500 rounded"></div>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">오류 발생</h2>
-            <p className="text-gray-600 mb-4">{error.message || '수료증 조회 중 오류가 발생했습니다.'}</p>
+            <h2 className="text-lg font-semibold mb-2">오류 발생</h2>
+            <p className="mb-4">{error.message || '수료증 조회 중 오류가 발생했습니다.'}</p>
             <button
               onClick={handleManualRefresh}
               className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
@@ -411,13 +411,13 @@ export default function MyCertificatesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 lg:ml-64">
+    <main className="min-h-screen lg:ml-64">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* 상단 */}
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">내 수료증</h1>
-            <p className="text-gray-600 mt-1">총 {total}개</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">내 수료증</h1>
+            <p className="mt-1">총 {total}개</p>
           </div>
 
           {/* 검색/정렬 + 새로고침 버튼 */}
@@ -426,7 +426,7 @@ export default function MyCertificatesPage() {
             <button
               onClick={handleManualRefresh}
               disabled={loading}
-              className="h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2"
+              className="h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2"
             >
               <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -440,7 +440,7 @@ export default function MyCertificatesPage() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="수료증명 또는 기관명 검색"
-                className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
             </div>
             
@@ -481,7 +481,7 @@ export default function MyCertificatesPage() {
                 className={`h-9 px-3 rounded-full border text-sm ${
                   active
                     ? 'bg-cyan-500 border-cyan-500 text-white'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 {opt.label} ({count})
@@ -492,7 +492,7 @@ export default function MyCertificatesPage() {
 
         {/* 현재 검색 조건 표시 */}
         {(q || status !== 'all') && (
-          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
             <span>검색 조건:</span>
             {q && (
               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
@@ -509,7 +509,7 @@ export default function MyCertificatesPage() {
                 setQ('');
                 setStatus('all');
               }}
-              className="px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+              className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
             >
               초기화
             </button>
@@ -520,10 +520,10 @@ export default function MyCertificatesPage() {
         {pageData.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-              <span className="text-2xl text-gray-400">📜</span>
+              <div className="w-8 h-8 bg-gray-400 rounded"></div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">수료증이 없습니다</h3>
-            <p className="text-gray-600">
+            <h3 className="text-lg font-semibold mb-2">수료증이 없습니다</h3>
+            <p>
               {q || status !== 'all' ? '조건에 맞는 수료증이 없습니다.' : '아직 발급받은 수료증이 없습니다.'}
             </p>
           </div>
@@ -547,7 +547,7 @@ export default function MyCertificatesPage() {
                         e.target.parentElement.innerHTML = `
                           <div class="text-center">
                             <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-cyan-100 flex items-center justify-center">
-                              <span class="text-2xl text-cyan-600">📜</span>
+                              <div class="w-8 h-8 bg-cyan-600 rounded"></div>
                             </div>
                             <p class="text-sm text-gray-500">수료증</p>
                           </div>
@@ -557,9 +557,9 @@ export default function MyCertificatesPage() {
                   ) : (
                     <div className="text-center">
                       <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-cyan-100 flex items-center justify-center">
-                        <span className="text-2xl text-cyan-600">📜</span>
+                        <div className="w-8 h-8 bg-cyan-600 rounded"></div>
                       </div>
-                      <p className="text-sm text-gray-500">수료증</p>
+                      <p className="text-sm">수료증</p>
                     </div>
                   )}
                   
@@ -574,30 +574,30 @@ export default function MyCertificatesPage() {
                 {/* 카드 내용 */}
                 <div className="p-6">
                   {/* 수료증 제목 */}
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-cyan-600 transition-colors">
+                  <h3 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-cyan-600 transition-colors">
                     {c.certificateName}
                   </h3>
                   
                   {/* 발급기관 */}
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm mb-3">
                     {c.issuer}
                   </p>
                   
                   {/* 수료자 정보 */}
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-600">
+                      <span className="text-xs font-medium">
                         {c.userName?.charAt(0) || '?'}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{c.userName}</p>
-                      <p className="text-xs text-gray-500">수료자</p>
+                      <p className="text-sm font-medium">{c.userName}</p>
+                      <p className="text-xs">수료자</p>
                     </div>
                   </div>
                   
                   {/* 발급일 */}
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <div className="flex items-center justify-between text-sm mb-4">
                     <span>발급일</span>
                     <span className="font-medium">
                       {c.issueDate ? new Date(c.issueDate).toLocaleDateString('ko-KR') : 'N/A'}
@@ -615,7 +615,7 @@ export default function MyCertificatesPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
             >
               이전
             </button>
@@ -628,7 +628,7 @@ export default function MyCertificatesPage() {
                     w-10 h-10 rounded-xl text-sm font-medium transition-colors
                     ${page === p 
                       ? 'bg-cyan-500 text-white' 
-                      : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                      : 'bg-white hover:bg-gray-50 border border-gray-200'
                     }
                   `}
                 >
@@ -639,7 +639,7 @@ export default function MyCertificatesPage() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
             >
               다음
             </button>

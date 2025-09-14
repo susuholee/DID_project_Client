@@ -189,7 +189,7 @@ const DIDSignupPage = () => {
       <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4 py-6">
         <div className="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-cyan-500 mx-auto mb-3"></div>
-          <p className="text-gray-600 text-sm">카카오 사용자 정보를 불러오는 중...</p>
+          <p className="text-sm">카카오 사용자 정보를 불러오는 중...</p>
         </div>
       </main>
     );
@@ -204,7 +204,7 @@ const DIDSignupPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <p className="text-red-500 mb-3 text-sm">사용자 정보를 불러오는데 실패했습니다.</p>
+          <p className="mb-3 text-sm">사용자 정보를 불러오는데 실패했습니다.</p>
           <Button 
             onClick={() => window.location.reload()}
             className="w-full px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm"
@@ -263,7 +263,7 @@ const DIDSignupPage = () => {
         {/* 헤더 */}
         <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-4 text-white">
           <h1 className="text-lg sm:text-xl font-bold mb-1">DID 정보 입력</h1>
-          <p className="text-cyan-100 text-xs">DID 계정 생성을 위한 정보를 입력해주세요</p>
+                  <p className="text-xs">DID 계정 생성을 위한 정보를 입력해주세요</p>
         </div>
         
         <div className="p-4 sm:p-6">
@@ -278,10 +278,10 @@ const DIDSignupPage = () => {
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                  <p className="font-semibold text-sm sm:text-base truncate">
                     {kakaoUserInfo.properties?.nickname || '사용자'}
                   </p>
-                  <p className="text-xs text-gray-600">카카오 로그인</p>
+                  <p className="text-xs">카카오 로그인</p>
                 </div>
               </div>
             </div>
@@ -289,7 +289,7 @@ const DIDSignupPage = () => {
 
           <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4" noValidate>
             <div className="space-y-1">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">이름 (실명)</label>
+              <label className="block text-xs sm:text-sm font-medium">이름 (실명)</label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -300,7 +300,7 @@ const DIDSignupPage = () => {
             </div>
             
             <div className="space-y-1">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">생년월일</label>
+              <label className="block text-xs sm:text-sm font-medium">생년월일</label>
               <Input
                 type="date"
                 value={birth}
@@ -311,7 +311,7 @@ const DIDSignupPage = () => {
             </div>
             
             <div className="space-y-1">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">주소</label>
+              <label className="block text-xs sm:text-sm font-medium">주소</label>
               <div className="flex gap-2">
                 <Input 
                   value={address} 
@@ -323,7 +323,7 @@ const DIDSignupPage = () => {
                 <Button 
                   type="button" 
                   onClick={openAddressSearch}
-                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap text-xs"
+                  className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap text-xs"
                 >
                   주소 검색
                 </Button>
@@ -331,7 +331,7 @@ const DIDSignupPage = () => {
             </div>
             
             <div className="space-y-1">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">상세주소</label>
+              <label className="block text-xs sm:text-sm font-medium">상세주소</label>
               <Input
                 ref={detailRef}
                 value={detail}
@@ -398,7 +398,7 @@ const DIDSignupPage = () => {
               )}
             </div>
             
-            <p className="text-base sm:text-lg font-medium text-gray-900 mb-2 leading-relaxed">
+            <p className="text-base sm:text-lg font-medium mb-2 leading-relaxed">
               {modalMessage}
             </p>
           </div>

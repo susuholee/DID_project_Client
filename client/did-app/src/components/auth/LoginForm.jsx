@@ -120,72 +120,110 @@ export default function LoginForm() {
     
   return (
     <>
-      <main className="flex min-h-screen items-center justify-center">
-        <div className="w-full max-w-md rounded-2xl bg-gray-200 shadow-lg p-8">
-          <h1 className="text-black text-3xl font-extrabold mb-8">로그인</h1>
+      <main className="flex min-h-screen items-center justify-center px-4 py-8">
+        <div className="w-full max-w-sm rounded-xl sm:rounded-2xl bg-white shadow-2xl border border-gray-200 p-4 sm:p-5 md:p-6">
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/30 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 mb-3 sm:mb-4">
+              <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium text-cyan-700">Sealium</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold bg-gradient-to-r from-cyan-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">로그인</h1>
+            <p className="text-gray-600 text-xs px-2">디지털 자격증명 플랫폼에 오신 것을 환영합니다</p>
+          </div>
           
           {/* 일반 로그인 (아이디 / 비밀번호) */}
-          <form onSubmit={onSubmit} className="space-y-4" noValidate>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800">
+          <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4" noValidate>
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
                 아이디
               </label>
-              <Input
-                type="text"
-                required
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="아이디를 입력해주세요"
-                disabled={loading}
-              />
+              <div className="relative">
+                <Input
+                  type="text"
+                  required
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="아이디를 입력해주세요"
+                  disabled={loading}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200 bg-white"
+                />
+                <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-cyan-400 to-cyan-500 rounded-full opacity-60"></div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-800">
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
                 비밀번호
               </label>
-              <Input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호를 입력해주세요"
-                disabled={loading}
-              />
+              <div className="relative">
+                <Input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호를 입력해주세요"
+                  disabled={loading}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200 bg-white"
+                />
+                <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-cyan-400 to-cyan-500 rounded-full opacity-60"></div>
+                </div>
+              </div>
             </div>
 
             <Button
               type="submit"
               disabled={loading}
-              className="mt-2 w-full h-[48px] rounded-xl bg-black hover:bg-rose-500 cursor-pointer text-white text-lg"
+              className="mt-3 sm:mt-4 w-full h-[44px] rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 cursor-pointer text-white text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {loading ? "로그인 중..." : "로그인"}
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span className="text-sm">로그인 중...</span>
+                </div>
+              ) : (
+                "로그인"
+              )}
             </Button>
           </form>
 
           {/* 구분선 */}
-          <div className="flex items-center my-6">
-            <div className="flex-grow border-b border-gray-500"></div>
-            <div className="flex-grow border-b border-gray-500"></div>
+          <div className="flex items-center my-4 sm:my-6">
+            <div className="flex-grow border-b border-gray-300"></div>
+            <span className="px-3 text-xs text-gray-500 bg-white rounded-full">또는</span>
+            <div className="flex-grow border-b border-gray-300"></div>
           </div>
 
           {/* 카카오 로그인 버튼 */}
-          <div className="space-y-2">
-            <button onClick={handleKakaoLogin} className="block w-full cursor-pointer">
-              <img
-                src="/images/kakao_login.png"
-                alt="카카오 로그인"
-                className="w-full h-[48px] object-cover rounded-xl"
-              />
+          <div className="space-y-3">
+            <button 
+              onClick={handleKakaoLogin} 
+              className="block w-full cursor-pointer"
+            >
+              <div className="relative overflow-hidden rounded-lg shadow-lg">
+                <img
+                  src="/images/kakao_login.png"
+                  alt="카카오 로그인"
+                  className="w-full h-[44px] object-cover"
+                />
+              </div>
             </button>
           </div>
 
-          <p className="mt-8 text-center text-sm text-gray-600">
-            아직 계정이 없으신가요?{" "}
-            <Link href="/signup" className="text-indigo-500 hover:underline">
-              회원가입
+          <div className="mt-4 sm:mt-6 text-center">
+            <p className="text-xs text-gray-600 mb-2 sm:mb-3">
+              아직 계정이 없으신가요?
+            </p>
+            <Link 
+              href="/signup" 
+              className="inline-flex items-center gap-1.5 text-cyan-600 hover:text-cyan-700 font-semibold transition-colors duration-200 group text-sm"
+            >
+              <span>회원가입</span>
+              <div className="w-3 h-3 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full group-hover:scale-110 transition-transform duration-200"></div>
             </Link>
-          </p>
+          </div>
         </div>
       </main>
 

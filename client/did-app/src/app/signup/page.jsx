@@ -599,7 +599,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                   className={`flex-1 px-1 sm:px-2 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors ${
                     currentStep === tab.id
                       ? 'bg-cyan-50 text-cyan-600 border-b-2 border-cyan-500'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : ' hover: hover:bg-gray-50'
                   }`}
                 >
                   {tab.label}
@@ -616,11 +616,11 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
                     <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">기본 정보</h2>
-                    <p className="text-xs sm:text-sm text-gray-600">이름, 닉네임, 아이디를 입력해주세요</p>
+                    <p className="text-xs sm:text-sm">이름, 닉네임, 아이디를 입력해주세요</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2" htmlFor="userName">이름</label>
+                    <label className="block text-xs sm:text-sm font-medium mb-2" htmlFor="userName">이름</label>
                     <Input
                       id="userName"
                       value={userName}
@@ -648,30 +648,30 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       aria-label="이름 입력"
                     />
                     {userName && userName !== userName.trim() && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
+                      <p className="text-xs mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
                     )}
                     {userName.trim() && userName.trim().length > 0 && userName.trim().length < 2 && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">2자 이상 입력해주세요</p>
+                      <p className="text-xs mt-1" role="alert">2자 이상 입력해주세요</p>
                     )}
                     {userName.trim() && userName.trim().length > 20 && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">20자 이하로 입력해주세요</p>
+                      <p className="text-xs mt-1" role="alert">20자 이하로 입력해주세요</p>
                     )}
                     {userName && userName.includes('  ') && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">연속된 공백은 사용할 수 없습니다</p>
+                      <p className="text-xs mt-1" role="alert">연속된 공백은 사용할 수 없습니다</p>
                     )}
                     {userName && userName.replace(/\s/g, '').length === 0 && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">이름을 올바르게 입력해주세요</p>
+                      <p className="text-xs mt-1" role="alert">이름을 올바르게 입력해주세요</p>
                     )}
                     {userName && /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(userName) && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">숫자나 특수문자는 사용할 수 없습니다</p>
+                      <p className="text-xs mt-1" role="alert">숫자나 특수문자는 사용할 수 없습니다</p>
                     )}
                     {userName.trim() && userName.trim().length >= 2 && userName.trim().length <= 20 && /^[가-힣a-zA-Z\s]{2,20}$/.test(userName.trim()) && !userName.includes('  ') && userName === userName.trim() && userName.replace(/\s/g, '').length > 0 && !/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(userName) && (
-                      <p className="text-xs text-green-600 mt-1">올바른 이름입니다</p>
+                      <p className="text-xs mt-1">올바른 이름입니다</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2" htmlFor="nickName">닉네임</label>
+                    <label className="block text-xs sm:text-sm font-medium mb-2" htmlFor="nickName">닉네임</label>
                     <Input
                       id="nickName"
                       value={nickName}
@@ -685,33 +685,33 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       aria-label="닉네임 입력"
                     />
                     {nickName && nickName !== nickName.trim() && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
+                      <p className="text-xs mt-1" role="alert">앞뒤 공백을 제거해주세요</p>
                     )}
                     {nickName.trim() && nickName.trim().length > 0 && nickName.trim().length < 2 && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">2자 이상 입력해주세요</p>
+                      <p className="text-xs mt-1" role="alert">2자 이상 입력해주세요</p>
                     )}
                     {nickName.trim() && nickName.trim().length > 12 && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">12자 이하로 입력해주세요</p>
+                      <p className="text-xs  mt-1" role="alert">12자 이하로 입력해주세요</p>
                     )}
                     {nickName.trim() && nickName.trim().length >= 2 && nickName.trim().length <= 12 && !/^[가-힣a-zA-Z0-9]{2,12}$/.test(nickName.trim()) && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">한글, 영문, 숫자만 사용 가능합니다</p>
+                      <p className="text-xs  mt-1" role="alert">한글, 영문, 숫자만 사용 가능합니다</p>
                     )}
                     {nickName.trim() && /(.)\1{2,}/.test(nickName.trim()) && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">같은 문자를 3번 이상 연속 사용할 수 없습니다</p>
+                      <p className="text-xs  mt-1" role="alert">같은 문자를 3번 이상 연속 사용할 수 없습니다</p>
                     )}
                     {nickName.trim() && /^\d+$/.test(nickName.trim()) && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">숫자로만 구성할 수 없습니다</p>
+                      <p className="text-xs  mt-1" role="alert">숫자로만 구성할 수 없습니다</p>
                     )}
                     {isNickNameSameAsUserId && nickName.trim() && userId.trim() && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">닉네임과 아이디는 같을 수 없습니다</p>
+                      <p className="text-xs  mt-1" role="alert">닉네임과 아이디는 같을 수 없습니다</p>
                     )}
                     {nickName.trim() && nickName.trim().length >= 2 && nickName.trim().length <= 12 && /^[가-힣a-zA-Z0-9]{2,12}$/.test(nickName.trim()) && !/(.)\1{2,}/.test(nickName.trim()) && !/^\d+$/.test(nickName.trim()) && !isNickNameSameAsUserId && (
-                      <p className="text-xs text-green-600 mt-1">사용 가능한 닉네임입니다</p>
+                      <p className="text-xs  mt-1">사용 가능한 닉네임입니다</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2" htmlFor="userId">아이디</label>
+                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="userId">아이디</label>
                     <div className="flex gap-2">
                       <Input
                         id="userId"
@@ -741,31 +741,31 @@ const getInputStatus = (value, isValid, hasError = false) => {
                     
                     <div className="mt-1">
                       {userId && userId !== userId.trim() && (
-                        <p className="text-xs text-red-600" role="alert">앞뒤 공백을 제거해주세요</p>
+                        <p className="text-xs " role="alert">앞뒤 공백을 제거해주세요</p>
                       )}
                       {userId && userId.trim().length > 0 && userId.trim().length < 4 && (
-                        <p className="text-xs text-red-600" role="alert">4자 이상 입력해주세요</p>
+                        <p className="text-xs " role="alert">4자 이상 입력해주세요</p>
                       )}
                       {userId && userId.trim().length > 16 && (
-                        <p className="text-xs text-red-600" role="alert">16자 이하로 입력해주세요</p>
+                        <p className="text-xs " role="alert">16자 이하로 입력해주세요</p>
                       )}
                       {userId && userId.trim().length >= 4 && userId.trim().length <= 16 && !/^[a-zA-Z0-9]+$/.test(userId.trim()) && (
-                        <p className="text-xs text-red-600" role="alert">영문자와 숫자만 사용 가능합니다</p>
+                        <p className="text-xs " role="alert">영문자와 숫자만 사용 가능합니다</p>
                       )}
                       {userId && /(.)\1{2,}/.test(userId.trim()) && (
-                        <p className="text-xs text-red-600" role="alert">같은 문자를 3번 이상 연속 사용할 수 없습니다</p>
+                        <p className="text-xs " role="alert">같은 문자를 3번 이상 연속 사용할 수 없습니다</p>
                       )}
                       {isNickNameSameAsUserId && nickName.trim() && userId.trim() && (
-                        <p className="text-xs text-red-600" role="alert">닉네임과 아이디는 같을 수 없습니다</p>
+                        <p className="text-xs " role="alert">닉네임과 아이디는 같을 수 없습니다</p>
                       )}
                       {userIdCheckStatus === 'available' && !isNickNameSameAsUserId && (
-                        <p className="text-xs text-green-600">사용 가능한 아이디입니다</p>
+                        <p className="text-xs ">사용 가능한 아이디입니다</p>
                       )}
                       {userIdCheckStatus === 'duplicate' && (
-                        <p className="text-xs text-red-600">이미 사용 중인 아이디입니다</p>
+                        <p className="text-xs ">이미 사용 중인 아이디입니다</p>
                       )}
                       {userIdCheckStatus === 'checking' && (
-                        <p className="text-xs text-blue-600">중복 확인 중...</p>
+                        <p className="text-xs ">중복 확인 중...</p>
                       )}
                     </div>
                   </div>
@@ -777,11 +777,11 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
                     <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">보안 정보</h2>
-                    <p className="text-xs sm:text-sm text-gray-600">안전한 비밀번호를 설정해주세요</p>
+                    <p className="text-xs sm:text-sm ">안전한 비밀번호를 설정해주세요</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2" htmlFor="password">비밀번호</label>
+                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="password">비밀번호</label>
                     <div className="relative">
                       <Input
                         id="password"
@@ -795,7 +795,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2  hover: text-xs sm:text-sm"
                         aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                       >
                         {showPassword ? "숨기기" : "보기"}
@@ -803,16 +803,16 @@ const getInputStatus = (value, isValid, hasError = false) => {
                     </div>
                     <div className="mt-1">
                       {password.length > 0 && !pwdValid && (
-                        <p className="text-xs text-red-600" role="alert">영문, 숫자, 특수문자를 포함하여 8자 이상 입력해주세요</p>
+                        <p className="text-xs " role="alert">영문, 숫자, 특수문자를 포함하여 8자 이상 입력해주세요</p>
                       )}
                       {pwdValid && (
-                        <p className="text-xs text-green-600">안전한 비밀번호입니다</p>
+                        <p className="text-xs ">안전한 비밀번호입니다</p>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2" htmlFor="confirm-password">비밀번호 확인</label>
+                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="confirm-password">비밀번호 확인</label>
                     <div className="relative">
                       <Input
                         id="confirm-password"
@@ -826,7 +826,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2  hover: text-xs sm:text-sm"
                         aria-label={showConfirmPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                       >
                         {showConfirmPassword ? "숨기기" : "보기"}
@@ -834,10 +834,10 @@ const getInputStatus = (value, isValid, hasError = false) => {
                     </div>
                     <div className="mt-1">
                       {confirm.length > 0 && password !== confirm && (
-                        <p className="text-xs text-red-600" role="alert">비밀번호가 일치하지 않습니다</p>
+                        <p className="text-xs " role="alert">비밀번호가 일치하지 않습니다</p>
                       )}
                       {confirm.length > 0 && password === confirm && (
-                        <p className="text-xs text-green-600">비밀번호가 일치합니다</p>
+                        <p className="text-xs ">비밀번호가 일치합니다</p>
                       )}
                     </div>
                   </div>
@@ -849,11 +849,11 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
                     <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">개인 정보</h2>
-                    <p className="text-xs sm:text-sm text-gray-600">생년월일과 주소를 입력해주세요</p>
+                    <p className="text-xs sm:text-sm ">생년월일과 주소를 입력해주세요</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2" htmlFor="birthDate">생년월일</label>
+                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="birthDate">생년월일</label>
                     <Input
                       id="birthDate"
                       type="date"
@@ -864,12 +864,12 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       max={new Date().toISOString().split('T')[0]}
                     />
                     {birthDate && new Date(birthDate) > new Date() && (
-                      <p className="text-xs text-red-600 mt-1" role="alert">미래 날짜는 선택할 수 없습니다</p>
+                      <p className="text-xs  mt-1" role="alert">미래 날짜는 선택할 수 없습니다</p>
                     )}
                   </div>
 
                   <div className="space-y-3">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700">주소</label>
+                    <label className="block text-xs sm:text-sm font-medium ">주소</label>
                     <Button
                       type="button"
                       onClick={openPostcode}
@@ -901,7 +901,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
                     <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">프로필 설정</h2>
-                    <p className="text-xs sm:text-sm text-gray-600">프로필 사진을 설정하세요 <span className="text-red-500 font-bold">(필수)</span></p>
+                    <p className="text-xs sm:text-sm ">프로필 사진을 설정하세요 <span className="text-red-500 font-bold">(필수)</span></p>
                   </div>
 
                   <div className="text-center">
@@ -923,8 +923,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       type="file"
                       accept="image/*"
                       onChange={handleProfileChange}
-                      className="block w-full text-xs sm:text-sm text-gray-500
-                                 file:mr-4 file:py-2 file:px-4
+                      className="block w-full text-xs sm:text-sm                                  file:mr-4 file:py-2 file:px-4
                                  file:rounded-full file:border-0
                                  file:text-xs sm:file:text-sm file:font-semibold
                                  file:bg-gradient-to-r file:from-cyan-500 file:to-cyan-600 file:text-white
@@ -932,14 +931,14 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       aria-label="프로필 이미지 업로드"
                     />
                     {!step4Valid && (
-                      <p className="text-xs text-red-600 mt-2" role="alert">프로필 사진을 선택해주세요.</p>
+                      <p className="text-xs  mt-2" role="alert">프로필 사진을 선택해주세요.</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-2">JPG, PNG 파일 (최대 5MB)</p>
+                    <p className="text-xs  mt-2">JPG, PNG 파일 (최대 5MB)</p>
                   </div>
 
                   <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                     <h3 className="text-sm sm:text-base font-medium mb-2 sm:mb-3">입력하신 정보</h3>
-                    <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600">
+                    <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm ">
                       <p><span className="font-medium">이름:</span> {userName}</p>
                       <p><span className="font-medium">닉네임:</span> {nickName}</p>
                       <p><span className="font-medium">아이디:</span> {userId}</p>
@@ -954,7 +953,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
               <div className="flex justify-between items-center mt-6 sm:mt-8 pt-4 border-t border-gray-200 gap-3">
                 <Link 
                   href="/" 
-                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 sm:px-4 py-2 sm:py-3 rounded-lg inline-block text-center transition-colors text-xs sm:text-sm font-medium"
+                  className="bg-gray-100  hover:bg-gray-200 px-3 sm:px-4 py-2 sm:py-3 rounded-lg inline-block text-center transition-colors text-xs sm:text-sm font-medium"
                   aria-label="로그인 페이지로 이동"
                 >
                   로그인으로

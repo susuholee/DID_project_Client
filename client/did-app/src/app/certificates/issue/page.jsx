@@ -406,14 +406,14 @@ export default function IssueCertificatePage() {
   // 로딩 중일 때 표시 (캐시 데이터가 없을 때만)
   if (certificatesLoading && !hasCache) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <div className="min-h-screen  flex">
         <div className="flex-1 flex flex-col lg:ml-64">
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
               </div>
-              <p className="text-gray-600">수료증 발급 내역을 확인하고 있습니다...</p>
+              <p>수료증 발급 내역을 확인하고 있습니다...</p>
             </div>
           </div>
         </div>
@@ -422,7 +422,7 @@ export default function IssueCertificatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="min-h-screen flex">
       <div className="flex-1 flex flex-col lg:ml-64">
         <div className="flex-1 flex items-start justify-center py-8 px-4 sm:px-6 lg:px-8">
           <div className="w-full max-w-3xl">
@@ -431,12 +431,10 @@ export default function IssueCertificatePage() {
             {availableCertificateOptions.length === 0 && (
               <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex items-center">
-                  <svg className="w-5 h-5 text-yellow-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
+                  <div className="w-5 h-5 bg-yellow-500 rounded mr-3"></div>
                   <div>
-                    <h3 className="text-sm font-medium text-yellow-800">발급 가능한 수료증이 없습니다</h3>
-                    <p className="text-sm text-yellow-700 mt-1">모든 수료증을 이미 요청했거나 발급받으셨습니다. 하나의 수료증당 1개씩만 발급 가능합니다.</p>
+                    <h3 className="text-sm font-medium">발급 가능한 수료증이 없습니다</h3>
+                    <p className="text-sm mt-1">모든 수료증을 이미 요청했거나 발급받으셨습니다. 하나의 수료증당 1개씩만 발급 가능합니다.</p>
                   </div>
                 </div>
               </div>
@@ -447,11 +445,9 @@ export default function IssueCertificatePage() {
               <div className="mb-6 bg-gradient-to-r from-cyan-50 to-cyan-100 border border-cyan-200 rounded-xl p-4 sm:p-6 shadow-sm">
                 <div className="flex items-center mb-4">
                   <div className="flex-shrink-0 w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
+                    <div className="w-4 h-4 bg-white rounded"></div>
                   </div>
-                  <h3 className="text-base sm:text-lg font-semibold text-cyan-800">
+                  <h3 className="text-base sm:text-lg font-semibold">
                     수료증 발급 내역 ({getAllRequestedCertificateNames.size}개)
                   </h3>
                 </div>
@@ -461,14 +457,12 @@ export default function IssueCertificatePage() {
                   <div className="mb-4">
                     <div className="flex items-center mb-2">
                       <div className="w-2 h-2 bg-cyan-300 rounded-full mr-2"></div>
-                      <h4 className="text-sm font-medium text-gray-700">승인 대기 중 ({getPendingCertificateNames.size}개)</h4>
+                      <h4 className="text-sm">승인 대기 중 ({getPendingCertificateNames.size}개)</h4>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {Array.from(getPendingCertificateNames).map((certName, index) => (
                         <span key={`pending-${certName}-${index}`} className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-cyan-400 to-cyan-800 text-white shadow-sm">
-                          <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                          </svg>
+                          <div className="w-3 h-3 mr-1 flex-shrink-0 bg-white rounded"></div>
                           <span className="truncate max-w-[120px] sm:max-w-none">{certName}</span>
                         </span>
                       ))}
@@ -481,16 +475,14 @@ export default function IssueCertificatePage() {
                   <div className="mb-4">
                     <div className="flex items-center mb-2">
                       <div className="w-2 h-2 bg-cyan-500 rounded-full mr-2"></div>
-                      <h4 className="text-sm font-medium text-gray-700">발급 완료 ({getAllRequestedCertificateNames.size - getPendingCertificateNames.size}개)</h4>
+                      <h4 className="text-sm font-medium">발급 완료 ({getAllRequestedCertificateNames.size - getPendingCertificateNames.size}개)</h4>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {certificateData.allRequests
                         .filter(cert => cert.status === 'approved')
                         .map((cert, index) => (
                           <span key={`approved-${cert.certificateName}-${index}`} className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-sm">
-                            <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
+                            <div className="w-3 h-3 mr-1 flex-shrink-0 bg-white rounded"></div>
                             <span className="truncate max-w-[120px] sm:max-w-none">{cert.certificateName}</span>
                           </span>
                         ))}
@@ -500,12 +492,10 @@ export default function IssueCertificatePage() {
 
                 {/* 안내 메시지 */}
                 <div className="bg-white/70 rounded-lg p-3 border border-cyan-200/50">
-                  <p className="text-xs sm:text-sm text-cyan-700 flex items-start">
-                    <svg className="w-4 h-4 mr-2 text-cyan-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                  <div className="text-xs sm:text-sm flex items-start">
+                    <div className="w-4 h-4 mr-2 bg-cyan-600 rounded flex-shrink-0 mt-0.5"></div>
                     <span>위 수료증들은 이미 요청했거나 발급받았으므로 중복 신청할 수 없습니다. 각 수료증은 한 번만 발급 가능합니다.</span>
-                  </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -513,11 +503,11 @@ export default function IssueCertificatePage() {
             <form className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-200 space-y-8">
               {/* 수료증 정보 섹션 */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">수료증 정보</h2>
+                <h2 className="text-xl font-semibold border-b border-gray-200 pb-2">수료증 정보</h2>
             
                 {/* 수료증 이름 선택 */}
                 <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  <label className="block mb-2 text-sm font-semibold">
                     수료증 이름 <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -541,7 +531,7 @@ export default function IssueCertificatePage() {
                     ))}
                   </select>
                   {availableCertificateOptions.length === 0 && (
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm">
                       모든 수료증을 이미 요청하셨습니다. 하나의 수료증당 1개씩만 발급 가능합니다.
                     </p>
                   )}
@@ -549,7 +539,7 @@ export default function IssueCertificatePage() {
 
                 {/* 발급 기관 */}
                 <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  <label className="block mb-2 text-sm font-semibold">
                     발급 기관
                   </label>
                   <input
@@ -562,7 +552,7 @@ export default function IssueCertificatePage() {
 
                 {/* 발급 요청 사유 */}
                 <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  <label className="block mb-2 text-sm font-semibold">
                     발급 용도 <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -591,13 +581,13 @@ export default function IssueCertificatePage() {
 
               {/* 프로필 사진 섹션 */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">프로필 사진</h2>
+                <h2 className="text-xl font-semibold border-b border-gray-200 pb-2">프로필 사진</h2>
                 
                 <div>
-                  <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  <label className="block mb-2 text-sm font-semibold">
                     프로필 사진 업로드 <span className="text-red-500">*</span>
                   </label>
-                  <p className="text-sm text-gray-500 mb-4">수료증에 사용될 프로필 사진을 업로드해주세요. (JPG, PNG, 5MB 이하)</p>
+                  <p className="text-sm mb-4">수료증에 사용될 프로필 사진을 업로드해주세요. (JPG, PNG, 5MB 이하)</p>
                   
                   <div className="flex items-start space-x-6">
                     {/* 이미지 미리보기 */}
@@ -620,12 +610,10 @@ export default function IssueCertificatePage() {
                           </div>
                         ) : (
                           <div className="text-center">
-                            <div className="w-12 h-12 mx-auto mb-2 text-gray-400">
-                              <svg fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                              </svg>
+                            <div className="w-12 h-12 mx-auto mb-2 bg-gray-400 rounded flex items-center justify-center">
+                              <div className="w-8 h-8 bg-gray-300 rounded"></div>
                             </div>
-                            <p className="text-xs text-gray-500">미리보기</p>
+                            <p className="text-xs">미리보기</p>
                           </div>
                         )}
                       </div>
@@ -647,13 +635,11 @@ export default function IssueCertificatePage() {
                         disabled={availableCertificateOptions.length === 0}
                         className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-cyan-500 hover:bg-cyan-50 transition-colors flex flex-col items-center disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <div className="w-8 h-8 text-gray-400 mb-2">
-                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
+                        <div className="w-8 h-8 bg-gray-400 rounded mb-2 flex items-center justify-center">
+                          <div className="w-4 h-4 bg-white rounded"></div>
                         </div>
-                        <span className="text-sm text-gray-600">클릭하여 이미지 선택</span>
-                        <span className="text-xs text-gray-400 mt-1">JPG, PNG 파일 (최대 5MB)</span>
+                        <span className="text-sm">클릭하여 이미지 선택</span>
+                        <span className="text-xs mt-1">JPG, PNG 파일 (최대 5MB)</span>
                       </button>
                     </div>
                   </div>
@@ -663,13 +649,13 @@ export default function IssueCertificatePage() {
               {/* 수료증 정보 미리보기 */}
               {(formData.certificateName || formData.reason || imagePreview) && (
                 <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-6 border border-cyan-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">요청 정보 미리보기</h3>
+                  <h3 className="text-lg font-semibold mb-4">요청 정보 미리보기</h3>
                   <div className="bg-white rounded-lg p-6 border space-y-4">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 text-lg">{formData.certificateName || "수료증 이름 미입력"}</h4>
-                        <p className="text-sm text-gray-600 mt-1">발급기관: {FIXED_ISSUER}</p>
-                        <p className="text-sm text-gray-600">발급 용도: {formData.reason || "미입력"}</p>
+                        <h4 className="font-semibold text-lg">{formData.certificateName || "수료증 이름 미입력"}</h4>
+                        <p className="text-sm mt-1">발급기관: {FIXED_ISSUER}</p>
+                        <p className="text-sm">발급 용도: {formData.reason || "미입력"}</p>
                       </div>
                       {imagePreview && (
                         <div className="ml-4">
@@ -679,15 +665,15 @@ export default function IssueCertificatePage() {
                     </div>
                     
                     <div className="border-t border-gray-200 pt-4">
-                      <h5 className="text-sm font-semibold text-gray-700 mb-3">수료자 정보</h5>
+                      <h5 className="text-sm font-semibold mb-3">수료자 정보</h5>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="bg-gray-50 p-3 rounded-lg">
-                          <span className="text-gray-500 block text-xs">이름</span>
-                          <span className="font-semibold text-gray-900 text-base">{user?.userName || "미입력"}</span>
+                          <span className="block text-xs">이름</span>
+                          <span className="font-semibold text-base">{user?.userName || "미입력"}</span>
                         </div>
                         <div className="bg-gray-50 p-3 rounded-lg">
-                          <span className="text-gray-500 block text-xs">생년월일</span>
-                          <span className="font-semibold text-gray-900 text-base">
+                          <span className="block text-xs">생년월일</span>
+                          <span className="font-semibold text-base">
                             {user?.birthDate ? 
                               new Date(user.birthDate).toLocaleDateString('ko-KR') : 
                               "미입력"}
@@ -715,7 +701,7 @@ export default function IssueCertificatePage() {
                 </button>
                 
                 {availableCertificateOptions.length > 0 && !canSubmit && (
-                  <div className="mt-3 text-sm text-gray-500 text-center">
+                  <div className="mt-3 text-sm text-center">
                     <span className="text-red-500">*</span> 수료증 이름, 발급 용도, 프로필 이미지를 모두 입력해주세요.
                   </div>
                 )}
@@ -743,13 +729,13 @@ export default function IssueCertificatePage() {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                   </div>
                 ) : modalType === "success" ? (
-                  <svg className="w-12 h-12 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <div className="w-12 h-12 mx-auto bg-green-500 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-white rounded"></div>
+                  </div>
                 ) : modalType === "error" ? (
-                  <svg className="w-12 h-12 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <div className="w-12 h-12 mx-auto bg-red-500 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-white rounded"></div>
+                  </div>
                 ) : (
                   <div className="w-12 h-12 mx-auto">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -757,7 +743,7 @@ export default function IssueCertificatePage() {
                 )}
               </div>
               
-              <p className="text-lg font-medium text-gray-900 mb-2">
+              <p className="text-lg font-medium mb-2">
                 {modalMessage || (
                   modalType === "loading" ? "요청을 처리하고 있습니다..." :
                   modalType === "success" ? "요청이 성공적으로 처리되었습니다!" : 
@@ -767,7 +753,7 @@ export default function IssueCertificatePage() {
               </p>
               
               {modalType === "loading" && (
-                <p className="text-sm text-gray-600">잠시만 기다려주세요...</p>
+                <p className="text-sm">잠시만 기다려주세요...</p>
               )}
             </div>
           </Modal>

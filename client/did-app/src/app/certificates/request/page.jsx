@@ -62,11 +62,6 @@ export default function CertificateRequestsPage() {
   
   const itemsPerPage = 5;
 
-  // 취소 모달 상태
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [requestToCancel, setRequestToCancel] = useState(null);
-  const [cancelReason, setCancelReason] = useState('');
-  
   // 경고 모달 상태
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -223,18 +218,6 @@ export default function CertificateRequestsPage() {
     }
   };
 
-  // 취소 모달 열기
-  const openCancelModal = (request) => {
-    setRequestToCancel(request);
-    setShowCancelModal(true);
-  };
-
-  // 취소 모달 닫기
-  const closeCancelModal = () => {
-    setShowCancelModal(false);
-    setRequestToCancel(null);
-    setCancelReason('');
-  };
 
   // 경고 모달 표시 함수
   const showWarning = (message) => {
@@ -253,12 +236,12 @@ export default function CertificateRequestsPage() {
   // 로딩 상태
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <main className="min-h-screen  flex">
         <div className="flex-1 flex flex-col lg:ml-64">
           <div className="flex-1 flex items-center justify-center py-8 px-4">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">요청 현황을 불러오는 중...</p>
+              <p>요청 현황을 불러오는 중...</p>
             </div>
           </div>
         </div>
@@ -269,15 +252,15 @@ export default function CertificateRequestsPage() {
   // 에러 상태
   if (isError) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <main className="min-h-screen  flex">
         <div className="flex-1 flex flex-col lg:ml-64">
           <div className="flex-1 flex items-center justify-center py-8 px-4">
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center max-w-md">
               <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <div className="w-8 h-8 bg-red-500 rounded"></div>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">데이터 로드 실패</h2>
-              <p className="text-gray-600 mb-4">{error?.message || '요청 현황을 불러오는 중 오류가 발생했습니다.'}</p>
+              <h2 className="text-lg font-semibold mb-2">데이터 로드 실패</h2>
+              <p className="mb-4">{error?.message || '요청 현황을 불러오는 중 오류가 발생했습니다.'}</p>
               <button
                 onClick={() => refetch()}
                 className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
@@ -293,33 +276,33 @@ export default function CertificateRequestsPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <main className="min-h-screen  flex">
         <div className="flex-1 flex flex-col lg:ml-64">
           <div className="flex-1 flex items-start justify-center py-8 px-4 sm:px-6 lg:px-8">
             <div className="w-full max-w-6xl">
               {/* 상단 헤더 */}
               <div className="mb-6 text-center">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">요청 현황</h1>
-                <p className="text-gray-600">수료증 발급 및 폐기 요청 현황을 확인하세요.</p>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">요청 현황</h1>
+                <p>수료증 발급 및 폐기 요청 현황을 확인하세요.</p>
               </div>
 
               {/* 통계 카드 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                  <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-                  <div className="text-sm text-gray-500">전체 요청</div>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                  <div className="text-sm">전체 요청</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                   <div className="text-2xl font-bold text-cyan-600">{stats.pending}</div>
-                  <div className="text-sm text-gray-500">대기중</div>
+                  <div className="text-sm">대기중</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                   <div className="text-2xl font-bold text-emerald-600">{stats.approved}</div>
-                  <div className="text-sm text-gray-500">승인됨</div>
+                  <div className="text-sm">승인됨</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                   <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-                  <div className="text-sm text-gray-500">거절됨</div>
+                  <div className="text-sm">거절됨</div>
                 </div>
               </div>
 
@@ -335,7 +318,7 @@ export default function CertificateRequestsPage() {
                       className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors ${
                         activeTab === 'all'
                           ? 'border-cyan-500 text-cyan-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                          : 'border-transparent hover:text-gray-700'
                       }`}
                     >
                       전체 요청 ({stats.total})
@@ -348,7 +331,7 @@ export default function CertificateRequestsPage() {
                       className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors ${
                         activeTab === 'issue'
                           ? 'border-cyan-500 text-cyan-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                          : 'border-transparent hover:text-gray-700'
                       }`}
                     >
                       발급 요청 ({stats.issueCount})
@@ -361,7 +344,7 @@ export default function CertificateRequestsPage() {
                       className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors ${
                         activeTab === 'revoke'
                           ? 'border-cyan-500 text-cyan-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                          : 'border-transparent hover:text-gray-700'
                       }`}
                     >
                       폐기 요청 ({stats.revokeCount})
@@ -413,7 +396,7 @@ export default function CertificateRequestsPage() {
                     <div className="border-t border-gray-200 pt-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">시작일</label>
+                          <label className="block text-sm font-medium mb-2">시작일</label>
                           <input
                             type="date"
                             value={dateRange.start}
@@ -422,7 +405,7 @@ export default function CertificateRequestsPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">종료일</label>
+                          <label className="block text-sm font-medium mb-2">종료일</label>
                           <input
                             type="date"
                             value={dateRange.end}
@@ -448,7 +431,7 @@ export default function CertificateRequestsPage() {
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                           statusFilter === filter.key
                             ? 'bg-cyan-500 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                       >
                         {filter.label} ({filter.count})
@@ -461,10 +444,10 @@ export default function CertificateRequestsPage() {
               {/* 요청 목록 */}
               {paginatedRequests.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <h3 className="text-lg font-medium mb-2">
                     요청 내역이 없습니다
                   </h3>
-                  <p className="text-gray-500 mb-6">
+                  <p className="mb-6">
                     {searchTerm || statusFilter !== 'all' 
                       ? '검색 조건에 맞는 요청이 없어요.'
                       : `아직 ${activeTab === 'all' ? '' : activeTab === 'issue' ? '발급' : '폐기'} 요청이 없어요.`
@@ -478,10 +461,11 @@ export default function CertificateRequestsPage() {
                       key={request.id}
                       className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow"
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex flex-col lg:flex-row gap-4">
+                        {/* 왼쪽: 수료증 정보 */}
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                          <div className="flex items-center gap-3 mb-4">
+                            <h3 className="text-lg font-semibold">
                               {request.certificateName}
                             </h3>
                             {activeTab === 'all' && (
@@ -494,47 +478,34 @@ export default function CertificateRequestsPage() {
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-3">
-                            <div>
-                              <span className="text-gray-500">요청일:</span>
-                              <span className="ml-2 text-gray-900 font-medium">
-                                {new Date(request.requestedAt).toLocaleDateString('ko-KR', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">수정일:</span>
-                              <span className="ml-2 text-gray-900 font-medium">
-                                {new Date(request.updatedAt).toLocaleDateString('ko-KR', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })}
-                              </span>
+                          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                            <div className="text-xs mb-1">요청일</div>
+                            <div className="text-sm font-medium">
+                              {new Date(request.requestedAt).toLocaleDateString('ko-KR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
                             </div>
                           </div>
 
-                          <div className="mb-3">
-                            <span className="text-gray-500 text-sm">설명:</span>
-                            <p className="mt-1 text-gray-900 text-sm">{request.description}</p>
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <div className="text-xs mb-1">사유</div>
+                            <div className="text-sm">{request.description}</div>
                           </div>
-
-                          {request.ImagePath && (
-                            <div className="mb-3">
-                              <span className="text-gray-500 text-sm">첨부 이미지:</span>
-                              <div className="mt-2">
-                                <img
-                                  src={request.ImagePath}
-                                  alt="수료증 이미지"
-                                  className="w-32 h-32 object-cover rounded-lg border border-gray-200"
-                                />
-                              </div>
-                            </div>
-                          )}
                         </div>
+
+                        {/* 오른쪽: 이미지 */}
+                        {request.ImagePath && (
+                          <div className="lg:w-32 lg:flex-shrink-0">
+                            <div className="text-xs mb-2">첨부 이미지</div>
+                            <img
+                              src={request.ImagePath}
+                              alt="수료증 이미지"
+                              className="w-full lg:w-32 h-32 object-cover rounded-lg border border-gray-200"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -594,7 +565,7 @@ export default function CertificateRequestsPage() {
               {/* 정보 표시 */}
               {filteredAndSortedRequests.length > 0 && (
                 <div className="text-center mt-4">
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-sm">
                     총 {filteredAndSortedRequests.length}개 중 {Math.min(currentPage * itemsPerPage, filteredAndSortedRequests.length)}개 표시 중
                   </p>
                 </div>
@@ -604,52 +575,6 @@ export default function CertificateRequestsPage() {
         </div>
       </main>
 
-      {/* 취소 확인 모달 */}
-      {showCancelModal && (
-        <>
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm z-40"
-            onClick={closeCancelModal}
-          />
-          
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl relative overflow-hidden">
-              <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-4">
-                <h3 className="text-lg font-semibold text-white">요청 취소</h3>
-              </div>
-              
-              <div className="p-6">
-                <p className="text-gray-700 mb-4">
-                  취소 사유를 입력해주세요
-                </p>
-                
-                <textarea
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="예) 오타가 있어요 / 정보 변경 필요 / 분실"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
-                  rows={4}
-                />
-                
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={closeCancelModal}
-                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={confirmCancelRequest}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg font-medium"
-                  >
-                    취소 확정
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* 경고 모달 */}
       {showWarningModal && (
@@ -666,7 +591,7 @@ export default function CertificateRequestsPage() {
               </div>
               
               <div className="p-6">
-                <p className="text-gray-700 mb-6 text-center">
+                <p className="mb-6 text-center">
                   {warningMessage}
                 </p>
                 
