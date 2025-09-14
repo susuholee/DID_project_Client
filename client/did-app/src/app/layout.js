@@ -7,15 +7,48 @@ import Footer from '@/components/layout/Footer';
 import ClientNav from '@/components/layout/ClientNav';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { io } from "socket.io-client";
+import { useWebSocket } from '@/Store/socketStore';
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false); 
+  const {setSocket} = useWebSocket();
   
   
 const { isInitialized, isLoggedIn, user } = useAuth();
 // console.log("무슨 상태야",isInitialized)
+
+useEffect(() => {
+  // connect to backend WebSocket
+  const socket = io('http://localhost:4000', {
+    transports: ["websocket"], // force pure WebSocket, skip long polling
+  });
+  console.log('socketconnect', socket)
+  setSocket(socket)
+
+  // when connected
+  socket.on("connect", () => {
+    console.log("Connected with id:", socket.id);
+  });
+
+  // listen for notifications
+  socket.on("receiveNotification", (data) => {
+    console.log("🔔 Notification:", data);
+  });
+
+  // listen for messages
+  socket.on("receiveMessage", (data) => {
+    console.log("💬 Message:", data);
+  });
+
+  // cleanup on component unmount
+  return () => {
+    socket.disconnect();
+  };
+}, []);
+
 
 useEffect(() => {
   if (!isInitialized) {

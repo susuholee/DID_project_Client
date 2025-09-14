@@ -9,14 +9,15 @@ import useUserStore from "@/Store/userStore";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import axios from "axios";
 
+
 // API 함수 - axios 사용하도록 수정
 const fetchUserVCs = async (userId) => {
   if (!userId) throw new Error('User ID is required');
-  
+
   try {
     console.log('API 요청 시작 - userId:', userId);
     console.log('API URL:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${userId}`);
-    
+
     const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${userId}`, {
       withCredentials: true,
     });
@@ -29,9 +30,9 @@ const fetchUserVCs = async (userId) => {
     // 단일 VC 객체 처리 (vc 필드가 있는 경우)
     if (data && data.vc && data.vc.credentialSubject) {
       console.log('단일 VC 데이터 발견:', data.vc);
-      
+
       const credentialSubject = data.vc.credentialSubject;
-      
+
       // 정규화된 데이터 구조로 변환
       const normalizedItem = {
         id: credentialSubject.id,
@@ -58,11 +59,11 @@ const fetchUserVCs = async (userId) => {
       console.log('정규화된 데이터:', normalizedItem);
       return [normalizedItem]; // 배열로 반환
     }
-    
+
     // 배열 형태의 응답 처리
     if (Array.isArray(data)) {
       console.log('배열 형태 응답, 길이:', data.length);
-      
+
       if (data.length === 0) {
         return [];
       }
@@ -70,7 +71,7 @@ const fetchUserVCs = async (userId) => {
       const processedData = data.map((item, index) => {
         try {
           let credentialSubject = null;
-          
+
           if (item && item.vc && item.vc.credentialSubject) {
             credentialSubject = item.vc.credentialSubject;
           } else if (item && item.message?.payload?.vc?.credentialSubject) {
@@ -78,7 +79,7 @@ const fetchUserVCs = async (userId) => {
           } else if (item && item.message?.verifiableCredential?.credentialSubject) {
             credentialSubject = item.message.verifiableCredential.credentialSubject;
           }
-          
+
           if (!credentialSubject) {
             console.warn(`아이템 ${index}: credentialSubject를 찾을 수 없음`, item);
             return null;
@@ -113,11 +114,11 @@ const fetchUserVCs = async (userId) => {
 
       return processedData;
     }
-    
+
     // 사용자 정보만 있고 vc가 없는 경우
     console.log('VC 데이터가 없음 - 빈 배열 반환');
     return [];
-    
+
   } catch (error) {
     console.error('fetchUserVCs 에러:', error);
     throw new Error(`수료증 조회 실패: ${error.message}`);
@@ -127,18 +128,18 @@ const fetchUserVCs = async (userId) => {
 // Suspense로 감쌀 메인 대시보드 컴포넌트
 function DashboardContent() {
   const searchParams = useSearchParams();
-  
+
   // 전역 상태에서 사용자 정보 가져오기
   const user = useUserStore((state) => state.user);
   console.log("유저 정보 데이터 :", user);
   const isLoggedIn = useUserStore((state) => state.isLoggedIn);
 
   // TanStack Query로 수료증 데이터 조회
-  const { 
-    data: vcData, 
-    isLoading: vcLoading, 
+  const {
+    data: vcData,
+    isLoading: vcLoading,
     isError: vcError,
-    error 
+    error
   } = useQuery({
     queryKey: ['userVCs', user?.userId],
     queryFn: () => fetchUserVCs(user?.userId),
@@ -184,27 +185,27 @@ function DashboardContent() {
   }
 
   const displayName = user.nickName || user.name || user.userName;
-  
+
   // 서버에서 받은 데이터 처리
   const allVCs = vcData || [];
-  
+
   // "issue" 상태인 수료증만 필터링 (발급 완료된 것들)
   const issuedCerts = allVCs.filter(vc => vc.request === "issue");
-  
+
   // 대기중인 수료증들 ("pending" 등 다른 상태)
   const pendingCerts = allVCs.filter(vc => vc.request !== "issue");
 
   // 차트 데이터 생성 함수
   const generateChartData = () => {
     const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
-    
+
     return daysOfWeek.map((day, index) => {
       const dayIssued = issuedCerts.filter(cert => {
         if (!cert.issueDate && !cert.createdAt) return false;
         const certDate = new Date(cert.issueDate || cert.createdAt);
         return certDate.getDay() === index;
       }).length;
-      
+
       return {
         name: day,
         issued: dayIssued
@@ -217,7 +218,7 @@ function DashboardContent() {
   // 파이 차트 데이터 (수료증 유형별 통계)
   const generatePieData = () => {
     if (issuedCerts.length === 0) return [];
-    
+
     const typeCount = {};
     issuedCerts.forEach(cert => {
       const type = cert.certificateName || '기타';
@@ -238,14 +239,14 @@ function DashboardContent() {
   const generateLineData = () => {
     const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
     const currentYear = new Date().getFullYear();
-    
+
     return monthNames.map((month, index) => {
       const monthIssued = issuedCerts.filter(cert => {
         if (!cert.issueDate && !cert.createdAt) return false;
         const certDate = new Date(cert.issueDate || cert.createdAt);
         return certDate.getFullYear() === currentYear && certDate.getMonth() === index;
       }).length;
-      
+
       return {
         month,
         issued: monthIssued
@@ -298,6 +299,9 @@ function DashboardContent() {
       day: 'numeric'
     });
   };
+
+
+
 
   return (
     <>
@@ -400,25 +404,25 @@ function DashboardContent() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Recharts 바 차트 */}
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis 
-                        dataKey="name" 
+                      <XAxis
+                        dataKey="name"
                         axisLine={false}
                         tickLine={false}
                         tick={{ fontSize: 12, fill: '#6b7280' }}
                       />
-                      <YAxis 
+                      <YAxis
                         axisLine={false}
                         tickLine={false}
                         tick={{ fontSize: 12, fill: '#6b7280' }}
                         tickFormatter={(value) => `${value}개`}
                       />
-                      <Tooltip 
+                      <Tooltip
                         content={({ active, payload, label }) => {
                           if (active && payload && payload.length) {
                             return (
@@ -430,9 +434,9 @@ function DashboardContent() {
                           return null;
                         }}
                       />
-                      <Bar 
-                        dataKey="issued" 
-                        fill="#06B6D4" 
+                      <Bar
+                        dataKey="issued"
+                        fill="#06B6D4"
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -466,7 +470,7 @@ function DashboardContent() {
                       >
                         <div className="flex items-center justify-between gap-4">
                           {/* 왼쪽: 아이콘과 기본 정보 */}
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                               {cert.imagePath ? (
                                 <img
@@ -478,7 +482,7 @@ function DashboardContent() {
                                 <div className="w-5 h-5 bg-cyan-500 rounded"></div>
                               )}
                             </div>
-                            
+
                             <div className="flex-1 min-w-0">
                               <h3 className="text-base font-semibold text-gray-900 mb-1 truncate">
                                 {cert.certificateName || '수료증'}
@@ -584,7 +588,7 @@ function DashboardContent() {
               {/* 수료증 유형별 통계 (파이 차트) - 항상 표시 */}
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">수료증 유형별 통계</h3>
-                
+
                 {pieData.length > 0 ? (
                   <>
                     <div className="h-48">
@@ -603,7 +607,7 @@ function DashboardContent() {
                               <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                           </Pie>
-                          <Tooltip 
+                          <Tooltip
                             content={({ active, payload }) => {
                               if (active && payload && payload.length) {
                                 const data = payload[0].payload;
@@ -623,7 +627,7 @@ function DashboardContent() {
                       {pieData.map((item, index) => (
                         <div key={index} className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded" style={{backgroundColor: item.color}}></div>
+                            <div className="w-3 h-3 rounded" style={{ backgroundColor: item.color }}></div>
                             <span className="text-gray-700">{item.name}</span>
                           </div>
                           <span className="font-medium text-gray-900">{item.value}개</span>
@@ -656,19 +660,19 @@ function DashboardContent() {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={lineData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis 
-                          dataKey="month" 
+                        <XAxis
+                          dataKey="month"
                           axisLine={false}
                           tickLine={false}
                           tick={{ fontSize: 11, fill: '#6b7280' }}
                         />
-                        <YAxis 
+                        <YAxis
                           axisLine={false}
                           tickLine={false}
                           tick={{ fontSize: 11, fill: '#6b7280' }}
                           tickFormatter={(value) => `${value}개`}
                         />
-                        <Tooltip 
+                        <Tooltip
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               return (
@@ -680,10 +684,10 @@ function DashboardContent() {
                             return null;
                           }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="issued" 
-                          stroke="#06B6D4" 
+                        <Line
+                          type="monotone"
+                          dataKey="issued"
+                          stroke="#06B6D4"
                           strokeWidth={3}
                           dot={{ fill: '#06B6D4', strokeWidth: 2, r: 4 }}
                           activeDot={{ r: 6, stroke: '#06B6D4', strokeWidth: 2 }}
@@ -730,6 +734,7 @@ function DashboardLoading() {
 
 // 메인 대시보드 페이지 컴포넌트
 export default function DashboardPage() {
+ 
   return (
     <Suspense fallback={<DashboardLoading />}>
       <DashboardContent />
