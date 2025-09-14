@@ -6,6 +6,7 @@ import useUserStore from "@/Store/userStore";
 import { useRouter, usePathname } from "next/navigation";
 import axios from "axios";
 
+
 export default function MainPage() {
   const sectionsRef = useRef([]);
   const router = useRouter();
@@ -15,7 +16,8 @@ export default function MainPage() {
   // console.log("현재 사용자:", user);
   // console.log("로그인 상태:", isLoggedIn);
   
-
+  https://api.sealiumback.store/uploads/ape6_1757846681702.jpg
+  $2b$10$UmYoMP8GvVGIdbnIN3S1xOl6vgfmp0yAF2Pj3DRVlgEOSvZpuy0Xa
 
   // 섹션 스크롤 애니메이션
   useEffect(() => {

@@ -6,6 +6,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from "axios";
 import Modal from "@/components/UI/Modal";
 import useUserStore from "@/Store/userStore";
+import { useWebSocket } from "@/Store/socketStore";
+
+
 
 // 고정 발급 기관
 const FIXED_ISSUER = "경일IT게임아카데미";
@@ -132,9 +135,10 @@ export default function IssueCertificatePage() {
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
 
+
   // zustand store 연결 (addNotification 제거)
   const { user } = useUserStore();
-
+  const {socket} = useWebSocket();
   // 사용자의 기존 수료증 내역 조회 - 모든 상태 포함
   const { data: certificateData = { allRequests: [], pendingRequests: [] }, isLoading: certificatesLoading, error: certificatesError } = useQuery({
     queryKey: ['userCertificates', user?.userId],
@@ -305,8 +309,19 @@ export default function IssueCertificatePage() {
     }
   };
 
+
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log(socket, 'socket')
+    socket.emit("sendNotification", {
+      id: user.userId, 
+      title : '수료증 발급',  
+      message: "Hello from frontend!",
+      ts: Date.now() - 1000 * 60 * 5,
+      read : false
+     });
 
     console.log("🚀 handleSubmit 시작");
     console.log("🔍 사용자 정보:", user);
@@ -363,7 +378,7 @@ export default function IssueCertificatePage() {
     setModalMessage("수료증 발급 요청을 처리하고 있습니다...");
     setModalType("loading");
     setShowModal(true);
-
+    
     // 요청 데이터 준비 - userId 우선 사용
     const requestData = {
       userName: user.userName,
