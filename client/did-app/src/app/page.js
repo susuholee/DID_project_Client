@@ -326,7 +326,7 @@ export default function MainPage() {
                 </button>
                 
                 <a 
-                  href="https://vc.sealiumback.store/"
+                  href="https://vcv.sealiumback.store/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 sm:gap-3 bg-white hover:bg-gray-50 text-cyan-600 font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl text-sm sm:text-base border-2 border-cyan-500"
