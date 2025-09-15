@@ -9,15 +9,14 @@ export default function ProgressBar({
   showPercentage = true,
   showStepText = true
 }) {
-  // 진행률 계산 (0-100%)
   const progress = Math.round((currentStep / totalSteps) * 100);
   
-  // 진행률이 100%를 초과하지 않도록 제한
+
   const clampedProgress = Math.min(progress, 100);
 
   return (
     <div className={`mb-6 ${className}`}>
-      {/* 상단 정보 표시 */}
+    
       {(showStepText || showPercentage) && (
         <div className="flex justify-between items-center mb-2">
           {showStepText && (
@@ -33,7 +32,7 @@ export default function ProgressBar({
         </div>
       )}
       
-      {/* 진행률 바 */}
+
       <div className={`w-full bg-${bgColor} rounded-full h-2`}>
         <div 
           className={`bg-${barColor} h-2 rounded-full transition-all duration-300 ease-in-out`}

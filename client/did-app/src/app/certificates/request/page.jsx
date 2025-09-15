@@ -6,25 +6,21 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import useUserStore from '@/Store/userStore';
 
-// API 함수
+
 const fetchVCRequestLogs = async () => {
   try {
     const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs`, {
       withCredentials: true
     });
     
-    console.log('VC Request Logs 전체 응답:', response.data);
-    
-    // API 응답 구조: { state: 200, message: "...", data: [...] }
+ 
+   
     if (response.data.state === 200 && response.data.data) {
-      console.log('실제 데이터:', response.data.data);
-      return response.data.data; // data 배열을 반환
+      return response.data.data;
     } else {
-      console.error('예상과 다른 응답 구조:', response.data);
       return [];
     }
   } catch (error) {
-    console.error('VC Request Logs 조회 실패:', error);
     throw new Error(`요청 현황 조회 실패: ${error.message}`);
   }
 };
@@ -33,7 +29,7 @@ export default function CertificateRequestsPage() {
   const router = useRouter();
   const { user, isLoggedIn } = useUserStore();
 
-  // TanStack Query로 요청 현황 데이터 조회
+
   const { 
     data: requestLogs, 
     isLoading, 
@@ -44,16 +40,16 @@ export default function CertificateRequestsPage() {
     queryKey: ['vcRequestLogs'],
     queryFn: fetchVCRequestLogs,
     enabled: !!isLoggedIn && !!user,
-    staleTime: 30 * 1000, // 30초간 캐시 유지
+    staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
     retry: 2,
   });
 
-  // 탭 상태
-  const [activeTab, setActiveTab] = useState('all'); // all | issue | revoke
-  const [statusFilter, setStatusFilter] = useState('all'); // all | pending | approved | rejected
 
-  // UI 상태들
+  const [activeTab, setActiveTab] = useState('all'); 
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -62,57 +58,42 @@ export default function CertificateRequestsPage() {
   
   const itemsPerPage = 5;
 
-  // 경고 모달 상태
+
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
 
 
-  // 현재 사용자의 요청만 필터링 (실제 API 응답 구조에 맞춤)
-  const userRequests = useMemo(() => {
-    console.log('=== 디버깅 정보 ===');
-    console.log('requestLogs:', requestLogs);
-    console.log('user:', user);
-    console.log('user.userId:', user?.userId);
-    
+
+  const userRequests = useMemo(() => {    
     if (!requestLogs || !Array.isArray(requestLogs)) {
-      console.log('requestLogs가 없거나 배열이 아님');
       return [];
     }
     
     if (!user?.userId) {
-      console.log('user.userId가 없음');
       return [];
     }
     
-    console.log('전체 로그 개수:', requestLogs.length);
-    
     const filtered = requestLogs.filter(log => {
-      console.log(`로그 ${log.id}: userId=${log.userId}, 현재 user.userId=${user.userId}, 일치=${log.userId === user.userId}`);
       return log.userId === user.userId;
     });
-    
-    console.log('필터링된 로그 개수:', filtered.length);
-    console.log('필터링된 로그:', filtered);
     
     const mapped = filtered.map(log => ({
       id: log.id,
       certificateName: log.certificateName || '수료증',
       description: log.description || '사유 없음',
       requestedAt: log.createdAt || new Date().toISOString(),
-      status: log.status || 'pending', // pending, approved, rejected
-      requestType: log.request, // issue 또는 revoke
+      status: log.status || 'pending', 
+      requestType: log.request,
       userId: log.userId,
       userName: log.userName,
       DOB: log.DOB,
       ImagePath: log.ImagePath,
       updatedAt: log.updatedAt
     }));
-    
-    console.log('최종 매핑된 데이터:', mapped);
     return mapped;
   }, [requestLogs, user?.userId]);
 
-  // 현재 탭에 따른 데이터
+ 
   const currentRequests = useMemo(() => {
     if (activeTab === 'all') {
       return userRequests;
@@ -123,14 +104,14 @@ export default function CertificateRequestsPage() {
     }
   }, [activeTab, userRequests]);
 
-  // 필터링 및 정렬
+ 
   const filteredAndSortedRequests = useMemo(() => {
     let filtered = currentRequests.filter(req => {
       const matchesSearch = req.certificateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            req.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
       
-      // 날짜 필터링
+    
       if (dateRange.start || dateRange.end) {
         const reqDate = new Date(req.requestedAt);
         if (dateRange.start && reqDate < new Date(dateRange.start)) return false;
@@ -152,30 +133,28 @@ export default function CertificateRequestsPage() {
     });
   }, [currentRequests, searchTerm, statusFilter, dateRange, sortOrder]);
 
-  // 페이지네이션을 위한 데이터 처리
   const totalPages = Math.ceil(filteredAndSortedRequests.length / itemsPerPage);
   const paginatedRequests = filteredAndSortedRequests.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // 통계 계산
+
   const stats = useMemo(() => {
     const total = userRequests.length;
     const pending = userRequests.filter(req => req.status === 'pending').length;
     const approved = userRequests.filter(req => req.status === 'approved').length;
     const rejected = userRequests.filter(req => req.status === 'rejected').length;
     
-    // 탭별 카운트
+
     const issueCount = userRequests.filter(req => req.requestType === 'issue').length;
     const revokeCount = userRequests.filter(req => req.requestType === 'revoke').length;
     
     return { total, pending, approved, rejected, issueCount, revokeCount };
   }, [userRequests]);
 
-  // 상태별 스타일
   const getStatusBadge = (status) => {
-    const baseClasses = "px-3 py-1 rounded-full text-xs font-medium";
+    const baseClasses = "px-3 py-1 rounded-full text-xs";
     
     switch (status) {
       case 'pending':
@@ -189,15 +168,15 @@ export default function CertificateRequestsPage() {
     }
   };
 
-  // 요청 타입별 배지 스타일
+ 
   const getRequestTypeBadge = (requestType) => {
     switch (requestType) {
       case 'issue':
-        return 'bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-xs font-medium';
+        return 'bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-xs';
       case 'revoke':
-        return 'bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium';
+        return 'bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs';
       default:
-        return 'bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium';
+        return 'bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs';
     }
   };
 
@@ -219,13 +198,12 @@ export default function CertificateRequestsPage() {
   };
 
 
-  // 경고 모달 표시 함수
   const showWarning = (message) => {
     setWarningMessage(message);
     setShowWarningModal(true);
   };
 
-  // 경고 모달 닫기
+
   const closeWarningModal = () => {
     setShowWarningModal(false);
     setWarningMessage('');
@@ -233,7 +211,7 @@ export default function CertificateRequestsPage() {
 
   
 
-  // 로딩 상태
+
   if (isLoading) {
     return (
       <main className="min-h-screen  flex">
@@ -249,7 +227,7 @@ export default function CertificateRequestsPage() {
     );
   }
 
-  // 에러 상태
+ 
   if (isError) {
     return (
       <main className="min-h-screen  flex">
@@ -280,13 +258,11 @@ export default function CertificateRequestsPage() {
         <div className="flex-1 flex flex-col lg:ml-64">
           <div className="flex-1 flex items-start justify-center py-8 px-4 sm:px-6 lg:px-8">
             <div className="w-full max-w-6xl">
-              {/* 상단 헤더 */}
               <div className="mb-6 text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2">요청 현황</h1>
                 <p>수료증 발급 및 폐기 요청 현황을 확인하세요.</p>
               </div>
 
-              {/* 통계 카드 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
                 <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                   <div className="text-2xl font-bold">{stats.total}</div>
@@ -306,7 +282,7 @@ export default function CertificateRequestsPage() {
                 </div>
               </div>
 
-              {/* 탭 네비게이션 */}
+           
               <div className="mb-6">
                 <div className="border-b border-gray-200 bg-white rounded-t-xl">
                   <nav className="-mb-px flex px-6">
@@ -315,7 +291,7 @@ export default function CertificateRequestsPage() {
                         setActiveTab('all');
                         setCurrentPage(1);
                       }}
-                      className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors ${
+                      className={`py-4 px-4 border-b-2  text-sm transition-colors ${
                         activeTab === 'all'
                           ? 'border-cyan-500 text-cyan-600'
                           : 'border-transparent hover:text-gray-700'
@@ -328,7 +304,7 @@ export default function CertificateRequestsPage() {
                         setActiveTab('issue');
                         setCurrentPage(1);
                       }}
-                      className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors ${
+                      className={`py-4 px-4 border-b-2  text-sm transition-colors ${
                         activeTab === 'issue'
                           ? 'border-cyan-500 text-cyan-600'
                           : 'border-transparent hover:text-gray-700'
@@ -341,7 +317,7 @@ export default function CertificateRequestsPage() {
                         setActiveTab('revoke');
                         setCurrentPage(1);
                       }}
-                      className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors ${
+                      className={`py-4 px-4 border-b-2  text-sm transition-colors ${
                         activeTab === 'revoke'
                           ? 'border-cyan-500 text-cyan-600'
                           : 'border-transparent hover:text-gray-700'
@@ -353,10 +329,9 @@ export default function CertificateRequestsPage() {
                 </div>
               </div>
 
-              {/* 검색 및 필터 */}
+           
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
                 <div className="p-4">
-                  {/* 검색 및 액션 */}
                   <div className="flex flex-col sm:flex-row gap-3 mb-4">
                     <div className="flex-1">
                       <input
@@ -391,12 +366,12 @@ export default function CertificateRequestsPage() {
                     </div>
                   </div>
 
-                  {/* 확장 필터 */}
+               
                   {showFilters && (
                     <div className="border-t border-gray-200 pt-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-sm font-medium mb-2">시작일</label>
+                          <label className="block text-sm mb-2">시작일</label>
                           <input
                             type="date"
                             value={dateRange.start}
@@ -405,7 +380,7 @@ export default function CertificateRequestsPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-2">종료일</label>
+                          <label className="block text-sm  mb-2">종료일</label>
                           <input
                             type="date"
                             value={dateRange.end}
@@ -417,7 +392,6 @@ export default function CertificateRequestsPage() {
                     </div>
                   )}
 
-                  {/* 상태 필터 태그 */}
                   <div className="flex flex-wrap gap-2 mt-4 -mb-2">
                     {[
                       { key: 'all', label: '전체', count: stats.total },
@@ -428,7 +402,7 @@ export default function CertificateRequestsPage() {
                       <button
                         key={filter.key}
                         onClick={() => setStatusFilter(filter.key)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                        className={`px-4 py-2 rounded-full text-sm  transition-all ${
                           statusFilter === filter.key
                             ? 'bg-cyan-500 text-white'
                             : 'bg-gray-100 hover:bg-gray-200'
@@ -441,10 +415,9 @@ export default function CertificateRequestsPage() {
                 </div>
               </div>
 
-              {/* 요청 목록 */}
               {paginatedRequests.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                  <h3 className="text-lg font-medium mb-2">
+                  <h3 className="text-lg  mb-2">
                     요청 내역이 없습니다
                   </h3>
                   <p className="mb-6">
@@ -462,7 +435,7 @@ export default function CertificateRequestsPage() {
                       className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow"
                     >
                       <div className="flex flex-col lg:flex-row gap-4">
-                        {/* 왼쪽: 수료증 정보 */}
+                      
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-4">
                             <h3 className="text-lg font-semibold">
@@ -480,7 +453,7 @@ export default function CertificateRequestsPage() {
 
                           <div className="bg-gray-50 rounded-lg p-3 mb-4">
                             <div className="text-xs mb-1">요청일</div>
-                            <div className="text-sm font-medium">
+                            <div className="text-sm">
                               {new Date(request.requestedAt).toLocaleDateString('ko-KR', {
                                 year: 'numeric',
                                 month: 'long',
@@ -495,7 +468,7 @@ export default function CertificateRequestsPage() {
                           </div>
                         </div>
 
-                        {/* 오른쪽: 이미지 */}
+                      
                         {request.ImagePath && (
                           <div className="lg:w-32 lg:flex-shrink-0">
                             <div className="text-xs mb-2">첨부 이미지</div>
@@ -512,7 +485,7 @@ export default function CertificateRequestsPage() {
                 </div>
               )}
 
-              {/* 페이지네이션 */}
+            
               {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-6">
                   <button
@@ -562,7 +535,7 @@ export default function CertificateRequestsPage() {
                 </div>
               )}
 
-              {/* 정보 표시 */}
+           
               {filteredAndSortedRequests.length > 0 && (
                 <div className="text-center mt-4">
                   <p className="text-sm">
@@ -576,7 +549,7 @@ export default function CertificateRequestsPage() {
       </main>
 
 
-      {/* 경고 모달 */}
+
       {showWarningModal && (
         <>
           <div 
@@ -597,7 +570,7 @@ export default function CertificateRequestsPage() {
                 
                 <button
                   onClick={closeWarningModal}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors font-medium"
+                  className="w-full px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
                 >
                   확인
                 </button>

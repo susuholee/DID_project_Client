@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import useUserStore from '@/Store/userStore';
+import api from '@/lib/axios';
 
-// 수료증 데이터 처리 함수
+
 const processCertificateData = (item, index, user, type = 'active') => {
-  console.log(`\n=== ${type} 아이템 ${index + 1} 전체 구조 ===`);
-  console.log('Raw item:', JSON.stringify(item, null, 2));
+
   
-  // credentialSubject 찾기 (간소화)
+ 
   const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
                         item.message?.verifiableCredential?.credentialSubject ||
                         item.verifiableCredential?.credentialSubject ||
@@ -19,7 +19,7 @@ const processCertificateData = (item, index, user, type = 'active') => {
                         item.vc?.credentialSubject ||
                         item;
   
-  // 기본값들 설정
+  
   let certificateName = '제목 없음';
   let issuer = '발급기관 없음';
   let userName = user?.userName || '사용자';
@@ -27,8 +27,7 @@ const processCertificateData = (item, index, user, type = 'active') => {
   let imagePath = null;
   let status = type === 'revoked' ? '폐기' : '유효';
   
-  // 간소화된 데이터 추출
-  // 수료증명
+
   if (credentialSubject?.certificateName) {
     certificateName = credentialSubject.certificateName;
   } else if (item.certificateName) {
@@ -39,7 +38,7 @@ const processCertificateData = (item, index, user, type = 'active') => {
     certificateName = credentialSubject.title;
   }
   
-  // 발급기관
+
   if (credentialSubject?.issuer) {
     issuer = credentialSubject.issuer;
   } else if (item.issuer) {
@@ -48,7 +47,7 @@ const processCertificateData = (item, index, user, type = 'active') => {
     issuer = credentialSubject.issuerName;
   }
   
-  // 사용자명
+ 
   if (credentialSubject?.userName) {
     userName = credentialSubject.userName;
   } else if (credentialSubject?.name && credentialSubject.name !== certificateName) {
@@ -57,7 +56,7 @@ const processCertificateData = (item, index, user, type = 'active') => {
     userName = item.userName;
   }
   
-  // 발급일
+
   if (credentialSubject?.issueDate) {
     issueDate = credentialSubject.issueDate;
   } else if (item.issueDate) {
@@ -68,7 +67,7 @@ const processCertificateData = (item, index, user, type = 'active') => {
     issueDate = item.createdAt;
   }
   
-  // 이미지 경로
+
   if (credentialSubject?.ImagePath) {
     imagePath = credentialSubject.ImagePath;
   } else if (credentialSubject?.imagePath) {
@@ -77,17 +76,11 @@ const processCertificateData = (item, index, user, type = 'active') => {
     imagePath = item.imagePath || item.ImagePath;
   }
   
-  // 상태 처리 - 간소화
+
   const requestType = credentialSubject?.requestType || item.requestType || item.request;
   const statusValue = credentialSubject?.status || item.status;
   
-  console.log(`${type} 아이템 ${index + 1} 상태 정보:`, {
-    requestType,
-    statusValue,
-    credentialSubjectStatus: credentialSubject?.status,
-    itemStatus: item.status,
-    type
-  });
+
   
   if (type === 'revoked') {
     status = '폐기';
@@ -99,20 +92,11 @@ const processCertificateData = (item, index, user, type = 'active') => {
     status = '유효';
   }
   
-  // 401 에러나 빈 데이터 필터링
   if (certificateName === '제목 없음' && issuer === '발급기관 없음' && !imagePath) {
-    console.log(`${type} 아이템 ${index + 1}: 유효하지 않은 데이터로 판단하여 제외`);
     return null;
   }
   
-  console.log(`${type} 아이템 ${index + 1} 최종 데이터:`, {
-    certificateName,
-    issuer,
-    userName,
-    issueDate,
-    status,
-    imagePath
-  });
+
 
   return {
     id: credentialSubject?.id || item.id || `${type}-cert-${index}`,
@@ -140,9 +124,9 @@ const processCertificateData = (item, index, user, type = 'active') => {
 export default function MyCertificatesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, isLoggedIn, addNotification } = useUserStore();
+  const { user, isLoggedIn } = useUserStore();
 
-  // TanStack Query로 수료증 데이터 가져오기 - 캐시 우선 사용 설정
+
   const { 
     data: allCerts = [], 
     isLoading: loading, 
@@ -155,25 +139,23 @@ export default function MyCertificatesPage() {
         throw new Error('사용자 정보가 없습니다.');
       }
       
-      // 일반 수료증과 폐기된 수료증을 병렬로 가져오기
+      
       const [activeResponse, revokedResponse] = await Promise.allSettled([
-        // 일반 수료증
-        axios.get(
+   
+        api.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${user.userId}`,
           { withCredentials: true }
         ),
-        // 폐기된 수료증 (request: revoke, status: approved)
-        axios.get(
+        api.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/vcrequestlogs`,
           { withCredentials: true }
         )
       ]);
 
-      // 일반 수료증 데이터 처리
       let activeCerts = [];
       if (activeResponse.status === 'fulfilled') {
         const response = activeResponse.value;
-        console.log('=== 일반 수료증 API 응답 ===', response.data);
+    
         
         if (Array.isArray(response.data) && response.data.length > 0) {
           activeCerts = response.data.map((item, index) => {
@@ -182,14 +164,13 @@ export default function MyCertificatesPage() {
         }
       }
 
-      // 폐기된 수료증 데이터 처리
+   
       let revokedCerts = [];
       if (revokedResponse.status === 'fulfilled') {
         const response = revokedResponse.value;
-        console.log('=== 폐기된 수료증 API 응답 ===', response.data);
+   
         
         if (response.data?.data && Array.isArray(response.data.data)) {
-          // 해당 사용자의 폐기된 수료증만 필터링
           const userRevokedCerts = response.data.data.filter(
             item => item.userId === user.userId && 
                    item.request === 'revoke' && 
@@ -202,101 +183,77 @@ export default function MyCertificatesPage() {
         }
       }
 
-      // 두 데이터를 합치기
+ 
       const allCertsData = [...activeCerts, ...revokedCerts];
-      console.log(`=== 최종 수료증 데이터 === 총 ${allCertsData.length}개 (일반: ${activeCerts.length}, 폐기: ${revokedCerts.length})`);
+      
       
       return allCertsData;
     },
     enabled: !!isLoggedIn && !!user?.userId,
-    staleTime: 2 * 60 * 1000, // 2분간 fresh (캐시 우선 사용)
-    gcTime: 10 * 60 * 1000, // 10분간 캐시 유지 (cacheTime → gcTime)
-    refetchOnMount: 'always', // 마운트 시 항상 refetch (캐시가 있어도)
-    refetchOnWindowFocus: true, // 윈도우 포커스 시 refetch (최신 데이터 보장)
+    staleTime: 2 * 60 * 1000, 
+    gcTime: 10 * 60 * 1000, 
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     retry: (failureCount, error) => {
-      // 401/403 에러는 재시도하지 않음
       if (error?.response?.status === 401 || error?.response?.status === 403) {
         return false;
       }
       return failureCount < 2;
     },
     onError: (error) => {
-      console.error('수료증 조회 실패:', error);
       if (error?.response?.status === 401) {
-        console.log('인증 오류 - 로그인 필요');
       }
     },
-    // 백그라운드에서 자동 refetch 설정
-    refetchInterval: 3 * 60 * 1000, // 3분마다 백그라운드 업데이트
-    refetchIntervalInBackground: true // 백그라운드에서도 업데이트
+  
+    refetchInterval: 3 * 60 * 1000,
+    refetchIntervalInBackground: true 
   });
 
-  // 캐시에서 기존 데이터 즉시 가져오기 및 백그라운드 업데이트
+
   useEffect(() => {
     if (user?.userId) {
       const cachedData = queryClient.getQueryData(['certificates', user.userId]);
       if (cachedData && cachedData.length > 0) {
-        console.log('캐시에서 데이터 발견:', cachedData.length, '개');
-        // 캐시된 데이터가 있으면 백그라운드에서 업데이트
         queryClient.invalidateQueries({
           queryKey: ['certificates', user.userId],
-          refetchType: 'none' // UI는 업데이트하지 않고 백그라운드에서만
+          refetchType: 'none'
         });
       }
     }
   }, [user?.userId, queryClient]);
 
-  // 알림 추가 함수
-  const pushNotif = (title, message) => {
-    if (user?.id || user?.userId) {
-      addNotification(user.id || user.userId, {
-        id: Date.now(),
-        title,
-        message,
-        ts: Date.now(),
-        read: false,
-      });
-    }
-  };
+ 
 
-  // 검색/정렬/상태필터/페이지
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('date_desc');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
-  const pageSize = 6; // 한 페이지에 6개씩 표시
+  const pageSize = 6;
 
-  // 필터링 + 정렬 (메모이제이션 최적화)
+ 
   const filtered = useMemo(() => {
     const text = q.trim().toLowerCase();
     
     let arr = allCerts.filter((c) => {
-      // 유효하지 않은 데이터 추가 필터링
       if (!c.certificateName || c.certificateName === '제목 없음') {
         return false;
       }
       
-      // 제목과 기관명 검색
+    
       const matchText = !text || 
         (c.certificateName || '').toLowerCase().includes(text) || 
         (c.issuer || '').toLowerCase().includes(text);
       
-      // 상태 필터링
+     
       const certStatus = c.status || '유효';
       const matchStatus = status === 'all' ? true : certStatus === status;
       
-      console.log(`필터링 체크 - ${c.certificateName}:`, {
-        certStatus,
-        filterStatus: status,
-        matchStatus,
-        matchText,
-        willInclude: matchText && matchStatus
-      });
+
       
       return matchText && matchStatus;
     });
 
-    // 정렬
+    
     arr = [...arr].sort((a, b) => {
       const aDate = a.issueDate || a.requestDate || a.createdAt || '1970-01-01';
       const bDate = b.issueDate || b.requestDate || b.createdAt || '1970-01-01';
@@ -311,12 +268,10 @@ export default function MyCertificatesPage() {
       if (sort === 'issuer')    return aIssuer.localeCompare(bIssuer, 'ko');
       return 0;
     });
-
-    console.log(`필터링 결과: ${arr.length}개 (전체: ${allCerts.length}개)`);
     return arr;
   }, [allCerts, q, sort, status]);
 
-  // 페이지 데이터
+
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageData = useMemo(() => {
@@ -324,7 +279,7 @@ export default function MyCertificatesPage() {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  // 검색/정렬/상태 바뀌면 첫 페이지로
+
   useEffect(() => setPage(1), [q, sort, status]);
 
   const badgeOf = (s) => {
@@ -333,21 +288,19 @@ export default function MyCertificatesPage() {
     return 'bg-gray-100 text-gray-600';
   };
 
-  // 상세 페이지로 이동
+ 
   const handleCertificateClick = (cert) => {
     router.push(`/certificates/detail?id=${cert.id}`);
   };
 
-  // 수동 새로고침 함수
+
   const handleManualRefresh = async () => {
-    // 캐시를 무효화하고 새로 가져오기
     await queryClient.invalidateQueries({
       queryKey: ['certificates', user?.userId],
     });
-    // refetch는 invalidateQueries가 자동으로 트리거하므로 별도 호출 불필요
   };
 
-  // 로딩 상태 (캐시 데이터가 있으면 로딩 표시 안함)
+
   const hasCache = queryClient.getQueryData(['certificates', user?.userId]);
   if (loading && !hasCache) {
     return (
@@ -364,7 +317,7 @@ export default function MyCertificatesPage() {
     );
   }
 
-  // 에러 상태 (인증 에러는 별도 처리)
+
   if (error && error?.response?.status === 401) {
     return (
       <main className="min-h-screen  lg:ml-64">
@@ -387,7 +340,7 @@ export default function MyCertificatesPage() {
     );
   }
 
-  // 기타 에러 상태
+
   if (error && error?.response?.status !== 401) {
     return (
       <main className="min-h-screen  lg:ml-64">
@@ -413,16 +366,14 @@ export default function MyCertificatesPage() {
   return (
     <main className="min-h-screen lg:ml-64">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* 상단 */}
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">내 수료증</h1>
             <p className="mt-1">총 {total}개</p>
           </div>
 
-          {/* 검색/정렬 + 새로고침 버튼 */}
+       
           <div className="flex flex-wrap items-center gap-3">
-            {/* 새로고침 버튼 */}
             <button
               onClick={handleManualRefresh}
               disabled={loading}
@@ -434,7 +385,7 @@ export default function MyCertificatesPage() {
               새로고침
             </button>
             
-            {/* 검색 입력 */}
+          
             <div className="flex-1 min-w-[240px]">
               <input
                 value={q}
@@ -444,7 +395,7 @@ export default function MyCertificatesPage() {
               />
             </div>
             
-            {/* 정렬 선택 */}
+         
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
@@ -458,7 +409,7 @@ export default function MyCertificatesPage() {
           </div>
         </div>
 
-        {/* 상태 필터 바 */}
+      
         <div className="mb-5 flex flex-wrap gap-2">
           {[
             { key: 'all', label: '전체' },
@@ -490,7 +441,7 @@ export default function MyCertificatesPage() {
           })}
         </div>
 
-        {/* 현재 검색 조건 표시 */}
+     
         {(q || status !== 'all') && (
           <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
             <span>검색 조건:</span>
@@ -563,22 +514,21 @@ export default function MyCertificatesPage() {
                     </div>
                   )}
                   
-                  {/* 상태 배지 */}
+          
                   <div className="absolute top-3 right-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeOf(c.status)}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs  ${badgeOf(c.status)}`}>
                       {c.status}
                     </span>
                   </div>
                 </div>
 
-                {/* 카드 내용 */}
+       
                 <div className="p-6">
-                  {/* 수료증 제목 */}
                   <h3 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-cyan-600 transition-colors">
                     {c.certificateName}
                   </h3>
                   
-                  {/* 발급기관 */}
+              
                   <p className="text-sm mb-3">
                     {c.issuer}
                   </p>
@@ -586,12 +536,12 @@ export default function MyCertificatesPage() {
                   {/* 수료자 정보 */}
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-xs font-medium">
+                      <span className="text-xs">
                         {c.userName?.charAt(0) || '?'}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{c.userName}</p>
+                      <p className="text-sm">{c.userName}</p>
                       <p className="text-xs">수료자</p>
                     </div>
                   </div>
@@ -599,7 +549,7 @@ export default function MyCertificatesPage() {
                   {/* 발급일 */}
                   <div className="flex items-center justify-between text-sm mb-4">
                     <span>발급일</span>
-                    <span className="font-medium">
+                    <span className="">
                       {c.issueDate ? new Date(c.issueDate).toLocaleDateString('ko-KR') : 'N/A'}
                     </span>
                   </div>
@@ -615,7 +565,7 @@ export default function MyCertificatesPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm  hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
             >
               이전
             </button>
@@ -625,7 +575,7 @@ export default function MyCertificatesPage() {
                   key={p}
                   onClick={() => setPage(p)}
                   className={`
-                    w-10 h-10 rounded-xl text-sm font-medium transition-colors
+                    w-10 h-10 rounded-xl text-sm transition-colors
                     ${page === p 
                       ? 'bg-cyan-500 text-white' 
                       : 'bg-white hover:bg-gray-50 border border-gray-200'
@@ -639,7 +589,7 @@ export default function MyCertificatesPage() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm  hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
             >
               다음
             </button>

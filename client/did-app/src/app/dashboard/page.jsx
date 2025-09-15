@@ -1,4 +1,3 @@
-// src/app/dashboard/page.jsx
 "use client";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,30 +8,22 @@ import useUserStore from "@/Store/userStore";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import axios from "axios";
 
-// API 함수 - axios 사용하도록 수정
 const fetchUserVCs = async (userId) => {
   if (!userId) throw new Error('User ID is required');
   
-  try {
-    console.log('API 요청 시작 - userId:', userId);
-    console.log('API URL:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${userId}`);
-    
+  try {    
     const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${userId}`, {
       withCredentials: true,
     });
-
-    console.log('axios 응답:', response);
-    console.log('응답 데이터:', response.data);
-
     const data = response.data;
 
-    // 단일 VC 객체 처리 (vc 필드가 있는 경우)
+   
     if (data && data.vc && data.vc.credentialSubject) {
-      console.log('단일 VC 데이터 발견:', data.vc);
+
       
       const credentialSubject = data.vc.credentialSubject;
       
-      // 정규화된 데이터 구조로 변환
+      
       const normalizedItem = {
         id: credentialSubject.id,
         certificateName: credentialSubject.certificateName,
@@ -55,14 +46,11 @@ const fetchUserVCs = async (userId) => {
         }
       };
 
-      console.log('정규화된 데이터:', normalizedItem);
-      return [normalizedItem]; // 배열로 반환
+      return [normalizedItem];
     }
     
-    // 배열 형태의 응답 처리
+  
     if (Array.isArray(data)) {
-      console.log('배열 형태 응답, 길이:', data.length);
-      
       if (data.length === 0) {
         return [];
       }
@@ -114,27 +102,24 @@ const fetchUserVCs = async (userId) => {
       return processedData;
     }
     
-    // 사용자 정보만 있고 vc가 없는 경우
-    console.log('VC 데이터가 없음 - 빈 배열 반환');
+   
+   
     return [];
-    
   } catch (error) {
-    console.error('fetchUserVCs 에러:', error);
     throw new Error(`수료증 조회 실패: ${error.message}`);
   }
 };
 
-// Suspense로 감쌀 메인 대시보드 컴포넌트
+
 function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // 전역 상태에서 사용자 정보 가져오기
+  
   const user = useUserStore((state) => state.user);
-  console.log("유저 정보 데이터 :", user);
   const isLoggedIn = useUserStore((state) => state.isLoggedIn);
 
-  // TanStack Query로 수료증 데이터 조회 (모든 Hook을 조건부 return 이전에 호출)
+ 
   const { 
     data: vcData, 
     isLoading: vcLoading, 
@@ -153,18 +138,18 @@ function DashboardContent() {
 
 
 
-  // 인증 체크 - 로그인되지 않은 사용자는 메인 페이지로 리다이렉트
+
   useEffect(() => {
     if (!isLoggedIn || !user) {
       const timer = setTimeout(() => {
         router.push("/");
-      }, 1500); // 1.5초 후 리다이렉트
+      }, 1500); 
       
       return () => clearTimeout(timer);
     }
   }, [isLoggedIn, user, router]);
 
-  // 로그인되지 않은 사용자에게는 로딩 화면 표시
+
   if (!user || !isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -176,7 +161,6 @@ function DashboardContent() {
     );
   }
 
-  // 로딩 상태
   if (vcLoading) {
     return (
       <div className="min-h-screen  lg:ml-64 flex items-center justify-center">
@@ -188,7 +172,7 @@ function DashboardContent() {
     );
   }
 
-  // 에러 상태
+
   if (vcError) {
     console.error("VC 데이터 조회 에러:", error);
     return (
@@ -206,13 +190,13 @@ function DashboardContent() {
 
   const displayName = user.nickName || user.name || user.userName;
   
-  // 서버에서 받은 데이터 처리
+
   const allVCs = vcData || [];
   
-  // "issue" 상태인 수료증만 필터링 (발급 완료된 것들)
+
   const issuedCerts = allVCs.filter(vc => vc.request === "issue");
 
-  // 차트 데이터 생성 함수
+
   const generateChartData = () => {
     const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
     
@@ -232,7 +216,7 @@ function DashboardContent() {
 
   const chartData = generateChartData();
 
-  // 파이 차트 데이터 (수료증 유형별 통계)
+
   const generatePieData = () => {
     if (issuedCerts.length === 0) return [];
     
@@ -252,7 +236,7 @@ function DashboardContent() {
 
   const pieData = generatePieData();
 
-  // 라인 차트 데이터 (월별 발급 추이)
+
   const generateLineData = () => {
     const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
     const currentYear = new Date().getFullYear();
@@ -273,7 +257,7 @@ function DashboardContent() {
 
   const lineData = generateLineData();
 
-  // 최근 발급된 인증서 - 최신 5개만
+ 
   const recentIssuedCerts = issuedCerts
     .sort((a, b) => {
       const aDate = new Date(a.issueDate || a.createdAt || 0);
@@ -282,7 +266,7 @@ function DashboardContent() {
     })
     .slice(0, 5);
 
-  // 통계 계산
+  
   const calculateStats = () => {
     const today = new Date().toDateString();
     const thirtyDaysAgo = new Date();
@@ -320,7 +304,6 @@ function DashboardContent() {
     <>
       <main className="min-h-screen  lg:ml-64">
         <div className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
-          {/* 헤더 섹션 */}
           <div className="mb-6">
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -341,7 +324,7 @@ function DashboardContent() {
                     <button
                       onClick={() => refetchVCs()}
                       disabled={vcLoading}
-                      className="px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-4 py-2 bg-cyan-500 text-white text-sm  rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       <svg 
                         className={`w-4 h-4 ${vcLoading ? 'animate-spin' : ''}`} 
@@ -359,12 +342,11 @@ function DashboardContent() {
             </div>
           </div>
 
-          {/* 메인 그리드 */}
+      
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* 메인 콘텐츠 */}
             <section className="col-span-1 xl:col-span-8 space-y-6">
 
-              {/* 통계 카드 */}
+           
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
@@ -403,18 +385,16 @@ function DashboardContent() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm mb-2">이번 주 획득</p>
-                      <p className="text-3xl font-bold">{chartData.reduce((sum, day) => sum + day.issued, 0)}</p>
+                      <p className="text-3xl">{chartData.reduce((sum, day) => sum + day.issued, 0)}</p>
                     </div>
                     <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
+                      <div className="w-6 h-6 bg-cyan-500 rounded"></div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 수료증 발급 현황 차트 */}
+            
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -437,7 +417,7 @@ function DashboardContent() {
                   </div>
                 </div>
                 
-                {/* Recharts 바 차트 */}
+             
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -476,7 +456,7 @@ function DashboardContent() {
                 </div>
               </div>
 
-              {/* 최근 발급된 VC 목록 */}
+          
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -486,7 +466,7 @@ function DashboardContent() {
                   <div className="flex gap-3">
                     <Link
                       href="/certificates/issue"
-                      className="px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 transition-colors"
+                      className="px-4 py-2 bg-cyan-500 text-white text-sm rounded-lg hover:bg-cyan-600 transition-colors"
                     >
                       새 발급 요청
                     </Link>
@@ -501,7 +481,6 @@ function DashboardContent() {
                         className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center justify-between gap-4">
-                          {/* 왼쪽: 아이콘과 기본 정보 */}
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                               {cert.imagePath ? (
@@ -520,28 +499,28 @@ function DashboardContent() {
                                 {cert.certificateName || '수료증'}
                               </h3>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs">
-                                <span className="font-medium">{cert.issuer || '발급기관'}</span>
+                                <span className="">{cert.issuer || '발급기관'}</span>
                                 <span className="hidden sm:inline">•</span>
                                 <span>{formatDate(cert.issueDate || cert.createdAt)}</span>
                                 {cert.status && (
                                   <>
                                     <span className="hidden sm:inline">•</span>
-                                    <span className="text-green-600 font-medium">{cert.status}</span>
+                                    <span className="text-green-600">{cert.status}</span>
                                   </>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          {/* 오른쪽: 상태와 액션 */}
+                  
                           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
-                            <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                            <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
                               발급 완료
                             </div>
                             {cert.id && (
                               <Link
                                 href={`/certificates/detail?id=${cert.id}`}
-                                className="text-xs text-cyan-600 hover:text-cyan-800 font-medium"
+                                className="text-xs text-cyan-600 hover:text-cyan-800 "
                               >
                                 상세보기
                               </Link>
@@ -568,9 +547,7 @@ function DashboardContent() {
 
             </section>
 
-            {/* 사이드 패널 */}
             <aside className="col-span-1 xl:col-span-4 space-y-6">
-              {/* 사용자 & 지갑 통합 카드 */}
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -596,7 +573,7 @@ function DashboardContent() {
 
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium">지갑 정보</p>
+                    <p className="text-sm">지갑 정보</p>
                     <span className="text-xs">Avalanche C-Chain</span>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -606,7 +583,7 @@ function DashboardContent() {
                           <div className="w-4 h-4 bg-cyan-300 rounded"></div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-mono font-medium">
+                          <p className="text-sm font-mono">
                             {user.walletAddress?.slice(0, 7) || 'Loading'}...{user.walletAddress?.slice(-4) || '****'}
                           </p>
                           <p className="text-xs mt-1">지갑 주소</p>
@@ -617,7 +594,7 @@ function DashboardContent() {
                 </div>
               </div>
 
-              {/* 수료증 유형별 통계 (파이 차트) - 항상 표시 */}
+           
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold mb-4">수료증 유형별 현황</h3>
                 
@@ -662,7 +639,7 @@ function DashboardContent() {
                             <div className="w-3 h-3 rounded" style={{backgroundColor: item.color}}></div>
                             <span>{item.name}</span>
                           </div>
-                          <span className="font-medium">{item.value}개</span>
+                          <span className="">{item.value}개</span>
                         </div>
                       ))}
                     </div>
@@ -674,7 +651,7 @@ function DashboardContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <h4 className="text-base font-medium mb-2">
+                    <h4 className="text-base mb-2">
                       아직 발급받은 수료증이 없습니다
                     </h4>
                     <p className="text-sm">
@@ -684,7 +661,7 @@ function DashboardContent() {
                 )}
               </div>
 
-              {/* 월별 발급 추이 (라인 차트) - 항상 표시 */}
+             
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold mb-4">월별 발급 추이</h3>
                 
@@ -735,7 +712,7 @@ function DashboardContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                     </div>
-                    <h4 className="text-base font-medium mb-2">
+                    <h4 className="text-base mb-2">
                       월별 발급 데이터가 없습니다
                     </h4>
                     <p className="text-sm">
@@ -753,7 +730,7 @@ function DashboardContent() {
   );
 }
 
-// Loading fallback 컴포넌트
+
 function DashboardLoading() {
   return (
     <div className="min-h-screen bg-gray-50 lg:ml-64 flex items-center justify-center">
@@ -765,7 +742,6 @@ function DashboardLoading() {
   );
 }
 
-// 메인 대시보드 페이지 컴포넌트
 export default function DashboardPage() {
   return (
     <Suspense fallback={<DashboardLoading />}>
@@ -774,7 +750,7 @@ export default function DashboardPage() {
   );
 }
 
-/* 유틸: 상대 시간 포맷 */
+
 function formatRelativeTime(ts) {
   const diff = Date.now() - ts;
   const sec = Math.floor(diff / 1000);

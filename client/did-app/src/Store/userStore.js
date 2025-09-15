@@ -1,4 +1,3 @@
-// store/userStore.js
 import { create } from "zustand";
 import api from "../lib/axios";
 
@@ -7,7 +6,7 @@ const useUserStore = create((set, get) => ({
   user: null,
   isLoggedIn: false,
   isInitialized: false,
-  loginType: null, // 'normal' | 'kakao'
+  loginType: null,
 
   setUser: (user, type = "normal") =>
     set({
@@ -29,7 +28,7 @@ initializeUser: async () => {
     let userId = null;
     let userData = null;
 
-    // 1. 카카오 로그인
+  
     if (res.data?.id && res.data?.properties) {
       loginType = "kakao";
       userId = res.data.id;
@@ -39,7 +38,7 @@ initializeUser: async () => {
         ? userRes.data.data[0]
         : userRes.data.data;
     } 
-    // 2. 일반 로그인
+    
     else if (res.data?.state === 200 && res.data?.data) {
       loginType = "normal";
       userData = Array.isArray(res.data.data)
@@ -47,7 +46,7 @@ initializeUser: async () => {
         : res.data.data;
     }
 
-    // 3. 상태 저장
+ 
     if (userData) {
       set({
         user: { ...userData, type: loginType },
@@ -64,7 +63,6 @@ initializeUser: async () => {
       });
     }
   } catch (err) {
-    console.log("사용자 인증 실패:", err);
     set({
       user: null,
       isLoggedIn: false,
@@ -82,9 +80,7 @@ initializeUser: async () => {
       } else {
         await api.get("/user/logout", { withCredentials: true });
       }
-      console.log("로그아웃 응답")
     } catch (err) {
-      console.log("서버 로그아웃 실패:", err);
     }
 
     set({

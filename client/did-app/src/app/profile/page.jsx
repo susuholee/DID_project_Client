@@ -17,7 +17,7 @@ export default function ProfilePage() {
   
 
 
-  // 안전한 날짜 포맷팅 함수
+
   const formatDate = (dateString) => {
     if (!mounted || !dateString) return '미설정';
     try {
@@ -27,7 +27,7 @@ export default function ProfilePage() {
     }
   };
 
-  // 서버 사이드 렌더링 중에는 로딩 표시
+  
   if (!mounted) {
     return (
       <div className="min-h-screen">
@@ -46,7 +46,7 @@ export default function ProfilePage() {
     );
   }
 
-  // 로그인하지 않은 경우 로딩 표시
+
   if (!isLoggedIn || !user) {
     return (
       <div className="min-h-screen">
@@ -70,15 +70,13 @@ export default function ProfilePage() {
       <UserSidebar />
       <div className="lg:ml-64 p-6">
         <div className="max-w-4xl mx-auto">
-          {/* 헤더 */}
           <div className="mb-8">
           </div>
 
-          {/* 프로필 카드 */}
+        
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            {/* 프로필 헤더 */}
+           
             <div className="relative bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700 p-8 text-white">
-              {/* 배경 장식 */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
               
@@ -100,7 +98,7 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <div className="text-center sm:text-left">
-                  <h2 className="text-3xl font-bold mb-2">
+                  <h2 className="text-3xl  mb-2">
                     {user?.userName || user?.nickName || '사용자'}
                   </h2>
                   <p className="text-cyan-100 mb-3 text-lg">
@@ -110,11 +108,11 @@ export default function ProfilePage() {
                     )}
                   </p>
                   <div className="flex flex-wrap justify-center sm:justify-start gap-3">
-                    <span className="bg-emerald-500/30 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">
+                    <span className="bg-emerald-500/30 backdrop-blur-sm px-4 py-2 rounded-full text-sm">
                       활성 계정
                     </span>
                     {user?.kakaoId && (
-                      <span className="bg-yellow-400/30 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">
+                      <span className="bg-yellow-400/30 backdrop-blur-sm px-4 py-2 rounded-full text-sm">
                         카카오 연동
                       </span>
                     )}
@@ -132,14 +130,14 @@ export default function ProfilePage() {
                     <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
                       <div className="w-4 h-4 bg-cyan-600 rounded"></div>
                     </div>
-                    <h3 className="text-xl font-bold">기본 정보</h3>
+                    <h3 className="text-xl">기본 정보</h3>
                   </div>
                   
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
                       <div className="flex justify-between items-center">
-                        <span className="text-cyan-700 font-medium">이름</span>
-                        <span className="font-semibold">
+                        <span className="text-cyan-700">이름</span>
+                        <span>
                           {user?.userName || '미설정'}
                         </span>
                       </div>
@@ -147,8 +145,8 @@ export default function ProfilePage() {
                     
                     <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
                       <div className="flex justify-between items-center">
-                        <span className="text-cyan-700 font-medium">닉네임</span>
-                        <span className="font-semibold">
+                        <span className="text-cyan-700">닉네임</span>
+                        <span>
                           {user?.nickname || user?.nickName || '미설정'}
                         </span>
                       </div>
@@ -156,8 +154,8 @@ export default function ProfilePage() {
                     
                     <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
                       <div className="flex justify-between items-center">
-                        <span className="text-cyan-700 font-medium">생년월일</span>
-                        <span className="font-semibold">
+                        <span className="text-cyan-700">생년월일</span>
+                        <span>
                           {formatDate(user?.birthDate)}
                         </span>
                       </div>
@@ -165,8 +163,8 @@ export default function ProfilePage() {
                     
                     <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
                       <div className="flex justify-between items-center">
-                        <span className="text-cyan-700 font-medium">주소</span>
-                        <span className="font-semibold">
+                        <span className="text-cyan-700">주소</span>
+                        <span>
                           {user?.address || '미설정'}
                         </span>
                       </div>
@@ -174,8 +172,8 @@ export default function ProfilePage() {
                     
                     <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
                       <div className="flex justify-between items-center">
-                        <span className="text-cyan-700 font-medium">가입일</span>
-                        <span className="font-semibold">
+                        <span className="text-cyan-700">가입일</span>
+                        <span>
                           {formatDate(user?.createdAt) || 'N/A'}
                         </span>
                       </div>
@@ -183,20 +181,20 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* 계정 정보 */}
+       
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
                       <div className="w-4 h-4 bg-cyan-600 rounded"></div>
                     </div>
-                    <h3 className="text-xl font-bold">계정 정보</h3>
+                    <h3 className="text-xl">계정 정보</h3>
                   </div>
                   
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
                       <div className="flex justify-between items-center">
-                        <span className="text-cyan-700 font-medium">계정 유형</span>
-                        <span className="font-semibold">
+                        <span className="text-cyan-700">계정 유형</span>
+                        <span>
                           {user?.kakaoId ? '카카오 계정' : user?.type === 'kakao' ? '카카오 계정' : '일반 계정'}
                         </span>
                       </div>
@@ -208,14 +206,14 @@ export default function ProfilePage() {
                           <div className="w-6 h-6 bg-cyan-100 rounded flex items-center justify-center">
                             <div className="w-3 h-3 bg-cyan-600 rounded"></div>
                           </div>
-                          <h4 className="text-lg font-bold">DID 정보</h4>
+                          <h4 className="text-lg">DID 정보</h4>
                         </div>
                         <div className="space-y-4">
                           {user?.didAddress && (
                             <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                              <span className="font-medium text-sm block mb-2">DID 계정 주소</span>
+                              <span className="text-sm block mb-2">DID 계정 주소</span>
                               <div className="bg-white rounded-lg p-3 border border-gray-200">
-                                <span className="font-mono text-xs break-all">
+                                <span className="text-xs break-all">
                                   {user.didAddress}
                                 </span>
                               </div>
@@ -223,9 +221,9 @@ export default function ProfilePage() {
                           )}
                           {user?.walletAddress && (
                             <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                              <span className="font-medium text-sm block mb-2">지갑 주소</span>
+                              <span className="text-sm block mb-2">지갑 주소</span>
                               <div className="bg-white rounded-lg p-3 border border-gray-200">
-                                <span className="font-mono text-xs break-all">
+                                <span className="text-xs break-all">
                                   {user.walletAddress}
                                 </span>
                               </div>

@@ -5,7 +5,7 @@ export default function SealiumLoader({
   size = "md",
   className = ""
 }) {
-  // 크기별 스타일 정의
+
   const sizeClasses = {
     sm: {
       container: "w-32 h-16",
@@ -31,9 +31,9 @@ export default function SealiumLoader({
 
   return (
     <div className={`flex flex-col items-center justify-center gap-6 ${className}`}>
-      {/* 로딩 애니메이션 */}
+  
       <div className="relative">
-        {/* SVG 필터 */}
+  
         <svg className="absolute">
           <defs>
             <filter id="sealium-goo">
@@ -48,12 +48,12 @@ export default function SealiumLoader({
           </defs>
         </svg>
 
-        {/* 볼 애니메이션 */}
+       
         <div className={`${currentSize.container} relative`}>
-          {/* 이동하는 볼 */}
-          <div className={`absolute ${currentSize.ball} bg-cyan-400 rounded-full animate-move-ball shadow-cyan-400 shadow-lg`}></div>
+       
+          <div className={`absolute ${currentSize.ball} bg-cyan-400 rounded-full animate-move-ball shadow-cyan-200 shadow-lg`}></div>
           
-          {/* 고정 볼들 */}
+      
           <div className="flex items-center justify-between w-full h-full" style={{ filter: 'url(#sealium-goo)' }}>
             <div className={`${currentSize.ball} bg-cyan-300 rounded-full animate-scale-1`}></div>
             <div className={`${currentSize.ball} bg-cyan-300 rounded-full animate-scale-2`}></div>
@@ -62,8 +62,6 @@ export default function SealiumLoader({
           </div>
         </div>
       </div>
-
-      {/* 로딩 메시지 */}
       <div className={`${currentSize.text} animate-pulse`}>
         {message}
       </div>

@@ -17,7 +17,7 @@ export const useCertInfoStore = create((set, get) => ({
     }
   }),
 
-  // 현재 선택된 수료증이 있는지 확인
+
   hasCertInfo: () => {
     const { certInfo } = get();
     return Object.keys(certInfo.vc.credentialSubject).length > 0;

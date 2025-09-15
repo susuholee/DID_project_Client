@@ -9,11 +9,9 @@ export default function UserSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout} = useUserStore();
-  // console.log("뭐가 들어있지?",user?.type);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // hydration 완료 체크
   useEffect(() => {
     setIsHydrated(true);
   }, []);
@@ -51,7 +49,6 @@ export default function UserSidebar() {
   }, [isMobileMenuOpen]);
 
 const isActive = (href) => {
-  // 상세 페이지에서는 사이드바를 숨김
   if (pathname?.includes('/certificates/detail')) {
     return false;
   }
@@ -65,7 +62,6 @@ const isActive = (href) => {
 
 
  const handleLogout = async () => {
-  console.log("로그아웃 시작, 타입:", user?.type);
 
   if (user?.type === "kakao") {
     window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/logout`;
@@ -98,27 +94,25 @@ const isActive = (href) => {
   ];
 
   if (!isHydrated || !user) {
-    return null; // 하이드레이션 완료 전이거나 로그인하지 않은 경우 렌더링하지 않음
+    return null; 
   }
 
   return (
     <>
-      {/* 모바일 햄버거 메뉴 버튼 */}
-      {!pathname?.includes('/certificates/detail') && (
+      {!pathname?.includes('/certificates/detail') && !isMobileMenuOpen && (
         <button
           onClick={toggleMobileMenu}
-          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+          className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-white border border-gray-200 shadow-lg hover:shadow-xl hover:bg-gray-50 transition-all duration-300 transform hover:scale-105"
           aria-label="메뉴 열기"
         >
-          <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
-            <div className="w-5 h-0.5"></div>
-            <div className="w-5 h-0.5"></div>
-            <div className="w-5 h-0.5"></div>
+          <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1.5">
+            <div className="w-5 h-0.5 bg-gray-700 rounded-full"></div>
+            <div className="w-5 h-0.5 bg-gray-700 rounded-full"></div>
+            <div className="w-5 h-0.5 bg-gray-700 rounded-full"></div>
           </div>
         </button>
       )}
 
-      {/* 모바일 오버레이 */}
       {isMobileMenuOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black opacity-50 z-40"
@@ -127,44 +121,31 @@ const isActive = (href) => {
         />
       )}
 
-      {/* 사이드바 */}
       <aside
         className={`
           fixed
           ${pathname?.includes('/certificates/detail') ? '-translate-x-full' : isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           transition-transform duration-300 ease-in-out
-          w-80 lg:w-64 h-screen
+          w-64 lg:w-56 h-screen
           bg-white
           overflow-y-auto flex-shrink-0 
           top-0 left-0 z-40
           shadow-[8px_0_25px_-5px_rgba(0,0,0,0.1),4px_0_15px_-3px_rgba(0,0,0,0.05)]
         `}
       >
-        {/* 상단 로고 */}
-        <div className="flex items-center justify-between h-16 bg-white px-4">
+       
+        <div className="flex items-center h-16 bg-gradient-to-r from-cyan-50 to-white px-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <img src="/icons/sealium_logo.png" alt="Sealium" className="w-10 h-10" />
+            <img src="/icons/sealium_logo.png" alt="Sealium" className="w-12 h-12 flex-shrink-0 drop-shadow-sm" />
             <Link href="/">
-              <span className="text-2xl font-bold text-cyan-500 tracking-tight">
+              <span className="text-2xl font-bold text-cyan-600 tracking-tight">
                 Sealium
               </span>
             </Link>
           </div>
-          
-          {/* 모바일 닫기 버튼 */}
-          <button
-            onClick={toggleMobileMenu}
-            className="lg:hidden p-2 rounded-md hover:bg-gray-100"
-            aria-label="메뉴 닫기"
-          >
-            <div className="w-6 h-6 relative">
-              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 transform -translate-x-1/2 -translate-y-1/2 rotate-45"></div>
-              <div className="absolute top-1/2 left-1/2 w-5 h-0.5 transform -translate-x-1/2 -translate-y-1/2 -rotate-45"></div>
-            </div>
-          </button>
         </div>
 
-        {/* 메뉴 네비게이션 */}
+      
         <nav className="p-4 pb-20">
           {userMenus.map((section, sectionIndex) => (
             <div key={sectionIndex} className="mb-6">
@@ -197,7 +178,7 @@ const isActive = (href) => {
             </div>
           ))}
         </nav>
-                {/* 하단 로그아웃 버튼 */}
+           
          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white">
             <button
               onClick={handleLogout}

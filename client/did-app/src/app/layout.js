@@ -19,7 +19,6 @@ const { isInitialized, isLoggedIn, user } = useAuth();
 
 useEffect(() => {
   if (!isInitialized) {
-    console.log("앱 시작: 사용자 상태 확인 중...");
   }
 }, [isInitialized]);
   

@@ -9,18 +9,42 @@
 
 
 
-/* 기본 색상 설정 */
+
 :root {
-  --background: #F8FAFC;  /* 매우 밝은 회색빛 배경 */
-  --foreground: #1E293B;  /* 진한 슬레이트 블루 텍스트 */
+  --background: #F8FAFC;  
+  --foreground: #1E293B; 
   --button-bg: #06B6D4;
   --button-hover: #0891B2;
-  --button-text: #ffffff;
+  --button-text: #ffff;
 }
 
-/* 버튼 기본 스타일 */
+/* 드롭다운 텍스트 색상 스타일 */
+select {
+  font-family: 'Paperozi', sans-serif !important;
+  font-weight: 700 !important;
+  color: #1E293B !important;
+}
+
+select option {
+  font-family: 'Paperozi', sans-serif !important;
+  font-weight: 700 !important;
+  color: #1E293B !important;
+  background-color: white !important;
+}
+
+select option:hover {
+  background-color: #F0F9FF !important;
+  color: #06B6D4 !important;
+}
+
+select option:checked {
+  background-color: #06B6D4 !important;
+  color: white !important;
+}
+
+
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-base font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
   background-color: var(--button-bg);
   color: var(--button-text);
 }
@@ -29,7 +53,7 @@
   background-color: var(--button-hover);
 }
 
-/* 전역 스타일 */
+
 body {
   background: #e0f7fa;
   color: var(--foreground);
@@ -39,7 +63,7 @@ body {
   min-height: 100vh;
 }
 
-/* 모든 페이지 컨테이너에 동일한 배경 적용 */
+
 .page-container {
   background: #e0f7fa;
   min-height: 100vh;
@@ -66,7 +90,7 @@ body {
   animation: fadeUpScroll 0.8s ease-out forwards;
 }
 
-/* 커스텀 애니메이션 */
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -103,7 +127,7 @@ body {
   animation-delay: 1.0s;
 }
 
-/* Sealium 로더 애니메이션 */
+
 @keyframes moveBall {
   0% {
     transform: translateX(0);

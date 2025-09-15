@@ -8,14 +8,13 @@ import axios from 'axios';
 import Input from "@/components/UI/Input";
 import Button from "@/components/UI/Button";
 import Modal from "@/components/UI/Modal";
-import ProgressBar from "@/components/UI/ProgressBar";
 import LoadingSpinner from "@/components/UI/Spinner";
 import useUserStore from "@/Store/userStore";
 
 export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [userName, setUserName] = useState(""); // 실명
-  const [nickName, setNickName] = useState(""); // 닉네임
+  const [userName, setUserName] = useState(""); 
+  const [nickName, setNickName] = useState(""); 
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -28,7 +27,7 @@ export default function SignupPage() {
   const [modalMessage, setModalMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [userIdCheckStatus, setUserIdCheckStatus] = useState(null); // 'checking', 'available', 'duplicate', null
+  const [userIdCheckStatus, setUserIdCheckStatus] = useState(null);
   const [isCheckingUserId, setIsCheckingUserId] = useState(false);
   
   const {setUser} = useUserStore.getState();
@@ -38,7 +37,7 @@ export default function SignupPage() {
     mutationFn: ({ userData, imageFile }) => createUser(userData, imageFile),
     onSuccess: async (data) => {
       showErrorModal("회원가입이 완료되었습니다!");
-      router.push('/'); // 메인 페이지로 이동
+      router.push('/');
     },
     onError: (error) => {
       console.error('회원가입 에러:', error);
@@ -82,10 +81,8 @@ const createUser = async (userData, file) => {
       }
     );
 
-    console.log("회원가입 성공 응답:", response.data);
     return response.data;
   } catch (error) {
-    console.error("회원가입 API 에러:", error);
     if (error.response) {
       throw new Error(error.response.data?.message || `서버 오류 (${error.response.status})`);
     }
@@ -98,22 +95,17 @@ const checkUserIdDuplicate = async (userId) => {
     const response = await axios.get(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`,
     );
-    console.log("아이디 중복 확인 응답:", response.data);
+
     
-    // 서버 응답 구조: {state: 404, message: 'no user'} 또는 {state: 200, data: {...}}
+  
     if (response.data.state === 404) {
-      // state가 404면 사용자가 존재하지 않는다는 뜻 (사용 가능)
       return { isDuplicate: false, message: "사용 가능한 아이디입니다." };
     } else if (response.data.state === 200) {
-      // state가 200이면 사용자가 존재한다는 뜻 (중복)
       return { isDuplicate: true, message: "이미 사용 중인 아이디입니다." };
     } else {
-      // 예상치 못한 응답
       throw new Error("아이디 중복 확인 응답을 처리할 수 없습니다.");
     }
   } catch (error) {
-    console.error('아이디 중복 확인 오류:', error);
-    // 네트워크 오류 등
     throw new Error("아이디 중복 확인 중 오류가 발생했습니다.");
   }
 };
@@ -136,7 +128,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
     [address, addressDetail]
   );
 
-  // 닉네임과 아이디가 같은지 체크하는 함수 추가
+
   const isNickNameSameAsUserId = useMemo(() => {
     return nickName.trim().toLowerCase() === userId.trim().toLowerCase();
   }, [nickName, userId]);
@@ -146,26 +138,26 @@ const getInputStatus = (value, isValid, hasError = false) => {
     const nickNameRegex = /^[가-힣a-zA-Z0-9]{2,12}$/;
     const userIdRegex = /^[a-zA-Z0-9]+$/;
     
-    // 이름 유효성 검사 함수
+  
     const isValidUserName = (name) => {
       const trimmedName = name.trim();
       
-      // 기본 길이 체크
+    
       if (trimmedName.length < 2 || trimmedName.length > 20) return false;
       
-      // 앞뒤 공백 체크
+   
       if (name !== trimmedName) return false;
       
-      // 기본 정규식 체크 (한글, 영어, 공백만 허용)
+     
       if (!userNameRegex.test(trimmedName)) return false;
       
-      // 연속된 공백 방지
+      
       if (trimmedName.includes('  ')) return false;
       
-      // 공백으로만 구성 방지
+    
       if (trimmedName.replace(/\s/g, '').length === 0) return false;
       
-      // 숫자나 특수문자 방지
+    
       if (/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(trimmedName)) return false;
       
       return true;
@@ -178,7 +170,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
            nickNameRegex.test(nickName.trim()) &&
            !/(.)\1{2,}/.test(nickName.trim()) &&
            !/^\d+$/.test(nickName.trim()) &&
-           !isNickNameSameAsUserId && // 닉네임과 아이디가 같으면 안됨
+           !isNickNameSameAsUserId && 
            userId.trim().length >= 4 && 
            userId.trim().length <= 16 &&
            userId === userId.trim() &&
@@ -310,7 +302,6 @@ const getInputStatus = (value, isValid, hasError = false) => {
           return;
         }
         if (userIdCheckStatus !== 'available') {
-          console.log('현재 userIdCheckStatus:', userIdCheckStatus);
           showErrorModal("아이디 중복 확인을 해주세요.");
           return;
         }
@@ -412,14 +403,11 @@ const getInputStatus = (value, isValid, hasError = false) => {
 
     try {
       const result = await checkUserIdDuplicate(userId.trim());
-      console.log('중복체크 결과:', result);
       setUserIdCheckStatus(result.isDuplicate ? 'duplicate' : 'available');
-      console.log('userIdCheckStatus 업데이트:', result.isDuplicate ? 'duplicate' : 'available');
       
-      // 중복 여부에 관계없이 모달창으로 결과 표시
+    
       showErrorModal(result.message);
     } catch (error) {
-      console.error('아이디 중복 확인 오류:', error);
       setUserIdCheckStatus(null);
       showErrorModal(error.message);
     } finally {
@@ -578,13 +566,13 @@ const getInputStatus = (value, isValid, hasError = false) => {
 
       <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto">
         <div className="rounded-xl bg-white shadow-lg overflow-hidden">
-          {/* 헤더 */}
+       
           <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-4 sm:px-6 sm:py-5 text-white">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold mb-1">회원가입</h1>
+            <h1 className="text-lg sm:text-xl lg:text-2xl  mb-1">회원가입</h1>
             <p className="text-cyan-100 text-xs sm:text-sm">간단한 정보로 빠르게 가입하세요</p>
           </div>
 
-          {/* 탭 네비게이션 */}
+       
           <div className="bg-white border-b border-gray-200">
             <nav className="flex">
               {[
@@ -596,7 +584,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 <button
                   key={tab.id}
                   onClick={() => setCurrentStep(tab.id)}
-                  className={`flex-1 px-1 sm:px-2 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors ${
+                  className={`flex-1 px-1 sm:px-2 py-2 sm:py-3 text-xs sm:text-sm  transition-colors ${
                     currentStep === tab.id
                       ? 'bg-cyan-50 text-cyan-600 border-b-2 border-cyan-500'
                       : ' hover: hover:bg-gray-50'
@@ -611,16 +599,16 @@ const getInputStatus = (value, isValid, hasError = false) => {
           <div className="p-4 sm:p-6 lg:p-8">
         
             <form onSubmit={handleSubmit} className="min-h-[350px] sm:min-h-[300px]" encType="multipart/form-data">
-              {/* 1단계: 기본 정보 */}
+            
               {currentStep === 1 && (
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
-                    <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">기본 정보</h2>
+                    <h2 className="text-lg sm:text-xl mb-1 sm:mb-2">기본 정보</h2>
                     <p className="text-xs sm:text-sm">이름, 닉네임, 아이디를 입력해주세요</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium mb-2" htmlFor="userName">이름</label>
+                    <label className="block text-xs sm:text-sm  mb-2" htmlFor="userName">이름</label>
                     <Input
                       id="userName"
                       value={userName}
@@ -671,7 +659,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium mb-2" htmlFor="nickName">닉네임</label>
+                    <label className="block text-xs sm:text-sm  mb-2" htmlFor="nickName">닉네임</label>
                     <Input
                       id="nickName"
                       value={nickName}
@@ -711,14 +699,14 @@ const getInputStatus = (value, isValid, hasError = false) => {
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="userId">아이디</label>
+                    <label className="block text-xs sm:text-sm  mb-2" htmlFor="userId">아이디</label>
                     <div className="flex gap-2">
                       <Input
                         id="userId"
                         value={userId}
                         onChange={(e) => {
                           setUserId(e.target.value);
-                          setUserIdCheckStatus(null); // 아이디 변경 시 중복체크 상태 초기화
+                          setUserIdCheckStatus(null);
                         }}
                         placeholder="영문/숫자 4-16자"
                         className={`flex-1 h-10 sm:h-12 text-sm sm:text-base rounded-lg border-2 transition-colors ${getInputStatus(
@@ -732,7 +720,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                         type="button"
                         onClick={handleUserIdCheck}
                         disabled={isCheckingUserId || !userId.trim() || userId.trim().length < 4 || userId.trim().length > 16 || !/^[a-zA-Z0-9]+$/.test(userId.trim()) || /(.)\1{2,}/.test(userId.trim())}
-                        className="bg-cyan-500 text-white hover:bg-cyan-600 px-2 sm:px-3 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap text-xs sm:text-sm font-medium"
+                        className="bg-cyan-500 text-white hover:bg-cyan-600 px-2 sm:px-3 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap text-xs sm:text-sm"
                         aria-label="아이디 중복 확인"
                       >
                         {isCheckingUserId ? "확인중..." : "중복확인"}
@@ -772,16 +760,16 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 </div>
               )}
 
-              {/* 2단계: 보안 정보 */}
+           
               {currentStep === 2 && (
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
-                    <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">보안 정보</h2>
+                    <h2 className="text-lg sm:text-xl  mb-1 sm:mb-2">보안 정보</h2>
                     <p className="text-xs sm:text-sm ">안전한 비밀번호를 설정해주세요</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="password">비밀번호</label>
+                    <label className="block text-xs sm:text-sm   mb-2" htmlFor="password">비밀번호</label>
                     <div className="relative">
                       <Input
                         id="password"
@@ -812,7 +800,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="confirm-password">비밀번호 확인</label>
+                    <label className="block text-xs sm:text-sm  mb-2" htmlFor="confirm-password">비밀번호 확인</label>
                     <div className="relative">
                       <Input
                         id="confirm-password"
@@ -844,16 +832,16 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 </div>
               )}
 
-              {/* 3단계: 개인 정보 */}
+         
               {currentStep === 3 && (
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
-                    <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">개인 정보</h2>
+                    <h2 className="text-lg sm:text-xl  mb-1 sm:mb-2">개인 정보</h2>
                     <p className="text-xs sm:text-sm ">생년월일과 주소를 입력해주세요</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium  mb-2" htmlFor="birthDate">생년월일</label>
+                    <label className="block text-xs sm:text-sm   mb-2" htmlFor="birthDate">생년월일</label>
                     <Input
                       id="birthDate"
                       type="date"
@@ -869,11 +857,11 @@ const getInputStatus = (value, isValid, hasError = false) => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="block text-xs sm:text-sm font-medium ">주소</label>
+                    <label className="block text-xs sm:text-sm">주소</label>
                     <Button
                       type="button"
                       onClick={openPostcode}
-                      className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 h-10 sm:h-12 rounded-lg text-xs sm:text-sm w-full font-medium transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg"
+                      className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 h-10 sm:h-12 rounded-lg text-xs sm:text-sm w-full  transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg"
                       aria-label="주소 검색 열기"
                     >
                       주소 검색
@@ -896,12 +884,12 @@ const getInputStatus = (value, isValid, hasError = false) => {
                 </div>
               )}
 
-              {/* 4단계: 프로필 설정 */}
+           
               {currentStep === 4 && (
                 <div className="space-y-4 sm:space-y-5">
                   <div className="text-center mb-4 sm:mb-6">
-                    <h2 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">프로필 설정</h2>
-                    <p className="text-xs sm:text-sm ">프로필 사진을 설정하세요 <span className="text-red-500 font-bold">(필수)</span></p>
+                    <h2 className="text-lg sm:text-xl  mb-1 sm:mb-2">프로필 설정</h2>
+                    <p className="text-xs sm:text-sm ">프로필 사진을 설정하세요 <span className="text-red-500">(필수)</span></p>
                   </div>
 
                   <div className="text-center">
@@ -925,7 +913,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       onChange={handleProfileChange}
                       className="block w-full text-xs sm:text-sm                                  file:mr-4 file:py-2 file:px-4
                                  file:rounded-full file:border-0
-                                 file:text-xs sm:file:text-sm file:font-semibold
+                                 file:text-xs sm:file:text-sm 
                                  file:bg-gradient-to-r file:from-cyan-500 file:to-cyan-600 file:text-white
                                  hover:file:from-cyan-600 hover:file:to-cyan-700"
                       aria-label="프로필 이미지 업로드"
@@ -937,23 +925,23 @@ const getInputStatus = (value, isValid, hasError = false) => {
                   </div>
 
                   <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                    <h3 className="text-sm sm:text-base font-medium mb-2 sm:mb-3">입력하신 정보</h3>
+                    <h3 className="text-sm sm:text-base mb-2 sm:mb-3">입력하신 정보</h3>
                     <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm ">
-                      <p><span className="font-medium">이름:</span> {userName}</p>
-                      <p><span className="font-medium">닉네임:</span> {nickName}</p>
-                      <p><span className="font-medium">아이디:</span> {userId}</p>
-                      <p><span className="font-medium">생년월일:</span> {birthDate}</p>
-                      <p><span className="font-medium">주소:</span> {fullAddress}</p>
+                      <p><span>이름:</span> {userName}</p>
+                      <p><span>닉네임:</span> {nickName}</p>
+                      <p><span>아이디:</span> {userId}</p>
+                      <p><span>생년월일:</span> {birthDate}</p>
+                      <p><span>주소:</span> {fullAddress}</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 네비게이션 버튼 */}
+           
               <div className="flex justify-between items-center mt-6 sm:mt-8 pt-4 border-t border-gray-200 gap-3">
                 <Link 
                   href="/" 
-                  className="bg-gray-100  hover:bg-gray-200 px-3 sm:px-4 py-2 sm:py-3 rounded-lg inline-block text-center transition-colors text-xs sm:text-sm font-medium"
+                  className="bg-gray-100  hover:bg-gray-200 px-3 sm:px-4 py-2 sm:py-3 rounded-lg inline-block text-center transition-colors text-xs sm:text-sm"
                   aria-label="로그인 페이지로 이동"
                 >
                   로그인으로
@@ -968,7 +956,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                       (currentStep === 2 && !step2Valid) ||
                       (currentStep === 3 && !step3Valid)
                     }
-                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 px-4 sm:px-6 py-2 sm:py-3 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none text-xs sm:text-sm font-medium shadow-lg"
+                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 px-4 sm:px-6 py-2 sm:py-3 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none text-xs sm:text-sm  shadow-lg"
                     aria-label="다음 단계로"
                   >
                     다음
@@ -977,7 +965,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
                   <Button
                     type="submit"
                     disabled={registerMutation.isPending || !step4Valid}
-                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 px-4 sm:px-6 py-2 sm:py-3 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none text-xs sm:text-sm font-medium shadow-lg min-w-[80px] sm:min-w-[100px]"
+                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 px-4 sm:px-6 py-2 sm:py-3 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:transform-none text-xs sm:text-sm  shadow-lg min-w-[80px] sm:min-w-[100px]"
                     aria-label="회원가입 완료"
                   >
                     {registerMutation.isPending ? (
@@ -996,7 +984,7 @@ const getInputStatus = (value, isValid, hasError = false) => {
         </div>
       </div>
 
-      {/* 커스텀 모달 */}
+    
       <Modal 
         isOpen={showModal} 
         message={modalMessage} 

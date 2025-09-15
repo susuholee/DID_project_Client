@@ -7,6 +7,7 @@ import Input from "@/components/UI/Input";
 import Modal from "@/components/UI/Modal";
 import useUserStore from "@/Store/userStore";
 import axios from "axios";
+import api from "@/lib/axios";
 
 export default function LoginForm() {
   const [userId, setUserId] = useState("");
@@ -31,7 +32,7 @@ export default function LoginForm() {
     e.preventDefault();
     setLoading(true);
 
-    // 입력값 검증
+   
     if (!userId.trim()) {
       showErrorModal("아이디를 입력해주세요.");
       setLoading(false);
@@ -44,8 +45,7 @@ export default function LoginForm() {
     }
 
     try {
-      // 로그인 요청
-      const loginUser = await axios.post(
+      const loginUser = await api.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/login`,
         {
           userid: userId,
@@ -55,12 +55,10 @@ export default function LoginForm() {
       );
 
       const { state } = loginUser.data;
-      console.log("로그인 응답:", loginUser.data);
-      
-      // 로그인 성공 처리
+     
+     
       if (state === 200) {
         try {
-          // 로그인 성공 후 사용자 정보 조회
           const userResponse = await axios.get(
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${userId}`,
             { withCredentials: true }
@@ -72,27 +70,23 @@ export default function LoginForm() {
               : userResponse.data.data;
             
               setUser(userData, "normal");
-              console.log("사용자 정보 저장 완료:", userData);
-            
+           
               const currentState = useUserStore.getState();
-              console.log("현재 전역 상태:", currentState);
               router.push("/dashboard");
         
           } else {
             showErrorModal("사용자 정보를 불러오는데 실패했습니다.");
           }
         } catch (error) {
-          console.error("사용자 정보 조회 실패:", error);
           showErrorModal("사용자 정보 조회 중 오류가 발생했습니다.");
         }
       } else {
-        // 로그인 실패 - 프론트엔드 메시지 사용
+       
         showErrorModal("아이디 또는 비밀번호가 올바르지 않습니다.");
       }
     } catch (error) {
-      console.error("로그인 실패:", error);
       
-      // 에러 상황별 프론트엔드 메시지 처리
+    
       if (error.response) {
         if (error.response.status === 401) {
           showErrorModal("아이디 또는 비밀번호가 올바르지 않습니다.");
@@ -113,7 +107,7 @@ export default function LoginForm() {
     }
   };
     
-  // 카카오 로그인 버튼 클릭 시
+  
   const handleKakaoLogin = () => {
     window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/auth`;
   };
@@ -125,16 +119,16 @@ export default function LoginForm() {
           <div className="text-center mb-4 sm:mb-6">
             <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/30 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 mb-3 sm:mb-4">
               <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-cyan-700">Sealium</span>
+              <span className="text-xs text-cyan-700">Sealium</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold bg-gradient-to-r from-cyan-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">로그인</h1>
-            <p className="text-gray-600 text-xs px-2">디지털 자격증명 플랫폼에 오신 것을 환영합니다</p>
+            <h1 className="text-xl sm:text-2xl  bg-gradient-to-r from-cyan-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">로그인</h1>
+            <p className="text-gray-600 text-base px-2">디지털 수료증 발급 플랫폼에 오신 것을 환영합니다</p>
           </div>
           
-          {/* 일반 로그인 (아이디 / 비밀번호) */}
+       
           <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4" noValidate>
             <div className="space-y-2">
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+              <label className="block text-xs sm:text-sm  text-gray-700">
                 아이디
               </label>
               <div className="relative">
@@ -154,7 +148,7 @@ export default function LoginForm() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+              <label className="block text-xs sm:text-sm  text-gray-700">
                 비밀번호
               </label>
               <div className="relative">
@@ -176,7 +170,7 @@ export default function LoginForm() {
             <Button
               type="submit"
               disabled={loading}
-              className="mt-3 sm:mt-4 w-full h-[44px] rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 cursor-pointer text-white text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="mt-3 sm:mt-4 w-full h-[44px] text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:transform-none"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -189,24 +183,24 @@ export default function LoginForm() {
             </Button>
           </form>
 
-          {/* 구분선 */}
+     
           <div className="flex items-center my-4 sm:my-6">
             <div className="flex-grow border-b border-gray-300"></div>
-            <span className="px-3 text-xs text-gray-500 bg-white rounded-full">또는</span>
+            <span className="px-3 text-xs 0 bg-white rounded-full">또는</span>
             <div className="flex-grow border-b border-gray-300"></div>
           </div>
 
-          {/* 카카오 로그인 버튼 */}
+      
           <div className="space-y-3">
             <button 
               onClick={handleKakaoLogin} 
-              className="block w-full cursor-pointer"
+              className="block w-full cursor-pointer hover:scale-[1.02] transition-transform duration-200"
             >
-              <div className="relative overflow-hidden rounded-lg shadow-lg">
+              <div className="relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200">
                 <img
                   src="/images/kakao_login.png"
                   alt="카카오 로그인"
-                  className="w-full h-[44px] object-cover"
+                  className="w-full h-[44px] sm:h-[48px] object-cover object-center"
                 />
               </div>
             </button>
@@ -218,7 +212,7 @@ export default function LoginForm() {
             </p>
             <Link 
               href="/signup" 
-              className="inline-flex items-center gap-1.5 text-cyan-600 hover:text-cyan-700 font-semibold transition-colors duration-200 group text-sm"
+              className="inline-flex items-center gap-1.5 text-cyan-600 hover:text-cyan-700  transition-colors duration-200 group text-sm"
             >
               <span>회원가입</span>
               <div className="w-3 h-3 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full group-hover:scale-110 transition-transform duration-200"></div>

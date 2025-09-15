@@ -17,12 +17,12 @@ const DIDSignupPage = () => {
   const router = useRouter();
   const { setUser } = useUserStore();
   
-  // 모달 상태 관리
+
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState("success");
 
-  // 다음 주소 스크립트 로드
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
@@ -36,7 +36,7 @@ const DIDSignupPage = () => {
     };
   }, []);
 
-  // 카카오 사용자 정보 가져오기
+ 
   const { data: kakaoUserInfo, isLoading, error, isSuccess } = useQuery({
     queryKey: ['kakaoUserInfo'],
     queryFn: async () => {
@@ -50,13 +50,13 @@ const DIDSignupPage = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  // 이미 DID 계정이 있는지 확인
+
   useEffect(() => {
     const checkExistingUser = async () => {
       if (!kakaoUserInfo?.id) return;
       
       try {
-        console.log('기존 사용자 확인 중... userId:', kakaoUserInfo.id);
+       
         
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${kakaoUserInfo.id}`,
@@ -64,13 +64,11 @@ const DIDSignupPage = () => {
         );
         
         if (response.data.state === 200 && response.data.data && response.data.data.length > 0) {
-          // 이미 DID 계정이 존재함
-          const existingUser = response.data.data[0];
-          console.log('기존 DID 계정 발견:', existingUser);
           
-          // DID 정보가 있는지 확인
+          const existingUser = response.data.data[0];
+          
+       
           if (existingUser.walletAddress && existingUser.didAddress) {
-            // 완전한 사용자 정보를 Zustand에 저장
             const completeUserInfo = {
               id: existingUser.id,
               userName: existingUser.userName,
@@ -81,46 +79,39 @@ const DIDSignupPage = () => {
               address: existingUser.address,
               imgPath: existingUser.imgPath,
               
-              // DID 정보
+           
               walletAddress: existingUser.walletAddress,
               didAddress: existingUser.didAddress,
               
-              // 시스템 정보
+            
               createdAt: existingUser.createdAt,
               updatedAt: existingUser.updatedAt,
               
-              // 카카오 계정 타입
+           
               type: 'kakao',
               isLoggedIn: true
             };
             
-            console.log('기존 사용자 정보 저장 후 대시보드로 이동');
             setUser(completeUserInfo);
             router.push('/dashboard');
             return;
           } else {
-            console.log('사용자는 존재하지만 DID 정보가 없음 - DID 생성 필요');
           }
         }
       } catch (error) {
-        // 404 또는 사용자 없음 - 신규 사용자이므로 DID 생성 페이지 계속 표시
-        console.log('신규 사용자 - DID 생성 필요:', error.response?.status);
+      
       }
     };
     
-    // 카카오 사용자 정보 로딩이 완료된 후에만 확인
+ 
     if (isSuccess && kakaoUserInfo) {
       checkExistingUser();
     }
   }, [isSuccess, kakaoUserInfo, router, setUser]);
 
-  // DID 생성 요청 - 서버에서 모든 DID 처리 완료
+ 
   const didCreateMutation = useMutation({
     mutationFn: async (userData) => {
-      console.log('=== API 요청 시작 ===');
-      console.log('요청 URL:', `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/register`);
-      console.log('요청 데이터:', userData);
-      
       try {
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/kakao/register`,
@@ -128,24 +119,14 @@ const DIDSignupPage = () => {
           { withCredentials: true }
         );
         
-        console.log('=== API 응답 성공 ===');
-        console.log('응답 상태:', response.status);
-        console.log('응답 데이터:', response.data);
         
         return response.data;
       } catch (error) {
-        console.log('=== API 요청 실패 ===');
-        console.log('에러:', error);
-        console.log('응답 상태:', error.response?.status);
-        console.log('응답 데이터:', error.response?.data);
         throw error;
       }
     },
     onSuccess: (data) => {
-      console.log('=== DID 생성 완료 (onSuccess 호출됨) ===');
-      console.log('서버 응답:', data);
-      
-      // 서버에서 DID 생성이 완료되었으므로, 입력한 정보로 사용자 정보 구성
+    
       const userInfo = {
         userName: name.trim(),
         birthDate: birth,
@@ -157,27 +138,16 @@ const DIDSignupPage = () => {
         isLoggedIn: true
       };
       
-      console.log('=== 사용자 정보 저장 ===');
-      console.log('userInfo:', userInfo);
       
-      // Zustand에 저장
+      
       setUser(userInfo);
-      
-      console.log('=== 모달 표시 ===');
-      
-      // 성공 모달 표시
       setModalMessage("DID 계정이 성공적으로 생성되었습니다! 대시보드로 이동합니다.");
       setModalType("success");
       setShowModal(true);
     },
     onError: (error) => {
-      console.log('=== DID 생성 실패 (onError 호출됨) ===');
-      console.error('에러 전체:', error);
-      console.error('에러 메시지:', error.message);
-      console.error('응답 상태:', error.response?.status);
-      console.error('응답 데이터:', error.response?.data);
-      
-      // 에러 모달 표시
+   
+   
       setModalMessage(error.response?.data?.message || error.message || "가입 중 오류가 발생했습니다.");
       setModalType("error");
       setShowModal(true);
@@ -236,12 +206,7 @@ const DIDSignupPage = () => {
   const onSubmit = (e) => {
     e.preventDefault();
     
-    console.log('=== 폼 제출 시작 ===');
-    console.log('name:', name);
-    console.log('birth:', birth);
-    console.log('address:', address);
-    console.log('detail:', detail);
-    console.log('kakaoUserInfo:', kakaoUserInfo);
+   
     
     const userData = {
       userName: name.trim(),
@@ -251,8 +216,7 @@ const DIDSignupPage = () => {
       nickname: kakaoUserInfo?.properties?.nickname
     };
 
-    console.log('DID 생성 요청 데이터:', userData);
-    console.log('=== Mutation 실행 ===');
+  
     
     didCreateMutation.mutate(userData);
   };
@@ -260,7 +224,7 @@ const DIDSignupPage = () => {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4 py-6">
       <div className="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        {/* 헤더 */}
+      
         <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-4 text-white">
           <h1 className="text-lg sm:text-xl font-bold mb-1">DID 정보 입력</h1>
                   <p className="text-xs">DID 계정 생성을 위한 정보를 입력해주세요</p>
@@ -361,7 +325,7 @@ const DIDSignupPage = () => {
         </div>
       </div>
 
-      {/* 모달 */}
+    
       {showModal && (
         <Modal
           isOpen={showModal}

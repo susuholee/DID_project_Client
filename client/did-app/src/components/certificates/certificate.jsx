@@ -18,7 +18,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
   
   const date = Number(Date.now().toString().slice(-6));
 
-  // TanStack Query로 수료증 데이터 가져오기
+ 
   const { 
     data: certificateData, 
     isLoading: loading, 
@@ -40,18 +40,15 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
         throw new Error('사용자 ID를 찾을 수 없습니다.');
       }
 
-      // 일반 수료증과 폐기된 수료증을 병렬로 가져오기
+   
       const [activeResponse, revokedResponse] = await Promise.allSettled([
-        // 일반 수료증
         api.get(`/user/vc/${userId}`),
-        // 폐기된 수료증
         api.get(`/admin/vcrequestlogs`)
       ]);
 
       let foundCertificate = null;
       let certificateType = 'active';
 
-      // 일반 수료증에서 찾기
       if (activeResponse.status === 'fulfilled') {
         const response = activeResponse.value;
         if (Array.isArray(response.data)) {
@@ -67,7 +64,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
         }
       }
 
-      // 폐기된 수료증에서 찾기 (일반 수료증에서 못 찾은 경우)
+    
       if (!foundCertificate && revokedResponse.status === 'fulfilled') {
         const response = revokedResponse.value;
         if (response.data?.data && Array.isArray(response.data.data)) {
@@ -93,15 +90,11 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
         throw new Error('해당 수료증을 찾을 수 없습니다.');
       }
 
-      // 데이터 정규화
+    
       if (certificateType === 'active') {
-        // 일반 수료증 처리
+   
         const credentialSubject = foundCertificate.message?.payload?.vc?.credentialSubject || 
-                               foundCertificate.message?.verifiableCredential?.credentialSubject;
-        
-        // 디버깅을 위한 로그
-        console.log('Certificate 컴포넌트 - 일반 수료증 원본 데이터:', foundCertificate);
-        console.log('Certificate 컴포넌트 - 일반 수료증 credentialSubject:', credentialSubject);
+                                  foundCertificate.message?.verifiableCredential?.credentialSubject;
         
         const normalizedData = {
           vc: {
@@ -110,10 +103,10 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
               certificateName: credentialSubject.certificateName,
               issuer: credentialSubject.issuer,
               issueDate: credentialSubject.issueDate || 
-                       foundCertificate.message?.payload?.issuseDate || 
-                       foundCertificate.message?.payload?.issuanceDate ||
-                       foundCertificate.message?.verifiableCredential?.issuanceDate ||
-                       new Date().toISOString().split('T')[0], // 기본값으로 현재 날짜
+              foundCertificate.message?.payload?.issuseDate || 
+              foundCertificate.message?.payload?.issuanceDate ||
+              foundCertificate.message?.verifiableCredential?.issuanceDate ||
+              new Date().toISOString().split('T')[0],
               status: credentialSubject.status === 'approved' ? '유효' : '폐기',
               ImagePath: credentialSubject.ImagePath,
               userName: credentialSubject.userName,
@@ -128,11 +121,10 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
           }
         };
         
-        console.log('Certificate 컴포넌트 - 일반 수료증 정규화된 데이터:', normalizedData);
+
         return normalizedData;
       } else {
-        // 폐기된 수료증 처리
-        console.log('Certificate 컴포넌트 - 폐기된 수료증 원본 데이터:', foundCertificate);
+      리
         
         const normalizedData = {
           vc: {
@@ -155,23 +147,21 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
           }
         };
         
-        console.log('Certificate 컴포넌트 - 폐기된 수료증 정규화된 데이터:', normalizedData);
         return normalizedData;
       }
     },
-    enabled: !!certificateId && !!user && isLoggedIn && !propCertInfo, // propCertInfo가 없을 때만 API 호출
-    staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
-    cacheTime: 10 * 60 * 1000, // 10분간 메모리에 유지
+    enabled: !!certificateId && !!user && isLoggedIn && !propCertInfo, 
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000, 
   });
 
-  // 데이터가 로드되면 certInfo에 저장
   useEffect(() => {
     if (certificateData) {
       setCertInfo(certificateData);
     }
   }, [certificateData, setCertInfo]);
 
-  // 에러 처리
+
   useEffect(() => {
     if (queryError) {
       console.error('수료증 로드 실패:', queryError);
@@ -181,21 +171,15 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
     }
   }, [queryError, onError]);
 
-  // 에러 상태 계산
+ 
   const error = queryError?.message || null;
 
-  // credentialSubject에서 데이터 추출 (propCertInfo 우선, certificateData, certInfo 순)
+ 
   const credentialSubject = propCertInfo?.vc?.credentialSubject || 
                            certificateData?.vc?.credentialSubject || 
                            certInfo?.vc?.credentialSubject || {};
   
-  // 디버깅을 위한 로그
-  console.log('Certificate 렌더링 - propCertInfo:', propCertInfo);
-  console.log('Certificate 렌더링 - certificateData:', certificateData);
-  console.log('Certificate 렌더링 - certInfo:', certInfo);
-  console.log('Certificate 렌더링 - credentialSubject:', credentialSubject);
-  
-  // 발급일은 다른 위치에서 가져오기
+
   const rawIssueDate = credentialSubject.issueDate || 
     propCertInfo?.payload?.issuseDate || 
     propCertInfo?.payload?.issuanceDate ||
@@ -207,13 +191,13 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
     certInfo?.payload?.issuanceDate ||
     certInfo?.verifiableCredential?.issuanceDate;
 
-  // 날짜 포맷팅 함수
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString; // 유효하지 않은 날짜면 원본 반환
+      if (isNaN(date.getTime())) return dateString; 
       
       return date.toLocaleDateString('ko-KR', {
         year: 'numeric',
@@ -228,7 +212,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
 
   const issueDate = formatDate(rawIssueDate);
 
-  // 표시할 필드들 정의 (순서대로)
+ 
   const certificateFields = [
     {
       key: 'userId',
@@ -257,7 +241,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
   ];
 
 
-  // 로딩 상태
+ 
   if (loading) {
     return (
       <div className="font-noto-serif min-h-screen p-4 px-6 sm:p-8 sm:px-12">
@@ -271,7 +255,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
     );
   }
 
-  // 에러 상태
+
   if (error) {
     return (
       <div className="font-noto-serif min-h-screen p-4 px-6 sm:p-8 sm:px-12">
@@ -296,7 +280,6 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
     <div className="font-noto-serif min-h-screen p-4 px-6 sm:p-8 sm:px-12">
       <div className="max-w-4xl mx-auto mt-20 sm:mt-15">
         <div ref={certificateRef} className="bg-white rounded-lg p-4 px-6 sm:p-9 sm:px-16 backdrop-blur-sm shadow-blue-500/20 min-h-[480px] sm:min-h-[550px] overflow-hidden">
-          {/* Certificate Header */}
           <h1 className="text-2xl sm:text-4xl font-semibold mb-6 sm:mb-8 w-fit mx-auto">수 료 증</h1>
 
           <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0">
