@@ -7,18 +7,13 @@ import axios from 'axios';
 import useUserStore from '@/Store/userStore';
 import api from '@/lib/axios';
 
-
 const processCertificateData = (item, index, user, type = 'active') => {
-
-  
- 
   const credentialSubject = item.message?.payload?.vc?.credentialSubject || 
                         item.message?.verifiableCredential?.credentialSubject ||
                         item.verifiableCredential?.credentialSubject ||
                         item.credentialSubject ||
                         item.vc?.credentialSubject ||
                         item;
-  
   
   let certificateName = '제목 없음';
   let issuer = '경일IT게임아카데미';
@@ -27,7 +22,6 @@ const processCertificateData = (item, index, user, type = 'active') => {
   let imagePath = null;
   let status = type === 'revoked' ? '폐기' : '유효';
   
-
   if (credentialSubject?.certificateName) {
     certificateName = credentialSubject.certificateName;
   } else if (item.certificateName) {
@@ -38,7 +32,6 @@ const processCertificateData = (item, index, user, type = 'active') => {
     certificateName = credentialSubject.title;
   }
   
-
   if (credentialSubject?.issuer) {
     issuer = credentialSubject.issuer;
   } else if (item.issuer) {
@@ -47,7 +40,6 @@ const processCertificateData = (item, index, user, type = 'active') => {
     issuer = credentialSubject.issuerName;
   }
   
- 
   if (credentialSubject?.userName) {
     userName = credentialSubject.userName;
   } else if (credentialSubject?.name && credentialSubject.name !== certificateName) {
@@ -56,7 +48,6 @@ const processCertificateData = (item, index, user, type = 'active') => {
     userName = item.userName;
   }
   
-
   if (credentialSubject?.issueDate) {
     issueDate = credentialSubject.issueDate;
   } else if (item.issueDate) {
@@ -67,7 +58,6 @@ const processCertificateData = (item, index, user, type = 'active') => {
     issueDate = item.createdAt;
   }
   
-
   if (credentialSubject?.ImagePath) {
     imagePath = credentialSubject.ImagePath;
   } else if (credentialSubject?.imagePath) {
@@ -76,12 +66,10 @@ const processCertificateData = (item, index, user, type = 'active') => {
     imagePath = item.imagePath || item.ImagePath;
   }
   
-
   const requestType = credentialSubject?.requestType || item.requestType || item.request;
   const statusValue = credentialSubject?.status || item.status;
   
 
-  
   if (type === 'revoked') {
     status = '폐기';
   } else if (requestType === 'revoke' || requestType === 'cancel') {
@@ -90,13 +78,13 @@ const processCertificateData = (item, index, user, type = 'active') => {
     status = '폐기';
   } else if (statusValue === 'approved' || statusValue === 'active') {
     status = '유효';
+  } else {
+    status = type === 'revoked' ? '폐기' : '유효';
   }
   
   if (certificateName === '제목 없음' && issuer === '발급기관 없음' && !imagePath) {
     return null;
   }
-  
-
 
   return {
     id: credentialSubject?.id || item.id || `${type}-cert-${index}`,
@@ -117,7 +105,8 @@ const processCertificateData = (item, index, user, type = 'active') => {
     originalStatus: statusValue,
     rawData: item,
     vc: { credentialSubject: credentialSubject },
-    jwt: item.message?.jwt || item.message?.payload?.jwt
+    jwt: item.message?.jwt || item.message?.payload?.jwt,
+    dataSource: type
   };
 };
 
@@ -125,7 +114,6 @@ export default function MyCertificatesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, isLoggedIn } = useUserStore();
-
 
   const { 
     data: allCerts = [], 
@@ -139,9 +127,7 @@ export default function MyCertificatesPage() {
         throw new Error('사용자 정보가 없습니다.');
       }
       
-      
       const [activeResponse, revokedResponse] = await Promise.allSettled([
-   
         api.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/vc/${user.userId}`,
           { withCredentials: true }
@@ -155,8 +141,6 @@ export default function MyCertificatesPage() {
       let activeCerts = [];
       if (activeResponse.status === 'fulfilled') {
         const response = activeResponse.value;
-    
-        
         if (Array.isArray(response.data) && response.data.length > 0) {
           activeCerts = response.data.map((item, index) => {
             return processCertificateData(item, index, user, 'active');
@@ -164,12 +148,9 @@ export default function MyCertificatesPage() {
         }
       }
 
-   
       let revokedCerts = [];
       if (revokedResponse.status === 'fulfilled') {
         const response = revokedResponse.value;
-   
-        
         if (response.data?.data && Array.isArray(response.data.data)) {
           const userRevokedCerts = response.data.data.filter(
             item => item.userId === user.userId && 
@@ -183,9 +164,17 @@ export default function MyCertificatesPage() {
         }
       }
 
- 
-      const allCertsData = [...activeCerts, ...revokedCerts];
+   
+      const revokedCertIds = new Set(revokedCerts.map(cert => cert.id));
+      const revokedCertNames = new Set(revokedCerts.map(cert => cert.certificateName));
       
+    
+      const filteredActiveCerts = activeCerts.filter(cert => 
+        !revokedCertIds.has(cert.id) && 
+        !revokedCertNames.has(cert.certificateName)
+      );
+
+      const allCertsData = [...filteredActiveCerts, ...revokedCerts];
       
       return allCertsData;
     },
@@ -202,13 +191,12 @@ export default function MyCertificatesPage() {
     },
     onError: (error) => {
       if (error?.response?.status === 401) {
+       
       }
     },
-  
     refetchInterval: 3 * 60 * 1000,
     refetchIntervalInBackground: true 
   });
-
 
   useEffect(() => {
     if (user?.userId) {
@@ -222,38 +210,38 @@ export default function MyCertificatesPage() {
     }
   }, [user?.userId, queryClient]);
 
- 
-
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('date_desc');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
- 
-  const filtered = useMemo(() => {
+  
+  const { filtered, statusCounts } = useMemo(() => {
     const text = q.trim().toLowerCase();
+    
+
+    const statusCounts = {
+      all: allCerts.length,
+      유효: allCerts.filter(c => c.status === '유효').length,
+      폐기: allCerts.filter(c => c.status === '폐기').length
+    };
     
     let arr = allCerts.filter((c) => {
       if (!c.certificateName || c.certificateName === '제목 없음') {
         return false;
       }
       
-    
       const matchText = !text || 
         (c.certificateName || '').toLowerCase().includes(text) || 
         (c.issuer || '').toLowerCase().includes(text);
       
-     
-      const certStatus = c.status || '유효';
-      const matchStatus = status === 'all' ? true : certStatus === status;
-      
-
+   
+      const matchStatus = status === 'all' ? true : c.status === status;
       
       return matchText && matchStatus;
     });
 
-    
     arr = [...arr].sort((a, b) => {
       const aDate = a.issueDate || a.requestDate || a.createdAt || '1970-01-01';
       const bDate = b.issueDate || b.requestDate || b.createdAt || '1970-01-01';
@@ -268,9 +256,9 @@ export default function MyCertificatesPage() {
       if (sort === 'issuer')    return aIssuer.localeCompare(bIssuer, 'ko');
       return 0;
     });
-    return arr;
+    
+    return { filtered: arr, statusCounts };
   }, [allCerts, q, sort, status]);
-
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -278,7 +266,6 @@ export default function MyCertificatesPage() {
     const start = (page - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
-
 
   useEffect(() => setPage(1), [q, sort, status]);
 
@@ -288,11 +275,9 @@ export default function MyCertificatesPage() {
     return 'bg-gray-100 text-gray-600';
   };
 
- 
   const handleCertificateClick = (cert) => {
     router.push(`/certificates/detail?id=${cert.id}`);
   };
-
 
   const handleManualRefresh = async () => {
     await queryClient.invalidateQueries({
@@ -300,11 +285,10 @@ export default function MyCertificatesPage() {
     });
   };
 
-
   const hasCache = queryClient.getQueryData(['certificates', user?.userId]);
   if (loading && !hasCache) {
     return (
-      <main className="min-h-screen  lg:ml-64">
+      <main className="min-h-screen lg:ml-64">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -317,10 +301,9 @@ export default function MyCertificatesPage() {
     );
   }
 
-
   if (error && error?.response?.status === 401) {
     return (
-      <main className="min-h-screen  lg:ml-64">
+      <main className="min-h-screen lg:ml-64">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center">
@@ -340,10 +323,9 @@ export default function MyCertificatesPage() {
     );
   }
 
-
   if (error && error?.response?.status !== 401) {
     return (
-      <main className="min-h-screen  lg:ml-64">
+      <main className="min-h-screen lg:ml-64">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
@@ -372,7 +354,6 @@ export default function MyCertificatesPage() {
             <p className="mt-1">총 {total}개</p>
           </div>
 
-       
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleManualRefresh}
@@ -385,7 +366,6 @@ export default function MyCertificatesPage() {
               새로고침
             </button>
             
-          
             <div className="flex-1 min-w-[240px]">
               <input
                 value={q}
@@ -395,7 +375,6 @@ export default function MyCertificatesPage() {
               />
             </div>
             
-         
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
@@ -409,7 +388,7 @@ export default function MyCertificatesPage() {
           </div>
         </div>
 
-      
+    
         <div className="mb-5 flex flex-wrap gap-2">
           {[
             { key: 'all', label: '전체' },
@@ -417,13 +396,7 @@ export default function MyCertificatesPage() {
             { key: '폐기', label: '폐기' },
           ].map((opt) => {
             const active = status === opt.key;
-            
-            const count = opt.key === 'all' 
-              ? allCerts.length 
-              : allCerts.filter(c => {
-                const certStatus = c.status || '유효';
-                return certStatus === opt.key;
-              }).length;
+            const count = statusCounts[opt.key] || 0;
             
             return (
               <button
@@ -441,7 +414,6 @@ export default function MyCertificatesPage() {
           })}
         </div>
 
-     
         {(q || status !== 'all') && (
           <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
             <span>검색 조건:</span>
@@ -467,7 +439,6 @@ export default function MyCertificatesPage() {
           </div>
         )}
 
-     
         {pageData.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
@@ -486,7 +457,6 @@ export default function MyCertificatesPage() {
                 className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group"
                 onClick={() => handleCertificateClick(c)}
               >
-               
                 <div className="relative h-48 bg-gradient-to-br from-cyan-50 to-blue-50 flex items-center justify-center overflow-hidden">
                   {c.imagePath ? (
                     <img 
@@ -514,26 +484,22 @@ export default function MyCertificatesPage() {
                     </div>
                   )}
                   
-          
                   <div className="absolute top-3 right-3">
-                    <span className={`px-2 py-1 rounded-full text-xs  ${badgeOf(c.status)}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs ${badgeOf(c.status)}`}>
                       {c.status}
                     </span>
                   </div>
                 </div>
 
-       
                 <div className="p-6">
                   <h3 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-cyan-600 transition-colors">
                     {c.certificateName}
                   </h3>
                   
-              
                   <p className="text-sm mb-3">
                     {c.issuer}
                   </p>
                   
-                
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
                       <span className="text-xs">
@@ -546,7 +512,6 @@ export default function MyCertificatesPage() {
                     </div>
                   </div>
                   
-                
                   <div className="flex items-center justify-between text-sm mb-4">
                     <span>발급일</span>
                     <span className="">
@@ -559,13 +524,12 @@ export default function MyCertificatesPage() {
           </div>
         )}
 
-       
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 mt-8">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm  hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
             >
               이전
             </button>
@@ -589,7 +553,7 @@ export default function MyCertificatesPage() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm  hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+              className="px-4 h-10 rounded-xl border border-gray-200 bg-white text-sm hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
             >
               다음
             </button>
