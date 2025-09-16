@@ -31,6 +31,20 @@ export default function ProfilePage() {
   const [nameError, setNameError] = useState("");
 
 
+  // 변경사항이 있는지 확인하는 함수
+  const hasChanges = () => {
+    if (!user) return false;
+    
+    const trimmedNickName = localNickName.trim();
+    const fullAddress = address ? `${address} ${addressDetail.trim()}`.trim() : '';
+    
+    const isNickNameChanged = trimmedNickName !== (user.nickName || "");
+    const isAddressChanged = fullAddress !== (user.address || "");
+    const hasImageFile = !!profileFile;
+    
+    return isNickNameChanged || isAddressChanged || hasImageFile;
+  };
+
   const getUserName = (userObj) => {
     if (!userObj) return "";
     
@@ -169,22 +183,36 @@ const handleSave = async () => {
   }
   setNameError("");
 
+  // 변경사항 확인
+  const trimmedNickName = localNickName.trim();
+  const fullAddress = address ? `${address} ${addressDetail.trim()}`.trim() : '';
+  
+  const isNickNameChanged = trimmedNickName !== (user.nickName || "");
+  const isAddressChanged = fullAddress !== (user.address || "");
+  const hasImageFile = !!profileFile;
+
+  // 아무것도 변경되지 않았다면 요청하지 않음
+  if (!isNickNameChanged && !isAddressChanged && !hasImageFile) {
+    openModal("변경된 내용이 없습니다.");
+    return;
+  }
+
   try {
     setIsLoading(true);
     
-    const trimmedNickName = localNickName.trim();
-    const fullAddress = address ? `${address} ${addressDetail.trim()}`.trim() : '';
-    
     const promises = [];
     
-    if (profileFile) {
+    // 이미지 파일이 새로 업로드된 경우에만 multipart/form-data 요청
+    if (hasImageFile) {
       const formData = new FormData();
       
-      if (trimmedNickName) {
+      // 닉네임이 변경된 경우에만 추가
+      if (isNickNameChanged && trimmedNickName) {
         formData.append('nickName', trimmedNickName);
       }
       
-      if (fullAddress) {
+      // 주소가 변경된 경우에만 추가
+      if (isAddressChanged && fullAddress) {
         formData.append('address', fullAddress);
       }
       
@@ -203,23 +231,18 @@ const handleSave = async () => {
       promises.push(userUpdatePromise);
       
     } else {
+      // 이미지 파일 변경 없고, 닉네임이나 주소만 변경된 경우
       const updateData = {};
       
-      if (trimmedNickName) {
+      if (isNickNameChanged && trimmedNickName) {
         updateData.nickName = trimmedNickName;
       }
       
-      if (fullAddress) {
+      if (isAddressChanged && fullAddress) {
         updateData.address = fullAddress;
       }
       
-   
-      const currentImgPath = user.imgPath || user.profile;
-      if (currentImgPath && currentImgPath.trim()) {
-        updateData.imgPath = currentImgPath.trim();
-      }
-      
-    
+      // 실제로 변경된 데이터가 있는지 재확인
       if (Object.keys(updateData).length === 0) {
         openModal("변경된 내용이 없습니다.");
         setIsLoading(false);
@@ -262,13 +285,11 @@ const handleSave = async () => {
     let errorMessage = "프로필 수정 중 오류가 발생했습니다.";
     
     if (error.response) {
-  
       const status = error.response.status;
       const data = error.response.data;
       
-     
       if (status === 400) {
-        errorMessage = data?.message || "잘못된 요청입니다. 입력 정보를 확인해주세요.";
+        errorMessage = "잘못된 요청입니다. 입력 정보를 확인해주세요.";
       } else if (status === 401) {
         errorMessage = "인증이 필요합니다. 다시 로그인해주세요.";
       } else if (status === 403) {
@@ -276,18 +297,21 @@ const handleSave = async () => {
       } else if (status === 404) {
         errorMessage = "사용자를 찾을 수 없습니다.";
       } else if (status === 413) {
-        errorMessage = "파일 크기가 너무 큽니다.";
+        errorMessage = "파일 크기가 너무 큽니다. 2MB 이하로 업로드해주세요.";
       } else if (status === 415) {
-        errorMessage = "지원하지 않는 파일 형식입니다.";
-      } else if (data?.message) {
-        errorMessage = data.message;
+        errorMessage = "지원하지 않는 파일 형식입니다. JPG, PNG, WEBP 형식을 사용해주세요.";
+      } else if (status >= 500) {
+        errorMessage = "서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      } else {
+        errorMessage = "프로필 수정 중 오류가 발생했습니다. 다시 시도해주세요.";
       }
     } else if (error.request) {
-      errorMessage = "서버에 연결할 수 없습니다. 네트워크를 확인해주세요.";
+      errorMessage = "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
     } else {
-      errorMessage = "요청 처리 중 오류가 발생했습니다.";
+      errorMessage = "요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
     }
     
+    console.error('Profile update error:', error);
     openModal(errorMessage);
   } finally {
     setIsLoading(false);
@@ -336,12 +360,9 @@ const handleWithdraw = async () => {
   } catch (error) {
     let errorMessage = "탈퇴 처리 중 오류가 발생했습니다.";
     
-    if (error.userEdit) {
-      const status = error.userEdit.status;
+    if (error.response) {
+      const status = error.response.status;
       
-    
-    
-   
       if (status === 404) {
         errorMessage = "사용자를 찾을 수 없습니다.";
       } else if (status === 401) {
@@ -349,14 +370,17 @@ const handleWithdraw = async () => {
       } else if (status === 403) {
         errorMessage = "권한이 없습니다.";
       } else if (status >= 500) {
-        errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        errorMessage = "서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      } else {
+        errorMessage = "탈퇴 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
       }
     } else if (error.request) {
-      errorMessage = "서버에 연결할 수 없습니다. 네트워크를 확인해주세요.";
+      errorMessage = "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
     } else {
-      errorMessage = "요청 처리 중 오류가 발생했습니다.";
+      errorMessage = "요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
     }
     
+    console.error('Withdraw error:', error);
     openModal(errorMessage);
     
   } finally {
@@ -513,8 +537,8 @@ const handleWithdraw = async () => {
             <div className="mt-8 space-y-3">
               <button
                 onClick={handleSave}
-                disabled={isLoading || !!nameError}
-                className="w-full bg-cyan-500 disabled:from-gray-300 disabled:to-gray-400 text-white py-4 cursor-pointer rounded-xl transition-all duration-200 transform  disabled:hover:scale-100 shadow-lg disabled:shadow-none"
+                disabled={isLoading || !!nameError || !hasChanges()}
+                className="w-full bg-cyan-500 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-4 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100 shadow-lg disabled:shadow-none"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">

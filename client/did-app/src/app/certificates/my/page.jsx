@@ -21,7 +21,7 @@ const processCertificateData = (item, index, user, type = 'active') => {
   
   
   let certificateName = '제목 없음';
-  let issuer = '발급기관 없음';
+  let issuer = '경일IT게임아카데미';
   let userName = user?.userName || '사용자';
   let issueDate = null;
   let imagePath = null;
@@ -467,7 +467,7 @@ export default function MyCertificatesPage() {
           </div>
         )}
 
-        {/* 목록(카드 형태) */}
+     
         {pageData.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
@@ -486,7 +486,7 @@ export default function MyCertificatesPage() {
                 className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group"
                 onClick={() => handleCertificateClick(c)}
               >
-                {/* 썸네일 이미지 */}
+               
                 <div className="relative h-48 bg-gradient-to-br from-cyan-50 to-blue-50 flex items-center justify-center overflow-hidden">
                   {c.imagePath ? (
                     <img 
@@ -533,7 +533,7 @@ export default function MyCertificatesPage() {
                     {c.issuer}
                   </p>
                   
-                  {/* 수료자 정보 */}
+                
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
                       <span className="text-xs">
@@ -546,7 +546,7 @@ export default function MyCertificatesPage() {
                     </div>
                   </div>
                   
-                  {/* 발급일 */}
+                
                   <div className="flex items-center justify-between text-sm mb-4">
                     <span>발급일</span>
                     <span className="">
@@ -559,7 +559,7 @@ export default function MyCertificatesPage() {
           </div>
         )}
 
-        {/* 페이지네이션 */}
+       
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 mt-8">
             <button

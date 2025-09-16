@@ -161,7 +161,7 @@ function CertificateDetailContent() {
           id: foundCertificate.id,
           title: foundCertificate.certificateName,
           certificateName: foundCertificate.certificateName,
-          issuer: foundCertificate.issuer || '발급기관 정보 없음',
+          issuer: foundCertificate.issuer || '경일IT게임아카데미',
           issueDate: foundCertificate.createdAt,
           status: '폐기',
           imageUrl: foundCertificate.ImagePath,

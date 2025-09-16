@@ -131,7 +131,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
             credentialSubject: {
               id: foundCertificate.id,
               certificateName: foundCertificate.certificateName,
-              issuer: foundCertificate.issuer || '발급기관 정보 없음',
+              issuer: foundCertificate.issuer || '경일IT게임아카데미',
               issueDate: foundCertificate.createdAt,
               status: '폐기',
               ImagePath: foundCertificate.ImagePath,
@@ -218,7 +218,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
       key: 'userId',
       label: '사용자',
       value: credentialSubject.userId,
-      className: 'font-mono break-all'
+      className: ''
     },
     {
       key: 'certificateName',
@@ -230,7 +230,7 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
       key: 'issuerId',
       label: '발급자',
       value: credentialSubject.issuerId,
-      className: 'font-mono break-all'
+      className: ''
     },
     {
       key: 'issueDate',
@@ -309,8 +309,8 @@ const Certificate = ({ certificateId, certInfo: propCertInfo, onError }) => {
               <div className="gap-2 border-b-1 border-gray-300 pb-3 sm:pb-4 space-y-2">
                 {certificateFields.map((field, i) => (
                   <div key={field.key || i}>
-                    <label className="text-sm sm:text-md font-bold">{field.label}</label>
-                    <p className={field.className}>{field.value || '발급자 없음'}</p>
+                    <label className="text-sm sm:text-md">{field.label}</label>
+                    <p className={field.className}>{field.value || '관리자'}</p>
                   </div>
                 ))}
               </div>
