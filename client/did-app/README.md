@@ -1,27 +1,27 @@
-# Sealium
+# Sealium  
 
-<img src="../did-app/public//icons/sealium_logo.png" width="120px" style="background-color: white;"/>
+<img src="../did-app/public//icons/sealium_logo.png" width="120px" style="background-color: white;"/>  
 
 ---
 
 > **DID(Decentralized Identifier)** 기반으로 안전하고 투명한 **VC(Verifiable Credential)** 발급 및 검증을 지원하는 웹 플랫폼  
 
 ## 배포 주소  
-**[https://sealium.io](https://sealium.io)**
+🔗 [https://sealiumback.store](https://sealiumback.store)  
 
 ---
 
 ## 목차
 - [프로젝트 소개](#프로젝트-소개)
 - [화면 구성](#화면-구성)
-- [메인 페이지](#메인-페이지)
-- [주요 기능 (Frontend)](#️주요-기능-frontend)
-- [담당 기능](#️담당-기능)
-- [개발 기간](#️개발-기간)
-- [팀원소개](#️팀원소개)
+- [주요 기능 (Frontend)](#주요-기능-frontend)
+- [담당 기능](#담당-기능)
+- [개발 기간](#개발-기간)
+- [팀원소개](#팀원소개)
 - [기술 스택](#기술-스택)
 - [협업 도구](#협업-도구)
 - [이슈 상황](#이슈-상황)
+- [해결 방안](#해결-방안)
 - [개선 방향](#개선-방향)
 - [향후 확장 방향](#향후-확장-방향)
 - [느낀 점](#느낀-점)
@@ -33,29 +33,66 @@
 
 ---
 
-## 화면 구성
+## 화면 구성  
 
-### 메인 페이지
+### 계정 및 인증  
+- **일반 계정 회원가입 페이지**  
+  ![회원가입](.)  
 
-#### DID 지갑 등록  
-![DID 지갑 등록](./images/demo-wallet.gif)
+- **일반 계정 로그인 페이지**  
+  ![로그인](.)  
 
-#### VC 발급 요청  
-![VC 발급 요청](./images/demo-vc-issue.gif)
+- **카카오 계정 로그인 페이지**  
+  ![카카오 로그인](.)  
 
-#### VC 검증  
-![VC 검증](./images/demo-vc-verify.gif)
+- **카카오 로그인 후 DID 추가정보 입력 페이지**  
+  ![카카오 DID 추가정보 입력](.)  
 
-- DID 생성 및 관리 화면
-- VC 발급 및 저장 UI
-- QR 코드 기반 VC 공유
-- VC 진위 여부 시각적 피드백
+---
+
+### 인트로 & 대시보드  
+- **인트로 페이지**  
+  ![인트로 화면](.)  
+
+- **대시보드 페이지**  
+  ![대시보드](./)  
+
+---
+
+### VC 관련 기능  
+- **VC 발급 요청 페이지**  
+  ![VC 발급 요청](.)  
+
+- **VC 요청 현황 페이지**  
+  ![VC 요청 현황](./)  
+
+- **VC 목록 페이지**  
+  ![VC 목록 조회](./)  
+
+- **VC 공유 링크 생성 페이지**  
+  ![VC 공유 링크 생성](./)  
+
+- **VC 폐기 요청 페이지**  
+  ![VC 폐기 요청](./)  
+
+---
+
+### 🔹 회원 관리  
+- **회원 정보 수정 페이지**  
+  ![회원 정보 수정]()  
+
+- **회원 탈퇴 페이지**  
+  ![회원 탈퇴]()  
 
 ---
 
 ## 주요 기능 (Frontend)
 
-
+- DID 지갑 생성 및 관리  
+- VC 발급 / 검증 UI  
+- QR 코드 기반 VC 공유  
+- 반응형 UI 및 사용자 경험 최적화  
+- 서버 상태 관리 (React Query), 전역 상태 관리 (Redux)  
 
 ---
 
@@ -79,31 +116,39 @@
 ### 상태 관리 & API 연동
 - React Query 기반 서버 상태 관리
 - Redux로 DID/VC 전역 상태 통합
-- API 응답에 따른 실시간 UI 업데이트
+- API 응답에 따른 실시간 UI 업데이트  
 
 ---
 
 ## 개발 기간
-* 2025.08.04 ~ 2025.09.17
+2025.08.04 ~ 2025.09.17  
 
 ---
 
 ## 팀원소개
 | 팀원 | 역할 | GitHub |
 |------|------|--------|
-| <img src="https://github.com/susuholee.png" width="100"> | <br>이수호 (Client Frontend, Deploy)  | [@susuholee](https://github.com/susuholee) |
-| <img src="https://github.com/Mr-Binod.png" width="100"> | <br>비노드 (BackEnd, Admin FrontEnd, Verification Frontend BlockChain, Deploy ) | [@Mr-Binod](https://github.com/Mr-Binod) |
-| <img src="https://github.com/kooming.png" width="100"> | <br>구다경| [@kooming](https://github.com/kooming) |
+| <img src="https://github.com/susuholee.png" width="100"> | 이수호 (클라이언트 프론트, 배포)  | [@susuholee](https://github.com/susuholee) |
+| <img src="https://github.com/Mr-Binod.png" width="100"> | 비노드 (백엔드, 관리자, 검증 프론트, 블록체인, 배포) | [@Mr-Binod](https://github.com/Mr-Binod) |
+| <img src="https://github.com/kooming.png" width="100"> | 구다경 | [@kooming](https://github.com/kooming) |
 
 ---
 
 ## 기술 스택 (Frontend)
 
 - **Frontend**  
-  Next.js, Zustand, Tanstack Query, TailwindCSS  
+  <div> 
+    <img src="./FrontEnd/Notionary/src/images/icons/html.png" alt="HTML5" width="60"/>  
+    <img src="./FrontEnd/Notionary/src/images/icons/CSS3.png" alt="CSS3" width="60"/>  
+    <img src="./FrontEnd/Notionary/src/images/icons/JavaScript.png" alt="JavaScript" width="60"/>  
+    <img src="./FrontEnd/Notionary/src/images/icons/react.png" alt="React" width="60"/>  
+    <img src="https://raw.githubusercontent.com/reduxjs/redux/master/logo/logo.png" alt="Redux" width="40"/>  
+    <img src="./FrontEnd/Notionary/src/images/icons/react_qeury.png" alt="React Query" width="40"/>  
+    <img src="https://styled-components.com/logo.png" alt="styled-components" width="40"/>  
+  </div>  
 
 - **협업**  
-  GitHub, Notion
+  GitHub, Notion  
 
 ---
 
@@ -125,7 +170,7 @@
 
 ## 해결 방안
 
-| 문제 | 해결 방법 |
+| 문제 | 해결 방법 | 
 |------|-----------| 
 | UI 반응 속도 저하 | React Query 캐싱 및 suspense 기능 도입 |
 | 모바일 QR 스캔 문제 | WebAssembly 기반 QR 디코더 라이브러리 사용 |
