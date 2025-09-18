@@ -1,13 +1,13 @@
 # Sealium  
 
-<img src="../did-app/public//icons/sealium_logo.png" width="120px" style="background-color: white;"/>  
+<img src="./client/did-app/public/icons/sealium_logo.png" width="120px" style="background-color: white;"/>  
 
 ---
 
 > **DID(Decentralized Identifier)** 기반으로 안전하고 투명한 **VC(Verifiable Credential)** 발급 및 검증을 지원하는 웹 플랫폼  
 
 ## 배포 주소  
-🔗 [https://sealiumback.store](https://sealiumback.store)  
+[https://sealiumback.store](https://sealiumback.store)  
 
 ---
 
@@ -42,9 +42,6 @@
 - **일반 계정 로그인 페이지**  
   ![로그인](.)  
 
-- **카카오 계정 로그인 페이지**  
-  ![카카오 로그인](.)  
-
 - **카카오 로그인 후 DID 추가정보 입력 페이지**  
   ![카카오 DID 추가정보 입력](.)  
 
@@ -77,7 +74,7 @@
 
 ---
 
-### 🔹 회원 관리  
+### 회원 관리  
 - **회원 정보 수정 페이지**  
   ![회원 정보 수정]()  
 
@@ -135,26 +132,19 @@
 ---
 
 ## 기술 스택 (Frontend)
-
-- **Frontend**  
+  
   <div> 
-    <img src="./FrontEnd/Notionary/src/images/icons/html.png" alt="HTML5" width="60"/>  
-    <img src="./FrontEnd/Notionary/src/images/icons/CSS3.png" alt="CSS3" width="60"/>  
-    <img src="./FrontEnd/Notionary/src/images/icons/JavaScript.png" alt="JavaScript" width="60"/>  
-    <img src="./FrontEnd/Notionary/src/images/icons/react.png" alt="React" width="60"/>  
-    <img src="https://raw.githubusercontent.com/reduxjs/redux/master/logo/logo.png" alt="Redux" width="40"/>  
-    <img src="./FrontEnd/Notionary/src/images/icons/react_qeury.png" alt="React Query" width="40"/>  
-    <img src="https://styled-components.com/logo.png" alt="styled-components" width="40"/>  
+    <img src="./client/did-app/public/icons/Next.png" alt="NEXT.js" width="50"/>  
+   <img src="./client/did-app/public/icons/tailwind.jpg" alt="tailwindCSS"       width="90"/>  
+    <img src="./client/did-app/public/icons/zustand.png" alt="Zustand" width="90"/>  
+    <img src="./client/did-app/public/icons/react_qeury.png" alt="React Query" width="40"/>  
   </div>  
-
-- **협업**  
-  GitHub, Notion  
 
 ---
 
 ## 협업 도구
-- GitHub (버전 관리 및 코드 리뷰)  
-- Notion (기획 및 작업 관리)  
+ <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub" width="40"/>
+<img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" width="40"/>
 
 ---
 
