@@ -37,49 +37,52 @@
 
 ### 계정 및 인증  
 - **일반 계정 회원가입 페이지**  
-  ![회원가입](.)  
+  ![회원가입](./client/did-app/public/images/signup.gif)  
 
 - **일반 계정 로그인 페이지**  
-  ![로그인](.)  
+  ![로그인](./client/did-app/public/images/login.gif)  
 
 - **카카오 로그인 후 DID 추가정보 입력 페이지**  
-  ![카카오 DID 추가정보 입력](.)  
+  ![카카오 DID 추가정보 입력](./client/did-app/public/images/DID_signup.gif)  
 
 ---
 
 ### 인트로 & 대시보드  
 - **인트로 페이지**  
-  ![인트로 화면](.)  
+  ![인트로 화면](./client/did-app/public/images/intro.gif)  
 
 - **대시보드 페이지**  
-  ![대시보드](./)  
+  ![대시보드](./client/did-app/public/images/dashboard.gif)  
 
 ---
 
 ### VC 관련 기능  
 - **VC 발급 요청 페이지**  
-  ![VC 발급 요청](.)  
+  ![VC 발급 요청](./client/did-app/public/images/vc_issue.gif)  
 
 - **VC 요청 현황 페이지**  
-  ![VC 요청 현황](./)  
+  ![VC 요청 현황](./client/did-app/public/images/vc_request.gif)  
 
 - **VC 목록 페이지**  
-  ![VC 목록 조회](./)  
+  ![VC 목록 조회](./client/did-app/public/images/vc_list.gif)  
+
+- **VC 상세 페이지**  
+  ![VC 상세 조회](./client/did-app/public/images/vc_detail.gif)  
 
 - **VC 공유 링크 생성 페이지**  
-  ![VC 공유 링크 생성](./)  
+  ![VC 공유 링크 생성](./client/did-app/public/images/sharelink_.gif)  
 
 - **VC 폐기 요청 페이지**  
-  ![VC 폐기 요청](./)  
+  ![VC 폐기 요청](./client/did-app/public/images/revoke.gif)  
 
 ---
 
 ### 회원 관리  
-- **회원 정보 수정 페이지**  
-  ![회원 정보 수정]()  
+- **내 정보 페이지**  
+  ![내 정보](./client/did-app/public/images/profilePage.jpg) 
 
-- **회원 탈퇴 페이지**  
-  ![회원 탈퇴]()  
+- **회원 정보 수정 페이지**  
+  ![회원 정보 수정 & 탈퇴](./client/did-app/public/images/profile_edit.gif)  
 
 ---
 
@@ -100,20 +103,14 @@
 - DID Document 데이터 표시 및 연동
 - 반응형 레이아웃 적용
 
-### VC 발급 / 검증 UI
-- VC 발급 요청 및 결과 표시 화면 개발
+### VC 발급 / 폐기
+- VC 발급 및 폐기 요청 결과 표시 화면 개발
 - 발급된 VC 목록 및 상세 보기 UI
-- 검증 결과에 따른 시각적 피드백 (성공/실패/에러)
 
-### QR 코드 기반 VC 공유
-- VC → QR 코드 생성 화면
-- 모바일 환경에서 QR 스캔 UI 구현
-- 에러 처리 및 사용자 경험(UX) 개선
 
-### 상태 관리 & API 연동
+### 상태 관리 & 데이터 패칭
 - React Query 기반 서버 상태 관리
-- Redux로 DID/VC 전역 상태 통합
-- API 응답에 따른 실시간 UI 업데이트  
+- zustand로 사용자 정보 전역 상태 관리
 
 ---
 
@@ -152,9 +149,9 @@
 
 | 번호 | 이슈 내용 |
 |------|-----------|
-| 1 | VC 검증 시 UI 반응 속도가 느려 사용자 경험 저하 |
-| 2 | 모바일 환경에서 QR 코드 스캔이 원활하지 않음 |
-| 3 | Redux와 React Query 상태 관리 충돌로 인한 데이터 불일치 |
+| 1 | |
+| 2 | |
+| 3 | |
 
 ---
 
