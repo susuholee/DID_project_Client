@@ -20,6 +20,7 @@
 - [팀원소개](#팀원소개)
 - [기술 스택](#기술-스택)
 - [협업 도구](#협업-도구)
+- [배포 과정](#배포-과정)
 - [이슈 상황](#이슈-상황)
 - [해결 방안](#해결-방안)
 - [개선 방향](#개선-방향)
@@ -141,6 +142,11 @@
 
 ---
 
+## 배포 과정
+- **Frontend**: AWS S3 + CloudFront를 활용해 정적 파일을 호스팅 및 CDN 배포  
+- **특징**: HTTPS 적용 및 캐싱 최적화를 통해 안정적인 서비스 환경 제공  
+
+---
 ## 협업 도구
  <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub" width="40"/>
 <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" width="40"/>
